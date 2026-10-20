@@ -1,0 +1,125 @@
+:root {
+  --fondo: #1b1d21;
+  --fondo-panel: #22252a;
+  --borde: #33373e;
+  --texto: #e4e6ea;
+  --texto-suave: #9aa0a9;
+  --acento: #d9774b;
+  font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+  font-size: 13px;
+  color: var(--texto);
+  background: var(--fondo);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+}
+
+body {
+  display: flex;
+  flex-direction: column;
+  background: var(--fondo);
+}
+
+.barra {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 34px;
+  padding: 0 12px;
+  border-bottom: 1px solid var(--borde);
+  flex: none;
+}
+
+.marca {
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--acento);
+}
+
+.boton-texto {
+  background: none;
+  border: 1px solid var(--borde);
+  border-radius: 4px;
+  color: var(--texto-suave);
+  padding: 3px 10px;
+  font: inherit;
+  cursor: pointer;
+}
+
+.boton-texto:hover {
+  color: var(--texto);
+  border-color: var(--texto-suave);
+}
+
+#espacio {
+  flex: 1;
+  min-height: 0;
+}
+
+/* Contenido de los paneles */
+
+.panel {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: var(--fondo-panel);
+  position: relative;
+}
+
+.panel-proyectos {
+  display: flex;
+  flex-direction: column;
+  overflow: auto;
+}
+
+.panel-proyectos .acciones {
+  padding: 8px;
+  border-bottom: 1px solid var(--borde);
+}
+
+.arbol {
+  list-style: none;
+  margin: 0;
+  padding: 4px 0;
+}
+
+.arbol li {
+  padding: 4px 12px;
+  cursor: default;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.arbol li:hover {
+  background: #2c3036;
+}
+
+.aviso {
+  padding: 12px;
+  color: var(--texto-suave);
+  line-height: 1.5;
+}
+
+.panel canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.etiqueta-flotante {
+  position: absolute;
+  left: 10px;
+  bottom: 8px;
+  color: var(--texto-suave);
+  font-size: 12px;
+  pointer-events: none;
+}
