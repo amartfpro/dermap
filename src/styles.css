@@ -52,6 +52,7 @@ body {
   padding: 3px 10px;
   font: inherit;
   cursor: pointer;
+  white-space: nowrap;
 }
 
 .boton-texto:hover {
@@ -122,4 +123,72 @@ body {
   color: var(--texto-suave);
   font-size: 12px;
   pointer-events: none;
+}
+
+/* Barras de herramientas de los paneles */
+
+.herramientas {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 36px;
+  padding: 0 10px;
+  border-bottom: 1px solid var(--borde);
+  background: var(--fondo-panel);
+  flex: none;
+}
+
+.herramientas.flotante {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  border-bottom: none;
+  background: linear-gradient(rgba(34, 37, 42, 0.95), rgba(34, 37, 42, 0));
+}
+
+.herramientas .estado {
+  color: var(--texto-suave);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.interruptor {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--texto-suave);
+  cursor: pointer;
+  user-select: none;
+}
+
+.interruptor input {
+  accent-color: var(--acento);
+  margin: 0;
+}
+
+.panel-lienzo {
+  display: flex;
+  flex-direction: column;
+}
+
+.panel-lienzo canvas {
+  flex: 1;
+  height: auto;
+  min-height: 0;
+}
+
+.aviso.centrado {
+  position: absolute;
+  inset: 36px 0 0 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  pointer-events: none;
+}
+
+.aviso[hidden] {
+  display: none;
 }

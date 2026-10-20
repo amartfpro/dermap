@@ -1,0 +1,33 @@
+// Dermap · sustituto de <thread> para WebAssembly (WASI sin hilos).
+//
+// libigl usa std::thread en parallel_for. En WASI no hay hilos, así que esta clase
+// ejecuta la tarea en el momento de crearla y declara un solo núcleo; con un núcleo,
+// libigl recorre los bucles en serie. El aplanado ya corre en un Web Worker, de modo
+// que la interfaz no se bloquea igualmente.
+#pragma once
+
+#include <functional>
+#include <utility>
+
+namespace std {
+
+class thread {
+ public:
+  thread() noexcept = default;
+
+  template <class Funcion, class... Args>
+  explicit thread(Funcion&& funcion, Args&&... args) {
+    std::invoke(std::forward<Funcion>(funcion), std::forward<Args>(args)...);
+  }
+
+  thread(thread&&) noexcept = default;
+  thread& operator=(thread&&) noexcept = default;
+
+  bool joinable() const noexcept { return false; }
+  void join() {}
+  void detach() {}
+
+  static unsigned int hardware_concurrency() noexcept { return 1; }
+};
+
+}  // namespace std
