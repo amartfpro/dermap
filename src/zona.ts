@@ -26,6 +26,9 @@ export class ZonaActiva {
   /** Contorno de la zona y, aparte, las aristas de costura (el corte). */
   readonly contorno = new Path2D();
   readonly costura = new Path2D();
+  /** Lo dibujado al otro lado de cada costura, para la franja de referencia. */
+  readonly fantasma: HTMLCanvasElement;
+  private readonly costuras: Costura[] = [];
 
   cuadricula = true;
   private readonly uMin: number;
@@ -57,6 +60,7 @@ export class ZonaActiva {
     this.mascara = crear();
     this.deformacion = crear();
     this.textura = crear();
+    this.fantasma = crear();
 
     this.pintarMascaraYDeformacion();
     this.trazarContorno();
@@ -99,7 +103,12 @@ export class ZonaActiva {
 
   borrar(): void {
     this.dibujo.getContext("2d")!.clearRect(0, 0, this.ancho, this.alto);
+    this.actualizarFantasma();
     this.componer();
+  }
+
+  get numeroDeCosturas(): number {
+    return this.costuras.length / 2;
   }
 
   /** Cuadrícula de 1 cm (y más marcada cada 5 cm): permite comprobar la escala a simple vista. */
@@ -136,25 +145,156 @@ export class ZonaActiva {
     }
   }
 
-  /** Aristas de borde (con un solo triángulo). Las que pasan por el corte son costura. */
+  /**
+   * Aristas de borde de la malla cortada. Una arista de la malla original que aparece dos
+   * veces como borde es costura: un lado de cada aparición se une con el otro en la piel.
+   * Para cada pareja se guarda la transformación del lienzo que lleva un lado al otro.
+   */
   private trazarContorno(): void {
-    const { caras, origen, corte } = this.aplanado;
-    const usos = new Map<string, number>();
+    const { caras, origen } = this.aplanado;
+    // Arista de borde → triángulo que la contiene (y vértice opuesto, para saber hacia dónde queda dentro).
+    const usos = new Map<string, { a: number; b: number; opuesto: number; n: number }>();
     const clave = (a: number, b: number) => (a < b ? `${a},${b}` : `${b},${a}`);
     for (let f = 0; f < caras.length / 3; f++)
       for (let j = 0; j < 3; j++) {
-        const k = clave(caras[3 * f + j], caras[3 * f + ((j + 1) % 3)]);
-        usos.set(k, (usos.get(k) ?? 0) + 1);
+        const a = caras[3 * f + j];
+        const b = caras[3 * f + ((j + 1) % 3)];
+        const k = clave(a, b);
+        const u = usos.get(k);
+        if (u) u.n++;
+        else usos.set(k, { a, b, opuesto: caras[3 * f + ((j + 2) % 3)], n: 1 });
       }
-    const enCorte = new Set(corte);
-    for (const [k, n] of usos) {
-      if (n !== 1) continue;
-      const [a, b] = k.split(",").map(Number);
-      const destino = enCorte.has(origen[a]) && enCorte.has(origen[b]) ? this.costura : this.contorno;
-      destino.moveTo(...this.aLienzo(a));
-      destino.lineTo(...this.aLienzo(b));
+    const porOriginal = new Map<string, { a: number; b: number; opuesto: number }[]>();
+    for (const u of usos.values()) {
+      if (u.n !== 1) continue;
+      const k = clave(origen[u.a], origen[u.b]);
+      const lista = porOriginal.get(k);
+      if (lista) lista.push(u);
+      else porOriginal.set(k, [u]);
+    }
+    for (const lista of porOriginal.values()) {
+      if (lista.length !== 2) {
+        for (const u of lista) {
+          this.contorno.moveTo(...this.aLienzo(u.a));
+          this.contorno.lineTo(...this.aLienzo(u.b));
+        }
+        continue;
+      }
+      // Empareja los extremos por su vértice original: a1 ↔ a2 y b1 ↔ b2.
+      const [e1, e2raw] = lista;
+      const e2 = origen[e2raw.a] === origen[e1.a] ? e2raw : { a: e2raw.b, b: e2raw.a, opuesto: e2raw.opuesto };
+      const lado1 = this.ladoDeCostura(e1.a, e1.b, e1.opuesto);
+      const lado2 = this.ladoDeCostura(e2.a, e2.b, e2.opuesto);
+      this.costuras.push({ desde: lado1, hacia: lado2, matriz: semejanza(lado1, lado2) });
+      this.costuras.push({ desde: lado2, hacia: lado1, matriz: semejanza(lado2, lado1) });
+      for (const lado of [lado1, lado2]) {
+        this.costura.moveTo(...lado.a);
+        this.costura.lineTo(...lado.b);
+      }
     }
   }
+
+  private ladoDeCostura(a: number, b: number, opuesto: number): LadoDeCostura {
+    const pa = this.aLienzo(a);
+    const pb = this.aLienzo(b);
+    const po = this.aLienzo(opuesto);
+    // Normal hacia fuera de la zona: perpendicular a la arista, en el sentido contrario al vértice opuesto.
+    let nx = -(pb[1] - pa[1]);
+    let ny = pb[0] - pa[0];
+    const largo = Math.hypot(nx, ny) || 1;
+    nx /= largo;
+    ny /= largo;
+    if ((po[0] - pa[0]) * nx + (po[1] - pa[1]) * ny > 0) {
+      nx = -nx;
+      ny = -ny;
+    }
+    return { a: pa, b: pb, fuera: [nx, ny] };
+  }
+
+  /**
+   * Costuras que tocan el segmento p → q con un trazo de grosor `ancho`: su transformación
+   * lleva el trazo al otro lado del corte (RF-36). Alcance de 1 cm más allá del borde.
+   */
+  costurasCerca(p: [number, number], q: [number, number], ancho: number): DOMMatrix[] {
+    const alcance = ancho / 2 + this.pxPorCm;
+    return this.costuras
+      .filter((c) => distanciaEntreSegmentos(p, q, c.desde.a, c.desde.b) <= alcance)
+      .map((c) => c.matriz);
+  }
+
+  /**
+   * Franja de referencia (RF-37): junto a cada costura, lo que hay dibujado al otro lado,
+   * en una banda de 1,5 cm por fuera del borde. Se recalcula al terminar cada trazo.
+   */
+  actualizarFantasma(): void {
+    const ctx = this.fantasma.getContext("2d")!;
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.clearRect(0, 0, this.ancho, this.alto);
+    const banda = 1.5 * this.pxPorCm;
+    for (const c of this.costuras) {
+      const { a, b, fuera } = c.desde;
+      ctx.save();
+      const franja = new Path2D();
+      franja.moveTo(...a);
+      franja.lineTo(...b);
+      franja.lineTo(b[0] + fuera[0] * banda, b[1] + fuera[1] * banda);
+      franja.lineTo(a[0] + fuera[0] * banda, a[1] + fuera[1] * banda);
+      franja.closePath();
+      ctx.clip(franja);
+      // Lo que está al otro lado se trae con la transformación inversa.
+      const inversa = c.matriz.inverse();
+      ctx.setTransform(inversa);
+      ctx.drawImage(this.dibujo, 0, 0);
+      ctx.restore();
+    }
+    // Fuera de la zona solamente: dentro ya se ve el dibujo real.
+    ctx.globalCompositeOperation = "destination-out";
+    ctx.drawImage(this.mascara, 0, 0);
+    ctx.globalCompositeOperation = "source-over";
+  }
+}
+
+interface LadoDeCostura {
+  a: [number, number];
+  b: [number, number];
+  /** Normal unitaria hacia fuera de la zona. */
+  fuera: [number, number];
+}
+
+interface Costura {
+  desde: LadoDeCostura;
+  hacia: LadoDeCostura;
+  /** Lleva el lienzo cerca de «desde» a la posición equivalente junto a «hacia». */
+  matriz: DOMMatrix;
+}
+
+/** Semejanza (giro, escala y traslación, sin reflexión) que lleva a1→a2 y b1→b2. */
+function semejanza(l1: LadoDeCostura, l2: LadoDeCostura): DOMMatrix {
+  const [ax, ay] = l1.a;
+  const d1 = [l1.b[0] - ax, l1.b[1] - ay];
+  const d2 = [l2.b[0] - l2.a[0], l2.b[1] - l2.a[1]];
+  const angulo = Math.atan2(d2[1], d2[0]) - Math.atan2(d1[1], d1[0]);
+  const escala = Math.hypot(d2[0], d2[1]) / (Math.hypot(d1[0], d1[1]) || 1);
+  return new DOMMatrix()
+    .translate(l2.a[0], l2.a[1])
+    .rotate((angulo * 180) / Math.PI)
+    .scale(escala)
+    .translate(-ax, -ay);
+}
+
+function distanciaPuntoSegmento(p: [number, number], a: [number, number], b: [number, number]): number {
+  const dx = b[0] - a[0], dy = b[1] - a[1];
+  const t = Math.max(0, Math.min(1, ((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / (dx * dx + dy * dy || 1)));
+  return Math.hypot(p[0] - a[0] - t * dx, p[1] - a[1] - t * dy);
+}
+
+function distanciaEntreSegmentos(p: [number, number], q: [number, number], a: [number, number], b: [number, number]): number {
+  return Math.min(
+    distanciaPuntoSegmento(p, a, b),
+    distanciaPuntoSegmento(q, a, b),
+    distanciaPuntoSegmento(a, p, q),
+    distanciaPuntoSegmento(b, p, q),
+  );
 }
 
 /** ≤ 2 %: sin color · 2–5 %: ámbar · > 5 %: rojo. */

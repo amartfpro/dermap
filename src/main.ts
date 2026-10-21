@@ -3,6 +3,7 @@ import "./vendor/dockview-8.6.1.css"; // hoja de estilos de dockview (MIT), copi
 import { PanelProyectos } from "./panels/proyectos";
 import { Visor3D } from "./panels/visor3d";
 import { Lienzo } from "./panels/lienzo";
+import { estado } from "./zona";
 
 const CLAVE_LAYOUT = "dermap.layout.v1";
 
@@ -65,3 +66,8 @@ dock.onDidLayoutChange(() => {
 });
 
 document.getElementById("restablecer")!.addEventListener("click", () => layoutInicial(dock));
+
+// Acceso para las pruebas automáticas en navegador (solo con ?prueba en la URL).
+if (new URLSearchParams(location.search).has("prueba")) {
+  (window as unknown as { dermap: unknown }).dermap = { estado };
+}

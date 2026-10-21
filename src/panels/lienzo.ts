@@ -49,14 +49,14 @@ export class Lienzo implements IContentRenderer {
 
     const leyenda = document.createElement("div");
     leyenda.className = "etiqueta-flotante";
-    leyenda.textContent = "Cuadrícula de 1 cm · línea roja: costura del corte";
+    leyenda.textContent = "Cuadrícula de 1 cm · línea roja: costura del corte · gris fuera: lo que hay al otro lado";
 
     this.element.append(barra, this.canvas, this.aviso, leyenda);
 
     this.canvas.addEventListener("pointerdown", (e) => this.empezar(e));
     this.canvas.addEventListener("pointermove", (e) => this.mover(e));
-    this.canvas.addEventListener("pointerup", () => (this.ultimo = null));
-    this.canvas.addEventListener("pointercancel", () => (this.ultimo = null));
+    this.canvas.addEventListener("pointerup", () => this.terminar());
+    this.canvas.addEventListener("pointercancel", () => this.terminar());
     document.addEventListener("dermap:zona", this.alCambiarZona);
     document.addEventListener("dermap:textura", this.alCambiarTextura);
 
@@ -105,6 +105,10 @@ export class Lienzo implements IContentRenderer {
     ctx.imageSmoothingQuality = "high";
     // Papel dentro de la zona, cuadrícula y tinta; todo recortado por la máscara.
     const capa = this.papel(zona);
+    // Franja de referencia: lo que hay al otro lado de la costura, atenuado (RF-37).
+    ctx.globalAlpha = 0.4;
+    ctx.drawImage(zona.fantasma, 0, 0);
+    ctx.globalAlpha = 1;
     ctx.drawImage(capa, 0, 0);
     if (this.verDeformacion) ctx.drawImage(zona.deformacion, 0, 0);
 
@@ -153,13 +157,27 @@ export class Lienzo implements IContentRenderer {
       // El ratón informa presión 0,5 con el botón pulsado; el lápiz, la real.
       const presion = ev.pointerType === "mouse" ? 0.5 : ev.pressure;
       ctx.lineWidth = (0.05 + presion * 0.25) * zona.pxPorCm; // de 0,5 a 3 mm
-      ctx.beginPath();
-      ctx.moveTo(this.ultimo.x, this.ultimo.y);
-      ctx.lineTo(p.x, p.y);
-      ctx.stroke();
+      const a: [number, number] = [this.ultimo.x, this.ultimo.y];
+      const b: [number, number] = [p.x, p.y];
+      // El segmento en su sitio y, si toca una costura, también al otro lado del corte (RF-36).
+      for (const matriz of [new DOMMatrix(), ...zona.costurasCerca(a, b, ctx.lineWidth)]) {
+        ctx.setTransform(matriz);
+        ctx.beginPath();
+        ctx.moveTo(...a);
+        ctx.lineTo(...b);
+        ctx.stroke();
+      }
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
       this.ultimo = p;
     }
     zona.componer(); // actualiza la textura del 3D y repinta este panel
+  }
+
+  private terminar(): void {
+    if (!this.ultimo) return;
+    this.ultimo = null;
+    estado.zona?.actualizarFantasma();
+    this.pintar();
   }
 
   private aLienzo(e: PointerEvent): { x: number; y: number } {

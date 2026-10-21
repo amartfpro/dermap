@@ -43,7 +43,9 @@ quitar; con la selección activa, la cámara gira con el botón derecho) y pulsa
 Una zona con un borde (parche) se aplana directamente; una con dos (manga) se corta por la cara
 que no estás mirando. El lienzo muestra la zona aplanada con una cuadrícula de 1 cm, la costura
 del corte en rojo y, opcionalmente, el mapa de deformación (ámbar: 2–5 %, rojo: más del 5 %).
-Lo que dibujes en el lienzo aparece sobre el cuerpo en tiempo real.
+Lo que dibujes en el lienzo aparece sobre el cuerpo en tiempo real. En una manga, un trazo que
+cruza la costura continúa al otro lado del corte, y fuera del contorno se ve en gris lo que hay
+dibujado al otro lado. La vista «cara interna» de cada brazo muestra el corte.
 
 El cuerpo es la malla base de [MakeHuman](https://github.com/makehumancommunity/makehuman)
 (licencia CC0), convertida con `scripts/convertir-makehuman.ts`.
