@@ -192,3 +192,24 @@ body {
 .aviso[hidden] {
   display: none;
 }
+
+.boton-texto.activo {
+  color: var(--texto);
+  border-color: var(--acento);
+  background: rgba(217, 119, 75, 0.18);
+}
+
+.desplegable {
+  background: var(--fondo-panel);
+  border: 1px solid var(--borde);
+  border-radius: 4px;
+  color: var(--texto-suave);
+  padding: 3px 6px;
+  font: inherit;
+  cursor: pointer;
+}
+
+.deslizador {
+  width: 70px;
+  accent-color: var(--acento);
+}
