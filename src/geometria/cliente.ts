@@ -32,6 +32,7 @@ export async function aplanarEnSegundoPlano(
   malla: Malla,
   opciones: OpcionesAplanado = {},
   hacia = [0, 1, 0] as [number, number, number],
+  haciaCamara?: [number, number, number],
 ): Promise<Resultado> {
   const id = siguienteId++;
   const resultado = await new Promise<Resultado>((resolver, rechazar) => {
@@ -44,7 +45,7 @@ export async function aplanarEnSegundoPlano(
     };
     obtenerTrabajador().postMessage(peticion);
   });
-  orientar(malla, resultado.aplanado, hacia);
+  orientar(malla, resultado.aplanado, hacia, haciaCamara);
   return resultado;
 }
 
@@ -52,9 +53,11 @@ export async function aplanarEnSegundoPlano(
  * El aplanado sale con una rotación arbitraria y puede salir en espejo. Se corrige:
  * 1. Si las caras quedan en sentido horario (vistas desde fuera), se refleja u.
  * 2. Se gira para que el gradiente medio de la proyección sobre `hacia` apunte a la
- *    derecha del lienzo.
+ *    derecha del lienzo. Si se indica `haciaCamara`, solo cuentan las caras que miran a la
+ *    cámara: en una manga, la cara de delante y la de detrás tienen gradientes opuestos al
+ *    desenrollarla y se anularían; así el lienzo queda como se ve la zona de frente.
  */
-function orientar(malla: Malla, a: Aplanado, hacia: [number, number, number]): void {
+function orientar(malla: Malla, a: Aplanado, hacia: [number, number, number], haciaCamara?: [number, number, number]): void {
   const altura = (v: number) =>
     malla.vertices[3 * v] * hacia[0] + malla.vertices[3 * v + 1] * hacia[1] + malla.vertices[3 * v + 2] * hacia[2];
   const nF = a.caras.length / 3;
@@ -76,9 +79,11 @@ function orientar(malla: Malla, a: Aplanado, hacia: [number, number, number]): v
     const [y0, y1, y2] = vs.map((v) => altura(a.origen[v]));
     const det = (u1 - u0) * (v2 - v0) - (u2 - u0) * (v1 - v0);
     if (Math.abs(det) < 1e-12) continue;
+    const peso = haciaCamara ? orientacionHacia(malla, a, vs, haciaCamara) : 1;
+    if (peso <= 0) continue;
     // ∇y = área · (dy1·(v2−v0) − dy2·(v1−v0), dy2·(u1−u0) − dy1·(u2−u0)) / det; el área se cancela con det/2.
-    gx += ((y1 - y0) * (v2 - v0) - (y2 - y0) * (v1 - v0)) * Math.sign(det);
-    gy += ((y2 - y0) * (u1 - u0) - (y1 - y0) * (u2 - u0)) * Math.sign(det);
+    gx += ((y1 - y0) * (v2 - v0) - (y2 - y0) * (v1 - v0)) * Math.sign(det) * peso;
+    gy += ((y2 - y0) * (u1 - u0) - (y1 - y0) * (u2 - u0)) * Math.sign(det) * peso;
   }
   const angulo = -Math.atan2(gy, gx);
   const c = Math.cos(angulo);
@@ -89,4 +94,17 @@ function orientar(malla: Malla, a: Aplanado, hacia: [number, number, number]): v
     a.uv[i] = c * u - s * v;
     a.uv[i + 1] = s * u + c * v;
   }
+}
+
+/** Cuánto mira un triángulo hacia una dirección: coseno entre su normal y la dirección (≤ 0 si da la espalda). */
+function orientacionHacia(malla: Malla, a: Aplanado, vs: number[], dir: [number, number, number]): number {
+  const p = vs.map((v) => {
+    const o = a.origen[v];
+    return [malla.vertices[3 * o], malla.vertices[3 * o + 1], malla.vertices[3 * o + 2]];
+  });
+  const u = [p[1][0] - p[0][0], p[1][1] - p[0][1], p[1][2] - p[0][2]];
+  const w = [p[2][0] - p[0][0], p[2][1] - p[0][1], p[2][2] - p[0][2]];
+  const n = [u[1] * w[2] - u[2] * w[1], u[2] * w[0] - u[0] * w[2], u[0] * w[1] - u[1] * w[0]];
+  const largo = Math.hypot(n[0], n[1], n[2]) || 1;
+  return (n[0] * dir[0] + n[1] * dir[1] + n[2] * dir[2]) / largo;
 }

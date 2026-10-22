@@ -5,7 +5,10 @@ import { aplanarEnSegundoPlano } from "../geometria/cliente";
 import { medirDeformacion } from "../geometria/metricas";
 import { longitud, seleccionarPorEje, submalla, suavizarSeleccion, type Seleccion } from "../geometria/seleccion";
 import { cargarCuerpo, ejeDeLaPierna, ejeDelBrazo, type Cuerpo } from "../modelos/cuerpo";
-import { activarZona, estado, ZonaActiva } from "../zona";
+import { app } from "../estado";
+import { nuevoId } from "../lienzo/capa";
+import { Lienzo } from "../lienzo/lienzo";
+import { contexto, crearLamina, RegionSucia, type Rect } from "../lienzo/teselas";
 
 type P3 = [number, number, number];
 
@@ -52,12 +55,10 @@ export class Visor3D implements IContentRenderer {
   private pintando: "añadir" | "quitar" | null = null;
   private raycaster = new THREE.Raycaster();
 
-  private zona3d = new THREE.Group();
-  private textura: THREE.CanvasTexture | null = null;
-  private alCambiarZona = () => this.mostrarZona();
-  private alCambiarTextura = () => {
-    if (this.textura) this.textura.needsUpdate = true;
-  };
+  private zonas3d = new THREE.Group();
+  private mallas = new Map<Lienzo, MallaLienzo>();
+  private alCambiarLienzos = () => this.reconstruirLienzos();
+  private alCambiarActivo = () => this.resaltarActivo();
 
   constructor() {
     this.element = document.createElement("div");
@@ -98,8 +99,8 @@ export class Visor3D implements IContentRenderer {
     this.controles.enableDamping = true;
 
     this.montarEscena();
-    document.addEventListener("dermap:zona", this.alCambiarZona);
-    document.addEventListener("dermap:textura", this.alCambiarTextura);
+    app.addEventListener("lienzos", this.alCambiarLienzos);
+    app.addEventListener("activo", this.alCambiarActivo);
 
     const lienzo = this.renderer.domElement;
     lienzo.addEventListener("pointerdown", (e) => this.empezarPincel(e));
@@ -113,6 +114,7 @@ export class Visor3D implements IContentRenderer {
     this.renderer.setAnimationLoop(() => {
       if (!this.activo) return;
       this.controles.update();
+      this.subirTexturas();
       this.renderer.render(this.escena, this.camara);
     });
 
@@ -134,8 +136,8 @@ export class Visor3D implements IContentRenderer {
     this.observador.disconnect();
     this.controles.dispose();
     this.renderer.dispose();
-    document.removeEventListener("dermap:zona", this.alCambiarZona);
-    document.removeEventListener("dermap:textura", this.alCambiarTextura);
+    app.removeEventListener("lienzos", this.alCambiarLienzos);
+    app.removeEventListener("activo", this.alCambiarActivo);
   }
 
   // ── Carga y escena ────────────────────────────────────────────────────────────
@@ -148,7 +150,7 @@ export class Visor3D implements IContentRenderer {
     const contraluz = new THREE.DirectionalLight(0xffffff, 0.5);
     contraluz.position.set(-80, 120, -150);
     this.escena.add(contraluz);
-    this.escena.add(this.zona3d);
+    this.escena.add(this.zonas3d);
     // Su geometría cambia con cada pincelada: sin recorte por frustum para no recalcular límites.
     this.resaltado.frustumCulled = false;
     this.escena.add(this.resaltado);
@@ -171,6 +173,8 @@ export class Visor3D implements IContentRenderer {
     this.resaltado.geometry.setAttribute("position", geometria.getAttribute("position"));
     this.precalcularCaras();
     this.verVista(0);
+    app.fijarCuerpo(this.cuerpo);
+    this.reconstruirLienzos();
     this.estadoTexto.textContent =
       "Elige una zona rápida o pinta una con «Seleccionar» · arrastra para girar, rueda para acercar";
   }
@@ -300,7 +304,7 @@ export class Visor3D implements IContentRenderer {
     this.resaltado.visible = this.seleccionados.size > 0;
   }
 
-  // ── Aplanado ──────────────────────────────────────────────────────────────────
+  // ── Aplanado: cada zona aplanada es un lienzo nuevo (RF-29) ─────────────────
 
   private async aplanar(): Promise<void> {
     if (!this.cuerpo) return;
@@ -319,72 +323,158 @@ export class Visor3D implements IContentRenderer {
         seleccion.malla,
         { direccionExterna: haciaCamara.toArray() as P3 },
         derecha.toArray() as P3,
+        haciaCamara.toArray() as P3,
       );
       const deformacion = medirDeformacion(seleccion.malla, aplanado);
-      this.ultimaSeleccion = seleccion;
-      activarZona(new ZonaActiva(seleccion.malla, aplanado, deformacion.porCara));
+      const lienzo = new Lienzo(nuevoId(), nombreLibre(), {
+        malla: seleccion.malla,
+        aplanado,
+        errorPorCara: deformacion.porCara,
+        triangulos: seleccion.triangulos,
+        verticeBase: seleccion.verticeBase,
+      });
       this.fijarSeleccion([]);
+      app.añadirLienzo(lienzo);
       const tipo = aplanado.tipo === "manga" ? "Manga aplanada (con corte)" : "Parche aplanado";
+      const [w, h] = lienzo.geo.tamanoCm;
       this.estadoTexto.textContent =
-        `${tipo} en ${(milisegundos / 1000).toFixed(2)} s · ` +
+        `${tipo} en ${(milisegundos / 1000).toFixed(2)} s · ${w.toFixed(1)} × ${h.toFixed(1)} cm · ` +
         `${deformacion.areaDentroDel2.toFixed(0)} % del área con deformación ≤ 2 %`;
     } catch (error) {
       this.estadoTexto.textContent = error instanceof Error ? error.message : String(error);
     }
   }
 
-  private ultimaSeleccion: Seleccion | null = null;
+  // ── Lienzos en el 3D (RF-43): todos los visibles, el activo resaltado ─────────
 
-  private mostrarZona(): void {
-    for (const hijo of [...this.zona3d.children]) {
-      this.zona3d.remove(hijo);
-      if (hijo instanceof THREE.Mesh || hijo instanceof THREE.Line) hijo.geometry.dispose();
+  private reconstruirLienzos(): void {
+    for (const [lienzo, m] of this.mallas) {
+      if (!app.lienzos.includes(lienzo) || !lienzo.visible) {
+        m.desconectar();
+        this.zonas3d.remove(m.grupo);
+        m.grupo.traverse((o) => {
+          if (o instanceof THREE.Mesh || o instanceof THREE.Line) o.geometry.dispose();
+        });
+        m.textura.dispose();
+        this.mallas.delete(lienzo);
+      }
     }
-    this.textura?.dispose();
-    const zona = estado.zona;
-    const seleccion = this.ultimaSeleccion;
-    if (!zona || !seleccion || !this.normalesCuerpo) return;
+    if (!this.normalesCuerpo) return;
+    app.lienzos.forEach((lienzo, orden) => {
+      if (!lienzo.visible) return;
+      let m = this.mallas.get(lienzo);
+      if (!m) {
+        m = this.crearMallaLienzo(lienzo);
+        this.mallas.set(lienzo, m);
+        this.zonas3d.add(m.grupo);
+      }
+      // Los lienzos posteriores en el árbol se dibujan encima (RF-06).
+      const malla = m.grupo.children[0] as THREE.Mesh;
+      const material = malla.material as THREE.MeshStandardMaterial;
+      material.polygonOffsetFactor = -2 - orden;
+      material.polygonOffsetUnits = -2 - orden;
+      malla.renderOrder = orden;
+    });
+    this.resaltarActivo();
+  }
 
-    const { malla, aplanado } = zona;
+  private crearMallaLienzo(lienzo: Lienzo): MallaLienzo {
+    const { malla, aplanado, verticeBase } = lienzo.zona;
+    const normalesCuerpo = this.normalesCuerpo!;
     // Normales del cuerpo completo: la zona se sombrea igual que la piel que la rodea.
     const n = aplanado.origen.length;
     const posiciones = new Float32Array(n * 3);
     const normales = new Float32Array(n * 3);
     for (let i = 0; i < n; i++) {
       const o = aplanado.origen[i];
-      const b = seleccion.verticeBase[o];
+      const b = verticeBase[o];
       posiciones.set(malla.vertices.subarray(3 * o, 3 * o + 3), 3 * i);
-      normales.set([this.normalesCuerpo.getX(b), this.normalesCuerpo.getY(b), this.normalesCuerpo.getZ(b)], 3 * i);
+      normales.set([normalesCuerpo.getX(b), normalesCuerpo.getY(b), normalesCuerpo.getZ(b)], 3 * i);
     }
     const geometria = new THREE.BufferGeometry();
     geometria.setAttribute("position", new THREE.BufferAttribute(posiciones, 3));
     geometria.setAttribute("normal", new THREE.BufferAttribute(normales, 3));
-    geometria.setAttribute("uv", new THREE.BufferAttribute(zona.coordenadasDeTextura(), 2));
+    geometria.setAttribute("uv", new THREE.BufferAttribute(lienzo.geo.coordenadasDeTextura(), 2));
     geometria.setIndex(new THREE.BufferAttribute(new Uint32Array(aplanado.caras), 1));
 
-    this.textura = new THREE.CanvasTexture(zona.textura);
-    this.textura.colorSpace = THREE.SRGBColorSpace;
-    this.textura.anisotropy = this.renderer.capabilities.getMaxAnisotropy();
-    const material = new THREE.MeshStandardMaterial({
-      map: this.textura,
-      roughness: 0.75,
-      polygonOffset: true,
-      polygonOffsetFactor: -2,
-      polygonOffsetUnits: -2,
-    });
-    this.zona3d.add(new THREE.Mesh(geometria, material));
+    // flipY = false: las filas del lienzo y de la textura coinciden, lo que permite subir
+    // solo la región que cambia en cada trazo (copyTextureToTexture) en vez de la textura entera.
+    const textura = new THREE.Texture(lienzo.textura as unknown as HTMLCanvasElement);
+    textura.flipY = false;
+    textura.colorSpace = THREE.SRGBColorSpace;
+    textura.anisotropy = this.renderer.capabilities.getMaxAnisotropy();
+    textura.needsUpdate = true;
+    this.renderer.initTexture(textura);
 
-    if (aplanado.corte.length) {
-      // Línea de corte, separada 1 mm de la piel en la dirección de la normal.
-      const puntos = Array.from(aplanado.corte, (v) => {
-        const b = seleccion.verticeBase[v];
-        const p = new THREE.Vector3().fromArray(malla.vertices, 3 * v);
-        const normal = new THREE.Vector3(this.normalesCuerpo!.getX(b), this.normalesCuerpo!.getY(b), this.normalesCuerpo!.getZ(b));
-        return p.addScaledVector(normal, 0.1);
-      });
-      this.zona3d.add(
-        new THREE.Line(new THREE.BufferGeometry().setFromPoints(puntos), new THREE.LineBasicMaterial({ color: 0xe0483e })),
+    const material = new THREE.MeshStandardMaterial({ map: textura, roughness: 0.75, polygonOffset: true });
+    const grupo = new THREE.Group();
+    grupo.add(new THREE.Mesh(geometria, material));
+
+    const punto = (i: number, separacion: number) => {
+      const o = aplanado.origen[i];
+      const b = verticeBase[o];
+      const p = new THREE.Vector3().fromArray(malla.vertices, 3 * o);
+      return p.addScaledVector(new THREE.Vector3(normalesCuerpo.getX(b), normalesCuerpo.getY(b), normalesCuerpo.getZ(b)), separacion);
+    };
+    // Borde de la zona (naranja) y corte (rojo), visibles solo en el lienzo activo.
+    const resalte = new THREE.Group();
+    for (const borde of lienzo.geo.bordesIndices) {
+      const linea = new THREE.LineLoop(
+        new THREE.BufferGeometry().setFromPoints(borde.map((i) => punto(i, 0.08))),
+        new THREE.LineBasicMaterial({ color: 0xd9774b }),
       );
+      resalte.add(linea);
+    }
+    if (aplanado.corte.length) {
+      // El corte se da en vértices de la malla de la zona; se busca un vértice cortado de cada uno.
+      const cortado = new Map<number, number>();
+      aplanado.origen.forEach((o, i) => cortado.set(o, i));
+      const puntos = Array.from(aplanado.corte, (v) => punto(cortado.get(v)!, 0.12));
+      resalte.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(puntos), new THREE.LineBasicMaterial({ color: 0xe0483e })));
+    }
+    grupo.add(resalte);
+
+    const m: MallaLienzo = { grupo, textura, resalte, pendiente: new RegionSucia(), desconectar: () => {} };
+    const alPrevia = (e: Event) => m.pendiente.añadir((e as CustomEvent<Rect>).detail);
+    const alPropiedades = () => this.reconstruirLienzos();
+    lienzo.addEventListener("previa", alPrevia);
+    lienzo.addEventListener("propiedades", alPropiedades);
+    m.desconectar = () => {
+      lienzo.removeEventListener("previa", alPrevia);
+      lienzo.removeEventListener("propiedades", alPropiedades);
+    };
+    return m;
+  }
+
+  private resaltarActivo(): void {
+    for (const [lienzo, m] of this.mallas) m.resalte.visible = lienzo === app.activo;
+  }
+
+  /** Sube a la GPU solo las regiones de textura que han cambiado (P3). */
+  private subirTexturas(): void {
+    for (const [lienzo, m] of this.mallas) {
+      if (m.pendiente.vacia) continue;
+      for (const r of m.pendiente.vaciar()) this.subirRegion(lienzo, m, r);
+    }
+  }
+
+  private subirRegion(lienzo: Lienzo, m: MallaLienzo, r: Rect): void {
+    {
+      const ancho = r.x1 - r.x0;
+      const alto = r.y1 - r.y0;
+      if (ancho <= 0 || alto <= 0) return;
+      if (ancho * alto > 0.5 * lienzo.geo.anchoPrevia * lienzo.geo.altoPrevia) {
+        m.textura.needsUpdate = true; // más de media textura: se sube entera
+        return;
+      }
+      const trozo = crearLamina(ancho, alto);
+      contexto(trozo).drawImage(lienzo.textura, r.x0, r.y0, ancho, alto, 0, 0, ancho, alto);
+      const fuente = new THREE.Texture(trozo as unknown as HTMLCanvasElement);
+      try {
+        this.renderer.copyTextureToTexture(fuente, m.textura, null, new THREE.Vector2(r.x0, r.y0));
+      } catch {
+        m.textura.needsUpdate = true;
+      }
     }
   }
 
@@ -404,6 +494,21 @@ export class Visor3D implements IContentRenderer {
     const horizontal = 2 * Math.atan(Math.tan(vertical / 2) * this.camara.aspect);
     return (radio / Math.sin(Math.min(vertical, horizontal) / 2)) * 1.05;
   }
+}
+
+interface MallaLienzo {
+  grupo: THREE.Group;
+  textura: THREE.Texture;
+  resalte: THREE.Group;
+  /** Regiones de la textura (px de la vista previa) pendientes de subir a la GPU. */
+  pendiente: RegionSucia;
+  desconectar: () => void;
+}
+
+function nombreLibre(): string {
+  let n = app.lienzos.length + 1;
+  while (app.lienzos.some((l) => l.nombre === `Lienzo ${n}`)) n++;
+  return `Lienzo ${n}`;
 }
 
 // ── Vistas predefinidas (RF-11) y zonas rápidas ──────────────────────────────────

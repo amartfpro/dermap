@@ -143,6 +143,11 @@ body {
   top: 0;
   left: 0;
   right: 0;
+  flex-wrap: wrap;
+  height: auto;
+  min-height: 36px;
+  padding: 4px 10px;
+  row-gap: 4px;
   border-bottom: none;
   background: linear-gradient(rgba(34, 37, 42, 0.95), rgba(34, 37, 42, 0));
 }
@@ -212,4 +217,153 @@ body {
 .deslizador {
   width: 70px;
   accent-color: var(--acento);
+}
+
+/* Barras que se reparten en varias líneas si el panel es estrecho */
+.herramientas.envolver {
+  flex-wrap: wrap;
+  height: auto;
+  min-height: 36px;
+  padding: 4px 10px;
+  row-gap: 4px;
+}
+
+.grupo {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding-right: 10px;
+  border-right: 1px solid var(--borde);
+}
+
+.grupo:last-child {
+  border-right: none;
+}
+
+.control-etiquetado {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--texto-suave);
+}
+
+.control-etiquetado .valor {
+  min-width: 36px;
+  text-align: right;
+}
+
+.selector-color {
+  width: 28px;
+  height: 22px;
+  padding: 0;
+  border: 1px solid var(--borde);
+  border-radius: 4px;
+  background: none;
+  cursor: pointer;
+}
+
+.boton-texto:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.boton-texto.primario {
+  color: #fff;
+  border-color: var(--acento);
+  background: var(--acento);
+}
+
+.aviso-imagen {
+  background: rgba(217, 119, 75, 0.15);
+  color: var(--texto);
+}
+
+.aviso-imagen[hidden] {
+  display: none;
+}
+
+/* Panel de capas */
+.panel-capas {
+  display: flex;
+  flex-direction: column;
+}
+
+.propiedades-capa {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--borde);
+}
+
+.propiedades-capa .deslizador {
+  width: 90px;
+}
+
+.lista-capas {
+  list-style: none;
+  margin: 0;
+  padding: 4px 0;
+  overflow: auto;
+  flex: 1;
+}
+
+.fila-capa {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border-left: 3px solid transparent;
+  cursor: default;
+  user-select: none;
+}
+
+.fila-capa:hover {
+  background: #2c3036;
+}
+
+.fila-capa.activa {
+  background: rgba(217, 119, 75, 0.14);
+  border-left-color: var(--acento);
+}
+
+.fila-capa.destino {
+  box-shadow: inset 0 2px 0 var(--acento);
+}
+
+.fila-capa .nombre {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fila-capa .detalle {
+  color: var(--texto-suave);
+  font-size: 11px;
+}
+
+.icono {
+  background: none;
+  border: none;
+  color: var(--texto);
+  width: 22px;
+  padding: 0;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.icono.tenue {
+  opacity: 0.35;
+}
+
+.campo-nombre {
+  flex: 1;
+  background: var(--fondo);
+  color: var(--texto);
+  border: 1px solid var(--acento);
+  border-radius: 3px;
+  font: inherit;
+  padding: 1px 4px;
 }

@@ -2,15 +2,17 @@ import { createDockview, themeVisualStudio, type DockviewApi, type IContentRende
 import "./vendor/dockview-8.6.1.css"; // hoja de estilos de dockview (MIT), copiada del paquete «dockview»
 import { PanelProyectos } from "./panels/proyectos";
 import { Visor3D } from "./panels/visor3d";
-import { Lienzo } from "./panels/lienzo";
-import { estado } from "./zona";
+import { PanelLienzo } from "./panels/lienzo";
+import { PanelCapas } from "./panels/capas";
+import { app } from "./estado";
 
-const CLAVE_LAYOUT = "dermap.layout.v1";
+const CLAVE_LAYOUT = "dermap.layout.v2";
 
 const componentes: Record<string, () => IContentRenderer> = {
   proyectos: () => new PanelProyectos(),
   visor3d: () => new Visor3D(),
-  lienzo: () => new Lienzo(),
+  lienzo: () => new PanelLienzo(),
+  capas: () => new PanelCapas(),
 };
 
 const contenedor = document.getElementById("espacio")!;
@@ -37,7 +39,13 @@ function layoutInicial(api: DockviewApi): void {
     component: "proyectos",
     title: "Proyectos",
     position: { referencePanel: "visor3d", direction: "left" },
-    initialWidth: 240,
+    initialWidth: 250,
+  });
+  api.addPanel({
+    id: "capas",
+    component: "capas",
+    title: "Capas",
+    position: { referencePanel: "proyectos", direction: "below" },
   });
 }
 
@@ -69,5 +77,5 @@ document.getElementById("restablecer")!.addEventListener("click", () => layoutIn
 
 // Acceso para las pruebas automáticas en navegador (solo con ?prueba en la URL).
 if (new URLSearchParams(location.search).has("prueba")) {
-  (window as unknown as { dermap: unknown }).dermap = { estado };
+  (window as unknown as { dermap: unknown }).dermap = { app };
 }
