@@ -45,15 +45,34 @@ export async function escribirTextoSeguro(fs: SistemaArchivos, ruta: string, tex
 
 const RAIZ = "Dermap";
 
+/**
+ * Carpeta base: Documentos. Si el sistema no tiene una carpeta Documentos definida (algunos
+ * Linux sin carpetas de usuario XDG), se usa la carpeta personal.
+ */
+async function carpetaBase(): Promise<{ dir: number; ruta: string }> {
+  const fs = await import("@tauri-apps/plugin-fs");
+  const { documentDir, homeDir, join } = await import("@tauri-apps/api/path");
+  try {
+    return { dir: fs.BaseDirectory.Document, ruta: await join(await documentDir(), RAIZ) };
+  } catch {
+    return { dir: fs.BaseDirectory.Home, ruta: await join(await homeDir(), RAIZ) };
+  }
+}
+
+/** Ruta absoluta de la carpeta raíz de Dermap (solo en Tauri). */
+export async function rutaRaiz(): Promise<string> {
+  return (await carpetaBase()).ruta;
+}
+
 async function crearTauri(): Promise<SistemaArchivos> {
   const fs = await import("@tauri-apps/plugin-fs");
-  const { documentDir, join } = await import("@tauri-apps/api/path");
-  const base = { baseDir: fs.BaseDirectory.Document };
+  const { dir, ruta: raizAbsoluta } = await carpetaBase();
+  const base = { baseDir: dir };
   const r = (ruta: string) => (ruta ? `${RAIZ}/${ruta}` : RAIZ);
   if (!(await fs.exists(RAIZ, base))) await fs.mkdir(RAIZ, { ...base, recursive: true });
   return {
     escrituraAtomica: false,
-    descripcion: async () => join(await documentDir(), RAIZ),
+    descripcion: async () => raizAbsoluta,
     existe: (ruta) => fs.exists(r(ruta), base),
     leerTexto: (ruta) => fs.readTextFile(r(ruta), base),
     escribirTexto: (ruta, texto) => fs.writeTextFile(r(ruta), texto, base),
@@ -63,8 +82,7 @@ async function crearTauri(): Promise<SistemaArchivos> {
       (await fs.readDir(r(ruta), base)).map((e) => ({ nombre: e.name, carpeta: e.isDirectory })),
     crearCarpeta: (ruta) => fs.mkdir(r(ruta), { ...base, recursive: true }),
     borrar: (ruta) => fs.remove(r(ruta), { ...base, recursive: true }),
-    renombrar: (de, a) =>
-      fs.rename(r(de), r(a), { oldPathBaseDir: fs.BaseDirectory.Document, newPathBaseDir: fs.BaseDirectory.Document }),
+    renombrar: (de, a) => fs.rename(r(de), r(a), { oldPathBaseDir: dir, newPathBaseDir: dir }),
   };
 }
 

@@ -88,7 +88,11 @@ function activar(p: ProyectoAbierto): void {
     if ((e as CustomEvent<{ afectaDibujo: boolean }>).detail.afectaDibujo) app.actualizarLienzos(p.ordenDeDibujo());
   };
   p.addEventListener("arbol", alCambiarArbol);
-  app.fijarProyecto(p, p.ordenDeDibujo());
+  const orden = p.ordenDeDibujo();
+  app.fijarProyecto(p, orden);
+  // Se abre el último lienzo del árbol para que el panel de dibujo no aparezca vacío.
+  const ultimo = orden[orden.length - 1];
+  if (ultimo) app.abrir(ultimo);
   try {
     localStorage.setItem(CLAVE_ULTIMO, p.carpeta);
   } catch {

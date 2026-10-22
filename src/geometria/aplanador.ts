@@ -17,6 +17,11 @@ export interface OpcionesAplanado {
   extremos?: [number, number];
   /** Iteraciones de SLIM tras la inicialización conforme. */
   iteraciones?: number;
+  /**
+   * Cortes adicionales (RF-25), como caminos de vértices; cada uno debe empezar en un borde.
+   * Reducen la deformación en zonas muy curvas, como las pinzas de un patrón de costura.
+   */
+  cortesExtra?: number[][];
 }
 
 export interface Aplanado {
@@ -27,7 +32,10 @@ export interface Aplanado {
   caras: Int32Array;
   /** Para cada vértice cortado, su vértice en la malla original. */
   origen: Int32Array;
-  /** Vértices originales por los que pasa el corte, en orden (vacío en parches). */
+  /**
+   * Vértices originales por los que pasan los cortes, en orden. El corte principal (vacío en
+   * parches) va primero; los cortes extra le siguen, separados por -1.
+   */
   corte: Int32Array;
   /** σ1 y σ2 por triángulo: estiramiento máximo y mínimo (1 = sin deformación). */
   estiramiento: Float64Array;
@@ -57,6 +65,7 @@ interface Exportaciones {
     v: number, nV: number, f: number, nF: number,
     dx: number, dy: number, dz: number,
     a: number, b: number, iteraciones: number,
+    extra: number, nExtra: number,
   ): number;
   dm_resultado_bordes(): number;
   dm_resultado_volteados(): number;
@@ -92,16 +101,20 @@ export class Aplanador {
     const nV = malla.vertices.length / 3;
     const nF = malla.caras.length / 3;
 
+    const extra = Int32Array.from((opciones.cortesExtra ?? []).flatMap((c, i) => (i ? [-1, ...c] : c)));
     const pV = w.dm_reservar(malla.vertices.byteLength);
     const pF = w.dm_reservar(malla.caras.byteLength);
+    const pE = w.dm_reservar(Math.max(4, extra.byteLength));
     try {
       new Float64Array(w.memory.buffer, pV, malla.vertices.length).set(malla.vertices);
       new Int32Array(w.memory.buffer, pF, malla.caras.length).set(malla.caras);
-      const codigo = w.dm_aplanar(pV, nV, pF, nF, dx, dy, dz, a, b, opciones.iteraciones ?? 30);
+      new Int32Array(w.memory.buffer, pE, extra.length).set(extra);
+      const codigo = w.dm_aplanar(pV, nV, pF, nF, dx, dy, dz, a, b, opciones.iteraciones ?? 30, pE, extra.length);
       if (codigo !== 0) throw new ErrorAplanado(codigo);
     } finally {
       w.dm_liberar(pV);
       w.dm_liberar(pF);
+      w.dm_liberar(pE);
     }
 
     // Se copian los resultados: la memoria del módulo puede crecer y moverse.

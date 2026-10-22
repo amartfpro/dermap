@@ -25,6 +25,33 @@ export function corteSugerido(malla: Malla, direccionExterna: P3): { camino: num
   return { camino, extremos: [a, camino[camino.length - 1]] };
 }
 
+/**
+ * Corte extra (RF-25) hasta el vértice `objetivo`: el camino más corto desde el borde más
+ * cercano, como una pinza de costura. Devuelve los vértices empezando en el borde.
+ */
+export function corteExtraHasta(malla: Malla, objetivo: number): number[] {
+  const bordes = bordesDe(malla);
+  const enBorde = new Uint8Array(malla.vertices.length / 3);
+  for (const b of bordes) for (const i of b) enBorde[i] = 1;
+  if (enBorde[objetivo]) return [];
+  return caminoMinimo(malla, objetivo, enBorde, enBorde).reverse();
+}
+
+/** Vértice de la malla más cercano a un punto. */
+export function verticeMasCercano(malla: Malla, p: P3): number {
+  const v = malla.vertices;
+  let mejor = 0;
+  let distancia = Infinity;
+  for (let i = 0; i < v.length / 3; i++) {
+    const d = (v[3 * i] - p[0]) ** 2 + (v[3 * i + 1] - p[1]) ** 2 + (v[3 * i + 2] - p[2]) ** 2;
+    if (d < distancia) {
+      distancia = d;
+      mejor = i;
+    }
+  }
+  return mejor;
+}
+
 /** Bordes de la malla como listas de vértices (sin ordenar dentro de cada borde). */
 export function bordesDe(malla: Malla): number[][] {
   const usos = new Map<string, number>();

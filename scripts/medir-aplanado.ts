@@ -11,6 +11,7 @@ import { readFileSync } from "node:fs";
 import { Aplanador, type Malla } from "../src/geometria/aplanador";
 import { medirDeformacion } from "../src/geometria/metricas";
 import { longitud, proyectarEnPolilinea, seleccionarPorEje } from "../src/geometria/seleccion";
+import { corteExtraHasta, verticeMasCercano } from "../src/geometria/corte";
 import { ejeDelBrazo, ejeDeLaPierna, leerCuerpo } from "../src/modelos/cuerpo";
 
 const bin = readFileSync(new URL("../src/modelos/cuerpo-base.bin", import.meta.url));
@@ -63,6 +64,27 @@ const informe = (nombre: string, malla: Malla) => {
   console.log(`  ${nombre.padEnd(36)} ${a.tipo.padEnd(7)} p95 ${pct(d.p95).padStart(7)}, ${d.areaDentroDel2.toFixed(0).padStart(3)} %`);
 };
 informe("Cono (control, debe dar 0 %)", conoDeControl());
+{
+  // Manga con tres cortes extra (pinzas) de 12 cm desde la muñeca (RF-25).
+  const punto = (s: number, lado: [number, number, number]): [number, number, number] => {
+    let acc = 0;
+    for (let i = 0; i + 1 < brazo.length; i++) {
+      const [a, b] = [brazo[i], brazo[i + 1]];
+      const l = Math.hypot(b[0] - a[0], b[1] - a[1], b[2] - a[2]);
+      if (s <= acc + l) {
+        const t = (s - acc) / l;
+        return [0, 1, 2].map((k) => a[k] + t * (b[k] - a[k]) + lado[k] * 4) as [number, number, number];
+      }
+      acc += l;
+    }
+    return brazo[brazo.length - 1];
+  };
+  const objetivos: [number, number, number][] = [[0, 1, 0], [0, 0, 1], [0, 0, -1]].map((lado) => punto(largoBrazo - 14, lado as [number, number, number]));
+  const cortesExtra = objetivos.map((p) => corteExtraHasta(manga, verticeMasCercano(manga, p)));
+  const a = aplanador.aplanar(manga, { direccionExterna: [0, 1, 0], cortesExtra });
+  const d = medirDeformacion(manga, a, enAntebrazo);
+  console.log(`  ${"Manga con 3 pinzas de 12 cm (antebrazo)".padEnd(36)} manga   p95 ${pct(d.p95).padStart(7)}, ${d.areaDentroDel2.toFixed(0).padStart(3)} %`);
+}
 informe("Antebrazo (codo → muñeca)", seleccionarPorEje(cuerpo, brazo, hastaCodo + 3, largoBrazo - 2, 7).malla);
 informe("Brazo (hombro → codo)", seleccionarPorEje(cuerpo, brazo, 4, hastaCodo - 3, 8).malla);
 informe("Muslo (cadera → rodilla)", seleccionarPorEje(cuerpo, pierna, 12, hastaRodilla - 4, 11).malla);

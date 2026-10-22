@@ -2,7 +2,7 @@ import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import type { IContentRenderer } from "dockview-core";
 import { aplanarEnSegundoPlano } from "../geometria/cliente";
-import { corteSugerido } from "../geometria/corte";
+import { corteExtraHasta, corteSugerido, verticeMasCercano } from "../geometria/corte";
 import { medirDeformacion } from "../geometria/metricas";
 import { longitud, seleccionarPorEje, submalla, suavizarSeleccion, type Seleccion } from "../geometria/seleccion";
 import { cargarCuerpo, ejeDeLaPierna, ejeDelBrazo, type Cuerpo } from "../modelos/cuerpo";
@@ -61,6 +61,11 @@ export class Visor3D implements IContentRenderer {
   /** Tubo rojo visible y, encima, el mismo semitransparente que se ve a través del cuerpo. */
   private previaCorte = new THREE.Group();
   private corteProgramado = false;
+  /** Cortes extra (RF-25) sobre la selección actual, en vértices de su submalla. */
+  private cortesExtra: number[][] = [];
+  private modoCorte = false;
+  private botonCorte!: HTMLButtonElement;
+  private grupoCortesExtra = new THREE.Group();
   private pintando: "añadir" | "quitar" | null = null;
   private raycaster = new THREE.Raycaster();
 
@@ -100,6 +105,11 @@ export class Visor3D implements IContentRenderer {
       this.botonSeleccionar,
       radio,
       boton("Limpiar", () => this.fijarSeleccion([])),
+      (this.botonCorte = titulo(
+        boton("Corte extra", () => this.alternarModoCorte()),
+        "Haz clic en la zona para abrir un corte desde el borde hasta ese punto (como una pinza): reduce la deformación en zonas muy curvas",
+      )),
+      titulo(boton("Quitar cortes", () => this.quitarCortesExtra()), "Quitar los cortes extra"),
       boton("Aplanar zona", () => void this.aplanar()),
       titulo(boton("Imagen 3D…", () => void this.exportarImagen()), "Guardar la vista actual en PNG para enseñarla al cliente"),
     );
@@ -165,6 +175,7 @@ export class Visor3D implements IContentRenderer {
     this.escena.add(this.zonas3d);
     // Su geometría cambia con cada pincelada: sin recorte por frustum para no recalcular límites.
     this.resaltado.frustumCulled = false;
+    this.resaltado.visible = false;
     this.escena.add(this.resaltado);
     const solido = new THREE.Mesh(new THREE.BufferGeometry(), new THREE.MeshBasicMaterial({ color: 0xe0483e }));
     const traslucido = new THREE.Mesh(
@@ -175,6 +186,7 @@ export class Visor3D implements IContentRenderer {
     this.previaCorte.add(solido, traslucido);
     this.previaCorte.visible = false;
     this.escena.add(this.previaCorte);
+    this.escena.add(this.grupoCortesExtra);
   }
 
   private async cargar(): Promise<void> {
@@ -192,6 +204,9 @@ export class Visor3D implements IContentRenderer {
     );
     this.escena.add(this.mallaCuerpo);
     this.resaltado.geometry.setAttribute("position", geometria.getAttribute("position"));
+    // Sin índices dibujaría todos los vértices del cuerpo como triángulos sueltos.
+    this.resaltado.geometry.setIndex(new THREE.BufferAttribute(new Uint32Array(0), 1));
+    this.resaltado.visible = false;
     this.precalcularCaras();
     this.verVista(0);
     app.fijarCuerpo(this.cuerpo);
@@ -240,7 +255,57 @@ export class Visor3D implements IContentRenderer {
 
   // ── Selección a pincel ────────────────────────────────────────────────────────
 
+  private alternarModoCorte(): void {
+    this.modoCorte = !this.modoCorte;
+    if (this.modoCorte && this.modoSeleccion) this.alternarSeleccion();
+    this.botonCorte.classList.toggle("activo", this.modoCorte);
+    this.renderer.domElement.style.cursor = this.modoCorte ? "crosshair" : "";
+    if (this.modoCorte) this.estadoTexto.textContent = "Haz clic en la zona seleccionada donde debe terminar el corte extra.";
+  }
+
+  private añadirCorteExtra(e: PointerEvent): void {
+    const seleccion = this.seleccionActual();
+    const golpe = this.lanzarRayo(e);
+    if (!seleccion || !golpe) return;
+    const objetivo = verticeMasCercano(seleccion.malla, golpe.point.toArray() as P3);
+    const camino = corteExtraHasta(seleccion.malla, objetivo);
+    if (camino.length < 2) {
+      this.estadoTexto.textContent = "Ese punto está en el borde: elige uno dentro de la zona.";
+      return;
+    }
+    this.cortesExtra.push(camino);
+    this.pintarCortesExtra();
+    this.estadoTexto.textContent = `${this.cortesExtra.length} ${this.cortesExtra.length === 1 ? "corte extra" : "cortes extra"}. Pulsa «Aplanar zona» o añade más.`;
+  }
+
+  private quitarCortesExtra(): void {
+    this.cortesExtra = [];
+    this.pintarCortesExtra();
+  }
+
+  private pintarCortesExtra(): void {
+    for (const hijo of [...this.grupoCortesExtra.children] as THREE.Mesh[]) {
+      this.grupoCortesExtra.remove(hijo);
+      hijo.geometry.dispose();
+    }
+    const seleccion = this.seleccionActual();
+    if (!seleccion || !this.normalesCuerpo) return;
+    const n = this.normalesCuerpo;
+    for (const camino of this.cortesExtra) {
+      const puntos = camino.map((i) => {
+        const b = seleccion.verticeBase[i];
+        return new THREE.Vector3().fromArray(seleccion.malla.vertices, 3 * i).add(new THREE.Vector3(n.getX(b), n.getY(b), n.getZ(b)).multiplyScalar(0.15));
+      });
+      const geometria = tubo(puntos, 0.15);
+      this.grupoCortesExtra.add(
+        new THREE.Mesh(geometria, new THREE.MeshBasicMaterial({ color: 0xf0a020 })),
+        Object.assign(new THREE.Mesh(geometria, new THREE.MeshBasicMaterial({ color: 0xf0a020, transparent: true, opacity: 0.35, depthTest: false, depthWrite: false })), { renderOrder: 10 }),
+      );
+    }
+  }
+
   private alternarSeleccion(): void {
+    if (!this.modoSeleccion && this.modoCorte) this.alternarModoCorte();
     this.modoSeleccion = !this.modoSeleccion;
     this.botonSeleccionar.classList.toggle("activo", this.modoSeleccion);
     // En modo selección el botón izquierdo pinta; la cámara gira con el derecho.
@@ -250,6 +315,10 @@ export class Visor3D implements IContentRenderer {
   }
 
   private empezarPincel(e: PointerEvent): void {
+    if (this.modoCorte && e.button === 0) {
+      this.añadirCorteExtra(e);
+      return;
+    }
     if (!this.modoSeleccion || e.button !== 0 || !this.cuerpo) return;
     this.pintando = e.shiftKey ? "quitar" : "añadir";
     this.renderer.domElement.setPointerCapture(e.pointerId);
@@ -355,6 +424,7 @@ export class Visor3D implements IContentRenderer {
   private actualizarResaltado(): void {
     if (!this.cuerpo) return;
     this.seleccionCacheada = null;
+    if (this.cortesExtra.length) this.quitarCortesExtra();
     this.programarCorte();
     const indices = new Uint32Array(this.seleccionados.size * 3);
     let k = 0;
@@ -386,7 +456,7 @@ export class Visor3D implements IContentRenderer {
       const corte = corteSugerido(seleccion.malla, haciaCamara.toArray() as P3);
       const { aplanado, milisegundos } = await aplanarEnSegundoPlano(
         seleccion.malla,
-        { direccionExterna: haciaCamara.toArray() as P3, extremos: corte?.extremos },
+        { direccionExterna: haciaCamara.toArray() as P3, extremos: corte?.extremos, cortesExtra: this.cortesExtra },
         derecha.toArray() as P3,
         haciaCamara.toArray() as P3,
       );
@@ -491,11 +561,20 @@ export class Visor3D implements IContentRenderer {
       resalte.add(linea);
     }
     if (aplanado.corte.length) {
-      // El corte se da en vértices de la malla de la zona; se busca un vértice cortado de cada uno.
+      // Los cortes se dan en vértices de la malla de la zona (separados por -1); se busca un
+      // vértice cortado de cada uno.
       const cortado = new Map<number, number>();
       aplanado.origen.forEach((o, i) => cortado.set(o, i));
-      const puntos = Array.from(aplanado.corte, (v) => punto(cortado.get(v)!, 0.12));
-      resalte.add(new THREE.Mesh(tubo(puntos, 0.12), new THREE.MeshBasicMaterial({ color: 0xe0483e })));
+      let tramo: THREE.Vector3[] = [];
+      const cerrarTramo = () => {
+        if (tramo.length > 1) resalte.add(new THREE.Mesh(tubo(tramo, 0.12), new THREE.MeshBasicMaterial({ color: 0xe0483e })));
+        tramo = [];
+      };
+      for (const v of aplanado.corte) {
+        if (v < 0) cerrarTramo();
+        else tramo.push(punto(cortado.get(v)!, 0.12));
+      }
+      cerrarTramo();
     }
     grupo.add(resalte);
 

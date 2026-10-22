@@ -114,11 +114,11 @@ int extremo_por_direccion(const Eigen::MatrixXd& V, const std::vector<int>& bord
 }
 
 // Marca como corte, en la convención de libigl (arista j de la cara f = F(f,j) → F(f,j+1)),
-// todas las aristas que unen vértices consecutivos del camino.
-Eigen::MatrixXi marcas_de_corte(const Eigen::MatrixXi& F, const std::vector<int>& camino) {
+// todas las aristas que unen vértices consecutivos de los caminos (separados por -1).
+Eigen::MatrixXi marcas_de_corte(const Eigen::MatrixXi& F, const std::vector<int>& caminos) {
   std::vector<Arista> aristas;
-  for (size_t i = 0; i + 1 < camino.size(); ++i)
-    aristas.push_back(std::minmax(camino[i], camino[i + 1]));
+  for (size_t i = 0; i + 1 < caminos.size(); ++i)
+    if (caminos[i] >= 0 && caminos[i + 1] >= 0) aristas.push_back(std::minmax(caminos[i], caminos[i + 1]));
   std::sort(aristas.begin(), aristas.end());
   Eigen::MatrixXi C = Eigen::MatrixXi::Zero(F.rows(), 3);
   for (int f = 0; f < F.rows(); ++f)
@@ -174,9 +174,11 @@ EXPORTAR(dm_liberar) void dm_liberar(void* p) { std::free(p); }
 // extremo_a, extremo_b: vértices de inicio y fin del corte en cada borde, o -1 para
 //            elegirlos automáticamente.
 // iteraciones: iteraciones de SLIM tras la inicialización con LSCM.
+// extra, nExtra: cortes adicionales (RF-25) como caminos de vértices separados por -1; cada
+//            uno debe empezar en un borde. Se devuelven en dm_resultado_corte tras el principal.
 EXPORTAR(dm_aplanar)
 int dm_aplanar(const double* vertices, int nV, const int* caras, int nF, double dx, double dy,
-               double dz, int extremo_a, int extremo_b, int iteraciones) {
+               double dz, int extremo_a, int extremo_b, int iteraciones, const int* extra, int nExtra) {
   resultado = Resultado{};
   Eigen::MatrixXd V = Eigen::Map<const Eigen::Matrix<double, Eigen::Dynamic, 3, Eigen::RowMajor>>(vertices, nV, 3);
   Eigen::MatrixXi F = Eigen::Map<const Eigen::Matrix<int, Eigen::Dynamic, 3, Eigen::RowMajor>>(caras, nF, 3);
@@ -190,6 +192,7 @@ int dm_aplanar(const double* vertices, int nV, const int* caras, int nF, double 
   Eigen::MatrixXd Vc = V;
   Eigen::MatrixXi Fc = F;
   Eigen::VectorXi I = Eigen::VectorXi::LinSpaced(nV, 0, nV - 1);
+  std::vector<int> cortes;  // todos los caminos a cortar, separados por -1
 
   // 2. Corte de borde a borde (solo mangas).
   if (bordes.size() == 2) {
@@ -209,7 +212,21 @@ int dm_aplanar(const double* vertices, int nV, const int* caras, int nF, double 
     }
     resultado.corte = camino_minimo(V, F, a, destino, en_borde);
     if (resultado.corte.size() < 2) return resultado.codigo = CORTE_IMPOSIBLE;
-    const Eigen::MatrixXi C = marcas_de_corte(F, resultado.corte);
+    cortes = resultado.corte;
+  }
+
+  // Cortes adicionales (pinzas): se añaden a las aristas que se abren.
+  if (extra && nExtra > 0) {
+    std::vector<int> adicionales(extra, extra + nExtra);
+    for (int v : adicionales)
+      if (v >= nV) return resultado.codigo = CORTE_NO_VALIDO;
+    if (!cortes.empty()) cortes.push_back(-1);
+    cortes.insert(cortes.end(), adicionales.begin(), adicionales.end());
+    if (!resultado.corte.empty()) resultado.corte.push_back(-1);
+    resultado.corte.insert(resultado.corte.end(), adicionales.begin(), adicionales.end());
+  }
+  if (!cortes.empty()) {
+    const Eigen::MatrixXi C = marcas_de_corte(F, cortes);
     igl::cut_mesh(Vc, Fc, C, I);
   }
 

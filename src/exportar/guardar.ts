@@ -1,6 +1,6 @@
 import { app } from "../estado";
 import { nombreSeguro } from "../proyectos/formato";
-import { enTauri, sistemaArchivos } from "../proyectos/sistema-archivos";
+import { enTauri, rutaRaiz, sistemaArchivos } from "../proyectos/sistema-archivos";
 
 /**
  * Guarda un archivo exportado. En la aplicación de escritorio pregunta dónde con el diálogo
@@ -16,12 +16,12 @@ export async function guardarExportacion(
   if (enTauri()) {
     const { save } = await import("@tauri-apps/plugin-dialog");
     const { writeFile } = await import("@tauri-apps/plugin-fs");
-    const { documentDir, join } = await import("@tauri-apps/api/path");
+    const { join } = await import("@tauri-apps/api/path");
     let ruta = archivo;
     if (app.proyecto) {
       // La carpeta debe existir para que el diálogo la proponga.
       await (await sistemaArchivos()).crearCarpeta(`${app.proyecto.carpeta}/exportaciones`);
-      ruta = await join(await documentDir(), "Dermap", app.proyecto.carpeta, "exportaciones", archivo);
+      ruta = await join(await rutaRaiz(), app.proyecto.carpeta, "exportaciones", archivo);
     }
     const elegida = await save({ defaultPath: ruta, filters: [{ name: tipo.descripcion, extensions: [tipo.extension] }] });
     if (!elegida) return null;

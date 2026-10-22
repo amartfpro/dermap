@@ -142,8 +142,10 @@ export class DocumentoLienzo extends EventTarget {
   /**
    * Dibuja las capas visibles (con el trazo en curso) que tocan `rect` en `ctx`, cuya
    * transformación ya debe llevar del documento al destino. El llamador recorta a `rect`.
+   * `solape` (en px del documento) agranda cada tesela al dibujarla escalada, para que el
+   * suavizado de los bordes no deje rendijas entre teselas vecinas.
    */
-  componer(ctx: Contexto2D, rect: Rect, filtro: (c: Capa) => boolean = (c) => c.visible): void {
+  componer(ctx: Contexto2D, rect: Rect, filtro: (c: Capa) => boolean = (c) => c.visible, solape = 0): void {
     for (const capa of this.capas) {
       if (!filtro(capa)) continue;
       ctx.globalAlpha = capa.opacidad;
@@ -155,7 +157,10 @@ export class DocumentoLienzo extends EventTarget {
         const buffer = trazo?.buffer.get(clave);
         let fuente: Lamina | undefined = tesela;
         if (buffer && trazo) fuente = this.combinar(tesela, buffer, trazo);
-        if (fuente) ctx.drawImage(fuente, tx * TESELA, ty * TESELA);
+        if (fuente)
+          solape > 0
+            ? ctx.drawImage(fuente, tx * TESELA, ty * TESELA, TESELA + solape, TESELA + solape)
+            : ctx.drawImage(fuente, tx * TESELA, ty * TESELA);
       }
     }
     ctx.globalAlpha = 1;

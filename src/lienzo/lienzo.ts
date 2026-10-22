@@ -165,7 +165,7 @@ export class Lienzo extends EventTarget {
     t.clearRect(previa.x0, previa.y0, ancho, alto);
     t.setTransform(s, 0, 0, s, 0, 0);
     t.imageSmoothingQuality = "high";
-    this.doc.componer(t, { x0: previa.x0 / s, y0: previa.y0 / s, x1: previa.x1 / s, y1: previa.y1 / s });
+    this.doc.componer(t, { x0: previa.x0 / s, y0: previa.y0 / s, x1: previa.x1 / s, y1: previa.y1 / s }, undefined, s < 1 ? 1 / s : 0);
     t.restore();
 
     const x = contexto(this.textura);

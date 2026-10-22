@@ -17,6 +17,12 @@
         },
         {
           "path": "$DOCUMENT/Dermap/**"
+        },
+        {
+          "path": "$HOME/Dermap"
+        },
+        {
+          "path": "$HOME/Dermap/**"
         }
       ]
     },

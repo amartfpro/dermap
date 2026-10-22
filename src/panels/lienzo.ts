@@ -570,7 +570,7 @@ export class PanelLienzo implements IContentRenderer {
       // De lejos basta la tinta de la vista previa (mucho más barata que las teselas).
       ctx.drawImage(l.tinta, 0, 0, geo.ancho, geo.alto);
     } else {
-      l.doc.componer(ctx, visible);
+      l.doc.componer(ctx, visible, undefined, 1 / escala);
     }
     ctx.restore();
 

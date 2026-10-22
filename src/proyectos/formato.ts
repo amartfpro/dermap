@@ -84,11 +84,14 @@ function relleno8(n: number): number {
   return Math.ceil(n / 8) * 8;
 }
 
-/** Nombre de carpeta seguro en Windows y macOS. */
+/** Nombre de carpeta seguro en Windows y macOS (sin caracteres ni nombres reservados). */
 export function nombreSeguro(nombre: string): string {
   const limpio = nombre
     .replace(/[<>:"/\\|?*\u0000-\u001f]/g, "")
     .replace(/[. ]+$/, "")
-    .trim();
-  return limpio || "Sin nombre";
+    .trim()
+    .slice(0, 80);
+  if (!limpio) return "Sin nombre";
+  // Windows no admite estos nombres de dispositivo como nombre de carpeta.
+  return /^(con|prn|aux|nul|com\d|lpt\d)$/i.test(limpio) ? `${limpio}_` : limpio;
 }
