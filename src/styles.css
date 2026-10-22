@@ -843,3 +843,45 @@ body {
 .versiones:empty {
   display: none;
 }
+
+/* Ayuda */
+.modal-ayuda {
+  width: min(980px, calc(100vw - 32px));
+}
+
+.ayuda-columnas {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
+  gap: 6px 26px;
+}
+
+.ayuda-columnas h3 {
+  margin: 10px 0 6px;
+  font-size: 13px;
+  color: var(--acento);
+}
+
+.ayuda-columnas dl {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 4px 14px;
+  margin: 0;
+}
+
+.ayuda-columnas dt {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12px;
+  color: var(--texto);
+  white-space: nowrap;
+}
+
+.ayuda-columnas dd {
+  margin: 0;
+  color: var(--texto-suave);
+}
+
+.ayuda-columnas .flujo dt {
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+}

@@ -3,6 +3,7 @@ import { app } from "../estado";
 import { PX_POR_MM } from "../lienzo/geometria-zona";
 import { ImagenFlotante } from "../lienzo/imagen";
 import { PRESETS } from "../lienzo/pincel";
+import { nuevoId } from "../lienzo/capa";
 import { copiarCapa, obtenerCopia } from "../lienzo/portapapeles";
 import { puntosDeForma, rellenar, restringir, Seleccion } from "../lienzo/herramientas";
 import type { Herramienta } from "../lienzo/pincel";
@@ -644,6 +645,16 @@ export class PanelLienzo implements IContentRenderer {
       e.preventDefault();
       const sel = this.seleccion;
       void sel.copiar(this.lienzo).then((ok) => ok && this.lienzo && sel.borrar(this.lienzo, "Cortar"));
+    } else if (ctrl && e.shiftKey && tecla === "n" && this.lienzo) {
+      e.preventDefault();
+      this.lienzo.historial.registrar(this.lienzo.doc.instantaneaCapas("Nueva capa"));
+      this.lienzo.doc.añadirCapa();
+    } else if (ctrl && tecla === "j" && this.lienzo) {
+      e.preventDefault();
+      const l = this.lienzo;
+      const origen = l.doc.activa;
+      l.historial.registrar(l.doc.instantaneaCapas("Duplicar capa"));
+      l.doc.insertarCapa(origen.duplicar(nuevoId(), `${origen.nombre} copia`), l.doc.capas.indexOf(origen) + 1);
     } else if (ctrl && tecla === "d") {
       e.preventDefault();
       this.seleccion = null;
@@ -663,6 +674,12 @@ export class PanelLienzo implements IContentRenderer {
       app.cambiarAjustes({ herramienta: "pincel" });
     } else if (tecla === "e") {
       app.cambiarAjustes({ herramienta: "goma" });
+    } else if (e.altKey && (e.key === "ArrowUp" || e.key === "ArrowDown") && this.lienzo) {
+      // Capa de encima o de debajo.
+      e.preventDefault();
+      const capas = this.lienzo.doc.capas;
+      const i = capas.indexOf(this.lienzo.doc.activa) + (e.key === "ArrowUp" ? 1 : -1);
+      if (i >= 0 && i < capas.length) this.lienzo.doc.seleccionarCapa(capas[i]);
     } else if (tecla === "g") {
       app.cambiarAjustes({ herramienta: "relleno" });
     } else if (tecla === "l") {

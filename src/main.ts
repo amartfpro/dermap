@@ -3,6 +3,7 @@ import "./vendor/dockview-8.6.1.css"; // hoja de estilos de dockview (MIT), copi
 import { PanelProyectos } from "./panels/proyectos";
 import { Visor3D, visorActual } from "./panels/visor3d";
 import { abrirFicha } from "./panels/ficha";
+import { abrirAyuda } from "./panels/ayuda";
 import { PanelLienzo } from "./panels/lienzo";
 import { PanelCapas } from "./panels/capas";
 import { app } from "./estado";
@@ -77,6 +78,7 @@ dock.onDidLayoutChange(() => {
 });
 
 document.getElementById("restablecer")!.addEventListener("click", () => layoutInicial(dock));
+document.getElementById("ayuda")!.addEventListener("click", abrirAyuda);
 document.getElementById("ficha")!.addEventListener("click", () => void abrirFicha());
 document.getElementById("presentar")!.addEventListener("click", () => visorActual()?.presentar(true));
 
@@ -96,6 +98,9 @@ window.addEventListener("keydown", (e) => {
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s") {
     e.preventDefault();
     void app.proyecto?.guardar();
+  } else if (e.key === "F1") {
+    e.preventDefault();
+    abrirAyuda();
   } else if (e.key === "F5") {
     e.preventDefault(); // en la aplicación, F5 no recarga: presenta
     visorActual()?.presentar(true);

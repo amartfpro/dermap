@@ -111,6 +111,20 @@ export class Visor3D implements IContentRenderer {
     this.ultimoActivo = app.activo;
   };
   private ultimoActivo: Lienzo | null = null;
+  /** Atajos del visor (con el ratón encima): 1–9 vistas, F zona activa, S seleccionar, L lazo. */
+  private alTecla = (e: KeyboardEvent) => {
+    const t = e.target as HTMLElement | null;
+    if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable)) return;
+    if (e.ctrlKey || e.metaKey || e.altKey || !this.element.matches(":hover") || this.presentando) return;
+    const n = Number(e.key);
+    if (n >= 1 && n <= VISTAS.length) this.verVista(n - 1);
+    else if (e.key.toLowerCase() === "f" && app.activo) this.encuadrarZona(app.activo);
+    else if (e.key.toLowerCase() === "s") this.alternarSeleccion();
+    else if (e.key.toLowerCase() === "l") this.alternarLazo();
+    else if (e.key === "Enter") void this.aplanar();
+    else return;
+    e.preventDefault();
+  };
 
   constructor() {
     this.element = document.createElement("div");
@@ -181,6 +195,7 @@ export class Visor3D implements IContentRenderer {
     app.addEventListener("lienzos", this.alCambiarLienzos);
     app.addEventListener("activo", this.alCambiarActivo);
     app.addEventListener("proyecto", this.alCambiarProyecto);
+    window.addEventListener("keydown", this.alTecla);
 
     const lienzo = this.renderer.domElement;
     lienzo.addEventListener("pointerdown", (e) => this.empezarPincel(e));
@@ -342,6 +357,7 @@ export class Visor3D implements IContentRenderer {
     app.removeEventListener("lienzos", this.alCambiarLienzos);
     app.removeEventListener("activo", this.alCambiarActivo);
     app.removeEventListener("proyecto", this.alCambiarProyecto);
+    window.removeEventListener("keydown", this.alTecla);
     this.proyectoSuscrito?.removeEventListener("modelo", this.alCambiarModelo);
   }
 
