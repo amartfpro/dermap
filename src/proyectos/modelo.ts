@@ -1,8 +1,16 @@
 /**
- * Modelo de datos de un proyecto (ver «Documento de diseño», sección Modelo de datos).
+ * Formato de los proyectos en disco (ver «Documento de diseño», Formato de archivos).
  * Si cambia la forma de estos datos, se sube VERSION_FORMATO y se añade una migración.
+ *
+ *   <Proyecto>/
+ *     proyecto.json                  ficha, modelo y árbol (carpetas, orden y visibilidad)
+ *     <nombre>_<id>.lienzo/
+ *       lienzo.json                  tamaño, capas y ajustes
+ *       zona.bin                     zona del cuerpo y aplanado (binario)
+ *       miniatura.png
+ *       capas/<id de capa>/t_<x>_<y>.png   solo las teselas con contenido
  */
-export const VERSION_FORMATO = 1;
+export const VERSION_FORMATO = 2;
 
 export interface Proyecto {
   version: number;
@@ -10,6 +18,7 @@ export interface Proyecto {
   nombre: string;
   ficha: FichaCliente;
   modelo: ModeloCuerpo;
+  /** Árbol de carpetas y lienzos. El orden (en profundidad) es el orden de dibujo en el 3D. */
   arbol: NodoArbol[];
 }
 
@@ -24,10 +33,53 @@ export interface ModeloCuerpo {
   altura: number; // cm
   complexion: number; // 0 = delgada, 1 = robusta
   tonoPiel: string; // color CSS
-  versionMalla: string; // versión de la malla base de MakeHuman
+  versionMalla: string; // versión de la malla base
 }
 
-/** Carpeta o lienzo del árbol. El orden del array es el orden de dibujo en el 3D. */
-export type NodoArbol =
-  | { tipo: "carpeta"; id: string; nombre: string; visible: boolean; hijos: NodoArbol[] }
-  | { tipo: "lienzo"; id: string; nombre: string; visible: boolean; carpeta: string };
+/**
+ * Carpeta o lienzo del árbol. Las carpetas son virtuales (solo existen aquí); cada lienzo
+ * guarda en `carpeta` el nombre de su carpeta .lienzo dentro del proyecto.
+ */
+export type NodoArbol = NodoCarpeta | NodoLienzo;
+
+export interface NodoCarpeta {
+  tipo: "carpeta";
+  id: string;
+  nombre: string;
+  visible: boolean;
+  abierta: boolean;
+  hijos: NodoArbol[];
+}
+
+export interface NodoLienzo {
+  tipo: "lienzo";
+  id: string;
+  nombre: string;
+  visible: boolean;
+  carpeta: string;
+}
+
+export interface DatosLienzo {
+  version: number;
+  id: string;
+  nombre: string;
+  ppp: number;
+  ancho: number;
+  alto: number;
+  cuadricula: boolean;
+  tonoPiel: string;
+  tipo: "parche" | "manga";
+  capaActiva: string;
+  /** De abajo arriba. */
+  capas: DatosCapa[];
+}
+
+export interface DatosCapa {
+  id: string;
+  nombre: string;
+  visible: boolean;
+  bloqueada: boolean;
+  opacidad: number;
+  modo: string;
+  enStencil: boolean;
+}

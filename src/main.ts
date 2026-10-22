@@ -5,6 +5,8 @@ import { Visor3D } from "./panels/visor3d";
 import { PanelLienzo } from "./panels/lienzo";
 import { PanelCapas } from "./panels/capas";
 import { app } from "./estado";
+import { abrirUltimo } from "./proyectos/gestor";
+import { enTauri, sistemaArchivos } from "./proyectos/sistema-archivos";
 
 const CLAVE_LAYOUT = "dermap.layout.v2";
 
@@ -75,7 +77,41 @@ dock.onDidLayoutChange(() => {
 
 document.getElementById("restablecer")!.addEventListener("click", () => layoutInicial(dock));
 
+// ── Proyectos: reabrir el último, guardar con Ctrl+S y antes de cerrar ───────────
+
+void abrirUltimo((texto) => app.dispatchEvent(new CustomEvent("progreso", { detail: texto }))).catch((error) => console.error("No se pudo abrir el último proyecto", error));
+
+window.addEventListener("keydown", (e) => {
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s") {
+    e.preventDefault();
+    void app.proyecto?.guardar();
+  }
+});
+
+if (enTauri()) {
+  // Al cerrar la ventana se guarda lo pendiente y luego se cierra de verdad.
+  void import("@tauri-apps/api/window").then(({ getCurrentWindow }) => {
+    const ventana = getCurrentWindow();
+    void ventana.onCloseRequested(async (evento) => {
+      if (!app.proyecto?.hayCambios) return;
+      evento.preventDefault();
+      try {
+        await app.proyecto.guardar();
+      } finally {
+        await ventana.destroy();
+      }
+    });
+  });
+} else {
+  window.addEventListener("beforeunload", (e) => {
+    if (app.proyecto?.hayCambios) {
+      void app.proyecto.guardar();
+      e.preventDefault();
+    }
+  });
+}
+
 // Acceso para las pruebas automáticas en navegador (solo con ?prueba en la URL).
 if (new URLSearchParams(location.search).has("prueba")) {
-  (window as unknown as { dermap: unknown }).dermap = { app };
+  (window as unknown as { dermap: unknown }).dermap = { app, sistemaArchivos };
 }

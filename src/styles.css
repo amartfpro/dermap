@@ -367,3 +367,139 @@ body {
   font: inherit;
   padding: 1px 4px;
 }
+
+/* Pestañas de lienzos abiertos */
+.pestanas {
+  display: flex;
+  gap: 1px;
+  background: var(--fondo);
+  border-bottom: 1px solid var(--borde);
+  overflow-x: auto;
+  flex: none;
+}
+
+.pestanas[hidden] {
+  display: none;
+}
+
+.pestana {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 4px 4px 10px;
+  color: var(--texto-suave);
+  background: #262930;
+  cursor: pointer;
+  white-space: nowrap;
+  max-width: 180px;
+  border-top: 2px solid transparent;
+}
+
+.pestana span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pestana.activa {
+  color: var(--texto);
+  background: var(--fondo-panel);
+  border-top-color: var(--acento);
+}
+
+/* Panel de proyectos */
+.selector-proyecto {
+  flex: 1;
+  min-width: 0;
+}
+
+.formulario-en-linea {
+  display: flex;
+  gap: 6px;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--borde);
+}
+
+.formulario-en-linea[hidden],
+.herramientas[hidden] {
+  display: none;
+}
+
+.panel-proyectos .arbol {
+  flex: 1;
+  overflow: auto;
+  padding: 4px 0;
+}
+
+.fila-arbol {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px 3px 6px;
+  cursor: default;
+  user-select: none;
+  border-left: 3px solid transparent;
+}
+
+.fila-arbol:hover {
+  background: #2c3036;
+}
+
+.fila-arbol.activa {
+  background: rgba(217, 119, 75, 0.14);
+  border-left-color: var(--acento);
+}
+
+.fila-arbol.oculta .nombre,
+.fila-arbol.oculta .tipo {
+  opacity: 0.45;
+}
+
+.fila-arbol.destino-dentro {
+  box-shadow: inset 0 0 0 1px var(--acento);
+}
+
+.fila-arbol.destino-antes {
+  box-shadow: inset 0 2px 0 var(--acento);
+}
+
+.fila-arbol .flecha {
+  width: 12px;
+  color: var(--texto-suave);
+  cursor: pointer;
+}
+
+.fila-arbol .tipo {
+  color: var(--texto-suave);
+  width: 14px;
+}
+
+.fila-arbol .nombre {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fila-arbol .acciones-fila {
+  visibility: hidden;
+}
+
+.fila-arbol:hover .acciones-fila {
+  visibility: visible;
+}
+
+.pie-panel {
+  padding: 6px 10px;
+  border-top: 1px solid var(--borde);
+  color: var(--texto-suave);
+  font-size: 12px;
+  flex: none;
+}
+
+.pie-panel.error {
+  color: #e0483e;
+}
+
+.fila-arbol.dañada .nombre {
+  color: #e0483e;
+}

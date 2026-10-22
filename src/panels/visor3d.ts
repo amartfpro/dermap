@@ -6,6 +6,7 @@ import { medirDeformacion } from "../geometria/metricas";
 import { longitud, seleccionarPorEje, submalla, suavizarSeleccion, type Seleccion } from "../geometria/seleccion";
 import { cargarCuerpo, ejeDeLaPierna, ejeDelBrazo, type Cuerpo } from "../modelos/cuerpo";
 import { app } from "../estado";
+import { añadirLienzo } from "../proyectos/gestor";
 import { nuevoId } from "../lienzo/capa";
 import { Lienzo } from "../lienzo/lienzo";
 import { contexto, crearLamina, RegionSucia, type Rect } from "../lienzo/teselas";
@@ -334,7 +335,7 @@ export class Visor3D implements IContentRenderer {
         verticeBase: seleccion.verticeBase,
       });
       this.fijarSeleccion([]);
-      app.añadirLienzo(lienzo);
+      await añadirLienzo(lienzo);
       const tipo = aplanado.tipo === "manga" ? "Manga aplanada (con corte)" : "Parche aplanado";
       const [w, h] = lienzo.geo.tamanoCm;
       this.estadoTexto.textContent =

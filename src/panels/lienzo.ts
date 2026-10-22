@@ -31,6 +31,7 @@ export class PanelLienzo implements IContentRenderer {
   private aviso: HTMLElement;
   private info: HTMLElement;
   private barra: HTMLElement;
+  private pestanas: HTMLElement;
   private barraImagen: HTMLElement;
   private observador: ResizeObserver;
 
@@ -47,7 +48,11 @@ export class PanelLienzo implements IContentRenderer {
 
   private controles: Record<string, HTMLInputElement | HTMLButtonElement> = {};
 
-  private alCambiarActivo = () => this.mostrar(app.activo);
+  private alCambiarActivo = () => {
+    this.mostrar(app.activo);
+    this.pintarPestanas();
+  };
+  private alCambiarAbiertos = () => this.pintarPestanas();
   private alCambiarAjustes = () => this.sincronizarControles();
   private alCambiarPrevia = () => this.pedirRepintado();
   private alCambiarHistorial = () => this.sincronizarControles();
@@ -58,6 +63,9 @@ export class PanelLienzo implements IContentRenderer {
     this.element = document.createElement("div");
     this.element.className = "panel panel-lienzo";
     this.element.tabIndex = -1;
+
+    this.pestanas = document.createElement("div");
+    this.pestanas.className = "pestanas";
 
     this.barra = document.createElement("div");
     this.barra.className = "herramientas envolver";
@@ -85,7 +93,7 @@ export class PanelLienzo implements IContentRenderer {
     this.info = document.createElement("div");
     this.info.className = "etiqueta-flotante";
 
-    this.element.append(this.barra, this.barraImagen, this.canvas, this.aviso, this.info);
+    this.element.append(this.pestanas, this.barra, this.barraImagen, this.canvas, this.aviso, this.info);
 
     this.canvas.addEventListener("pointerdown", (e) => this.punteroAbajo(e));
     this.canvas.addEventListener("pointermove", (e) => this.punteroMovido(e));
@@ -98,6 +106,8 @@ export class PanelLienzo implements IContentRenderer {
     this.canvas.addEventListener("wheel", (e) => this.rueda(e), { passive: false });
     this.canvas.addEventListener("contextmenu", (e) => e.preventDefault());
     app.addEventListener("activo", this.alCambiarActivo);
+    app.addEventListener("abiertos", this.alCambiarAbiertos);
+    app.addEventListener("lienzos", this.alCambiarAbiertos);
     app.addEventListener("ajustes", this.alCambiarAjustes);
     window.addEventListener("keydown", this.alTeclaAbajo);
     window.addEventListener("keyup", this.alTeclaArriba);
@@ -106,6 +116,34 @@ export class PanelLienzo implements IContentRenderer {
     this.observador.observe(this.element);
     instancias.push(this);
     this.mostrar(app.activo);
+    this.pintarPestanas();
+  }
+
+  /** Pestañas de los lienzos abiertos (RF-42), como los documentos de un editor. */
+  private pintarPestanas(): void {
+    this.pestanas.replaceChildren();
+    this.pestanas.hidden = app.abiertos.length === 0;
+    for (const l of app.abiertos) {
+      const p = document.createElement("div");
+      p.className = "pestana" + (l === app.activo ? " activa" : "");
+      p.title = l.nombre;
+      const nombre = document.createElement("span");
+      nombre.textContent = l.nombre;
+      const cerrar = document.createElement("button");
+      cerrar.className = "icono";
+      cerrar.textContent = "×";
+      cerrar.title = "Cerrar pestaña (el lienzo sigue en el proyecto y en el 3D)";
+      cerrar.addEventListener("click", (e) => {
+        e.stopPropagation();
+        app.cerrar(l);
+      });
+      p.append(nombre, cerrar);
+      p.addEventListener("click", () => app.activar(l));
+      p.addEventListener("auxclick", (e) => {
+        if (e.button === 1) app.cerrar(l);
+      });
+      this.pestanas.append(p);
+    }
   }
 
   init(): void {}
@@ -113,6 +151,8 @@ export class PanelLienzo implements IContentRenderer {
   dispose(): void {
     this.observador.disconnect();
     app.removeEventListener("activo", this.alCambiarActivo);
+    app.removeEventListener("abiertos", this.alCambiarAbiertos);
+    app.removeEventListener("lienzos", this.alCambiarAbiertos);
     app.removeEventListener("ajustes", this.alCambiarAjustes);
     window.removeEventListener("keydown", this.alTeclaAbajo);
     window.removeEventListener("keyup", this.alTeclaArriba);
@@ -130,6 +170,7 @@ export class PanelLienzo implements IContentRenderer {
     if (lienzo) {
       lienzo.addEventListener("previa", this.alCambiarPrevia);
       lienzo.addEventListener("propiedades", this.alCambiarPrevia);
+      lienzo.addEventListener("propiedades", this.alCambiarAbiertos);
       lienzo.addEventListener("historial", this.alCambiarHistorial);
     }
     this.aviso.hidden = lienzo !== null;
@@ -141,6 +182,7 @@ export class PanelLienzo implements IContentRenderer {
     if (!this.lienzo) return;
     this.lienzo.removeEventListener("previa", this.alCambiarPrevia);
     this.lienzo.removeEventListener("propiedades", this.alCambiarPrevia);
+    this.lienzo.removeEventListener("propiedades", this.alCambiarAbiertos);
     this.lienzo.removeEventListener("historial", this.alCambiarHistorial);
   }
 

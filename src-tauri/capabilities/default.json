@@ -2,14 +2,23 @@
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
   "description": "Permisos de la ventana principal",
-  "windows": ["main"],
+  "windows": [
+    "main"
+  ],
   "permissions": [
     "core:default",
     "dialog:default",
     "fs:default",
     {
       "identifier": "fs:scope",
-      "allow": [{ "path": "$DOCUMENT/Dermap" }, { "path": "$DOCUMENT/Dermap/**" }]
+      "allow": [
+        {
+          "path": "$DOCUMENT/Dermap"
+        },
+        {
+          "path": "$DOCUMENT/Dermap/**"
+        }
+      ]
     },
     "fs:allow-read-dir",
     "fs:allow-read-file",
@@ -19,6 +28,8 @@
     "fs:allow-mkdir",
     "fs:allow-rename",
     "fs:allow-exists",
-    "fs:allow-stat"
+    "fs:allow-stat",
+    "fs:allow-remove",
+    "core:window:allow-destroy"
   ]
 }
