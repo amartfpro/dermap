@@ -1,12 +1,13 @@
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 
 /**
  * Textos traducibles del código (RNF-14): los de `t("…")`, `traducible("…")` y
  * `plural(n, "…", "…")`. Los usan la prueba de traducciones y
  * `npx tsx scripts/textos.ts`, que lista los que faltan en un archivo de idioma.
  */
-export function textosDelCodigo(carpeta = new URL("../src", import.meta.url).pathname): Set<string> {
+export function textosDelCodigo(carpeta = fileURLToPath(new URL("../src", import.meta.url))): Set<string> {
   const textos = new Set<string>();
   const literal = String.raw`"((?:[^"\\]|\\.)*)"`;
   const patrones = [
@@ -33,7 +34,7 @@ export function textosDelCodigo(carpeta = new URL("../src", import.meta.url).pat
 /** Textos que necesitan traducción (los que tienen letras). */
 export const necesitaTraduccion = (texto: string) => /[A-Za-zÁÉÍÓÚáéíóúÑñ]{2,}/.test(texto);
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
   const idioma = process.argv[2] ?? "en";
   const archivo = JSON.parse(readFileSync(new URL(`../src/i18n/${idioma}.json`, import.meta.url), "utf8")) as Record<string, string>;
   const faltan = [...textosDelCodigo()].filter((x) => necesitaTraduccion(x) && !archivo[x]);
