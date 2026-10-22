@@ -2,6 +2,7 @@ import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import type { IContentRenderer } from "dockview-core";
 import { aplanarEnSegundoPlano } from "../geometria/cliente";
+import { corteSugerido } from "../geometria/corte";
 import { medirDeformacion } from "../geometria/metricas";
 import { longitud, seleccionarPorEje, submalla, suavizarSeleccion, type Seleccion } from "../geometria/seleccion";
 import { cargarCuerpo, ejeDeLaPierna, ejeDelBrazo, type Cuerpo } from "../modelos/cuerpo";
@@ -54,6 +55,12 @@ export class Visor3D implements IContentRenderer {
   );
   private modoSeleccion = false;
   private pendiente: PointerEvent | null = null;
+  /** Submalla de la selección actual (se invalida al cambiar la selección). */
+  private seleccionCacheada: Seleccion | null = null;
+  /** Corte que se usará al aplanar una manga, visible antes de aplanar (RF-23). */
+  /** Tubo rojo visible y, encima, el mismo semitransparente que se ve a través del cuerpo. */
+  private previaCorte = new THREE.Group();
+  private corteProgramado = false;
   private pintando: "añadir" | "quitar" | null = null;
   private raycaster = new THREE.Raycaster();
 
@@ -100,6 +107,8 @@ export class Visor3D implements IContentRenderer {
 
     this.controles = new OrbitControls(this.camara, this.renderer.domElement);
     this.controles.enableDamping = true;
+    // El corte por defecto va por la cara que no se ve: al girar la vista, se recalcula.
+    this.controles.addEventListener("change", () => this.programarCorte());
 
     this.montarEscena();
     app.addEventListener("lienzos", this.alCambiarLienzos);
@@ -157,6 +166,15 @@ export class Visor3D implements IContentRenderer {
     // Su geometría cambia con cada pincelada: sin recorte por frustum para no recalcular límites.
     this.resaltado.frustumCulled = false;
     this.escena.add(this.resaltado);
+    const solido = new THREE.Mesh(new THREE.BufferGeometry(), new THREE.MeshBasicMaterial({ color: 0xe0483e }));
+    const traslucido = new THREE.Mesh(
+      new THREE.BufferGeometry(),
+      new THREE.MeshBasicMaterial({ color: 0xe0483e, transparent: true, opacity: 0.35, depthTest: false, depthWrite: false }),
+    );
+    traslucido.renderOrder = 10;
+    this.previaCorte.add(solido, traslucido);
+    this.previaCorte.visible = false;
+    this.escena.add(this.previaCorte);
   }
 
   private async cargar(): Promise<void> {
@@ -216,7 +234,8 @@ export class Visor3D implements IContentRenderer {
     const seleccion = zona.seleccionar(this.cuerpo);
     this.fijarSeleccion(seleccion.triangulos);
     this.verVista(VISTAS.findIndex((v) => v.nombre === zona.vista));
-    this.estadoTexto.textContent = `${zona.nombre}: ${seleccion.triangulos.length} triángulos. Pulsa «Aplanar zona».`;
+    this.estadoTexto.textContent =
+      `${zona.nombre}: ${seleccion.triangulos.length} triángulos. La línea roja es el corte: gira la vista para moverlo. Pulsa «Aplanar zona».`;
   }
 
   // ── Selección a pincel ────────────────────────────────────────────────────────
@@ -294,8 +313,49 @@ export class Visor3D implements IContentRenderer {
     this.actualizarResaltado();
   }
 
+  private seleccionActual(): Seleccion | null {
+    if (!this.cuerpo || this.seleccionados.size < 8) return null;
+    this.seleccionCacheada ??= submalla(this.cuerpo, this.seleccionados);
+    return this.seleccionCacheada;
+  }
+
+  private haciaCamara(): P3 {
+    return this.camara.position.clone().sub(this.controles.target).normalize().toArray() as P3;
+  }
+
+  /** Recalcula la vista previa del corte como mucho cada 150 ms. */
+  private programarCorte(): void {
+    if (this.corteProgramado) return;
+    this.corteProgramado = true;
+    setTimeout(() => {
+      this.corteProgramado = false;
+      this.actualizarCorte();
+    }, 150);
+  }
+
+  private actualizarCorte(): void {
+    const seleccion = this.pintando ? null : this.seleccionActual();
+    const corte = seleccion && corteSugerido(seleccion.malla, this.haciaCamara());
+    this.previaCorte.visible = !!corte;
+    if (!seleccion || !corte || !this.normalesCuerpo) return;
+    const n = this.normalesCuerpo;
+    const puntos = corte.camino.map((i) => {
+      const b = seleccion.verticeBase[i];
+      return new THREE.Vector3()
+        .fromArray(seleccion.malla.vertices, 3 * i)
+        .add(new THREE.Vector3(n.getX(b), n.getY(b), n.getZ(b)).multiplyScalar(0.15));
+    });
+    const geometria = tubo(puntos, 0.15);
+    for (const m of this.previaCorte.children as THREE.Mesh[]) {
+      if (m.geometry !== geometria) m.geometry.dispose();
+      m.geometry = geometria;
+    }
+  }
+
   private actualizarResaltado(): void {
     if (!this.cuerpo) return;
+    this.seleccionCacheada = null;
+    this.programarCorte();
     const indices = new Uint32Array(this.seleccionados.size * 3);
     let k = 0;
     for (const t of this.seleccionados) {
@@ -315,16 +375,18 @@ export class Visor3D implements IContentRenderer {
       this.estadoTexto.textContent = "Selecciona primero una zona.";
       return;
     }
-    const seleccion = submalla(this.cuerpo, this.seleccionados);
+    const seleccion = this.seleccionActual()!;
     this.estadoTexto.textContent = "Aplanando…";
     // El corte por defecto queda en la cara que no se ve (opuesta a la cámara), y el
     // lienzo se orienta como la vista actual: la derecha de la pantalla es la del lienzo.
     const haciaCamara = this.camara.position.clone().sub(this.controles.target).normalize();
     const derecha = new THREE.Vector3().setFromMatrixColumn(this.camara.matrixWorld, 0).normalize();
     try {
+      // Se aplana con el mismo corte que se está mostrando.
+      const corte = corteSugerido(seleccion.malla, haciaCamara.toArray() as P3);
       const { aplanado, milisegundos } = await aplanarEnSegundoPlano(
         seleccion.malla,
-        { direccionExterna: haciaCamara.toArray() as P3 },
+        { direccionExterna: haciaCamara.toArray() as P3, extremos: corte?.extremos },
         derecha.toArray() as P3,
         haciaCamara.toArray() as P3,
       );
@@ -433,7 +495,7 @@ export class Visor3D implements IContentRenderer {
       const cortado = new Map<number, number>();
       aplanado.origen.forEach((o, i) => cortado.set(o, i));
       const puntos = Array.from(aplanado.corte, (v) => punto(cortado.get(v)!, 0.12));
-      resalte.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(puntos), new THREE.LineBasicMaterial({ color: 0xe0483e })));
+      resalte.add(new THREE.Mesh(tubo(puntos, 0.12), new THREE.MeshBasicMaterial({ color: 0xe0483e })));
     }
     grupo.add(resalte);
 
@@ -599,6 +661,13 @@ function geometriaDe(vertices: Float64Array, caras: Int32Array): THREE.BufferGeo
   g.setIndex(new THREE.BufferAttribute(new Uint32Array(caras), 1));
   g.computeVertexNormals();
   return g;
+}
+
+/** Tubo fino a lo largo de unos puntos: las líneas de WebGL siempre miden 1 px y apenas se ven. */
+function tubo(puntos: THREE.Vector3[], radio: number): THREE.BufferGeometry {
+  if (puntos.length < 2) return new THREE.BufferGeometry();
+  const curva = new THREE.CatmullRomCurve3(puntos, false, "centripetal");
+  return new THREE.TubeGeometry(curva, Math.max(8, puntos.length * 4), radio, 6, false);
 }
 
 function titulo<T extends HTMLElement>(el: T, texto: string): T {
