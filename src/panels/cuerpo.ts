@@ -3,7 +3,7 @@ import { app } from "../estado";
 import { ALTURA_MAXIMA, ALTURA_MINIMA, COMPLEXION_INICIAL } from "../modelos/formas";
 import { asegurarProyecto } from "../proyectos/gestor";
 import type { ModeloCuerpo } from "../proyectos/modelo";
-import { POSE_RECTA, type Pose } from "../modelos/pose";
+import { LIMITES_POSE, POSE_RECTA, type Pose } from "../modelos/pose";
 import type { Medida, Medidas } from "../modelos/medidas";
 
 /** Tonos de piel de partida (RF-14); el selector de color permite cualquier otro. */
@@ -18,13 +18,14 @@ export class PanelCuerpo {
   readonly element: HTMLElement;
   private altura: HTMLInputElement;
   private alturaNumero: HTMLInputElement;
-  private sexo: HTMLInputElement;
+  private sexo: HTMLElement;
   private peso: HTMLInputElement;
   private musculatura: HTMLInputElement;
   private color: HTMLInputElement;
   private muestras: HTMLButtonElement[] = [];
   private pose: Pose = { ...POSE_RECTA };
   private deslizadoresPose: Partial<Record<keyof Pose, HTMLInputElement>> = {};
+  private valoresPose: Partial<Record<keyof Pose, HTMLElement>> = {};
 
   private camposMedida: Partial<Record<Medida, HTMLInputElement>> = {};
 
@@ -63,8 +64,24 @@ export class PanelCuerpo {
       this.cambiar({ altura: v });
     });
 
-    this.sexo = rango(0, 100, 1);
-    this.sexo.addEventListener("input", () => this.cambiar({ sexo: Number(this.sexo.value) / 100 }));
+    // Hombre o mujer (formas de MakeHuman al 100 %, sin mezclas).
+    this.sexo = document.createElement("div");
+    this.sexo.className = "segmentado sexo";
+    for (const [valor, texto] of [
+      [0, t("Mujer")],
+      [1, t("Hombre")],
+    ] as const) {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "boton-texto";
+      b.textContent = texto;
+      b.dataset.valor = String(valor);
+      b.addEventListener("click", () => {
+        this.cambiar({ sexo: valor });
+        this.marcarSexo(valor);
+      });
+      this.sexo.append(b);
+    }
     this.peso = rango(0, 100, 1);
     this.peso.addEventListener("input", () => this.cambiar({ complexion: Number(this.peso.value) / 100 }));
     this.musculatura = rango(0, 100, 1);
@@ -101,7 +118,7 @@ export class PanelCuerpo {
     restablecer.addEventListener("click", () =>
       this.cambiar({
         altura: COMPLEXION_INICIAL.altura,
-        sexo: COMPLEXION_INICIAL.sexo,
+        sexo: (app.proyecto?.datos.modelo.sexo ?? 0) >= 0.5 ? 1 : 0,
         complexion: COMPLEXION_INICIAL.peso,
         musculatura: COMPLEXION_INICIAL.musculatura,
         medidas: {},
@@ -112,38 +129,87 @@ export class PanelCuerpo {
     nota.textContent =
       t("Sin medidas del cliente, el cuerpo es una aproximación para ver el diseño en proporción. La medida del stencil es siempre la del lienzo, en centímetros.");
 
-    // Postura (RF-13): solo para ver cómo se deforma el diseño; no se guarda ni cambia los lienzos.
+    // Postura (RF-13): para ver el diseño en una postura natural y para seleccionar mejor las
+    // zonas. No se guarda ni cambia los lienzos (se aplanan siempre en la postura base).
     const postura = document.createElement("div");
     postura.className = "postura";
-    const articulacion = (clave: keyof Pose, nombre: string) => {
-      const r = rango(0, 140, 1);
-      r.value = "0";
-      r.title = t("{articulacion}: grados de flexión", { articulacion: nombre });
-      r.addEventListener("input", () => {
-        this.pose = { ...this.pose, [clave]: Number(r.value) };
-        this.alCambiarPose({ ...this.pose });
-      });
-      this.deslizadoresPose[clave] = r;
-      const fila = document.createElement("div");
-      fila.className = "extremos";
-      const etiqueta = document.createElement("small");
-      etiqueta.textContent = nombre;
-      fila.append(etiqueta, r);
-      return fila;
+    const simetrica = document.createElement("label");
+    simetrica.className = "casilla";
+    const casillaSimetrica = document.createElement("input");
+    casillaSimetrica.type = "checkbox";
+    casillaSimetrica.checked = true;
+    simetrica.append(casillaSimetrica, " " + t("Igual en los dos lados"));
+    const fila = (nombre: string, izq: keyof Pose, der: keyof Pose, extremoA: string, extremoB: string) => {
+      const f = document.createElement("div");
+      f.className = "fila-postura";
+      const titulo = document.createElement("span");
+      titulo.className = "nombre-postura";
+      titulo.textContent = nombre;
+      const valor = document.createElement("span");
+      valor.className = "valor-postura";
+      const lados = document.createElement("div");
+      lados.className = "lados-postura";
+      const deslizador = (clave: keyof Pose, otra: keyof Pose, lado: string) => {
+        const [min, max] = LIMITES_POSE[clave];
+        const r = rango(min, max, 1);
+        r.value = "0";
+        r.title = t("{articulacion} ({lado}): de «{a}» a «{b}»", { articulacion: nombre, lado, a: extremoA, b: extremoB });
+        r.addEventListener("input", () => {
+          const v = Number(r.value);
+          this.pose = { ...this.pose, [clave]: v };
+          if (casillaSimetrica.checked) {
+            this.pose = { ...this.pose, [otra]: v };
+            const o = this.deslizadoresPose[otra];
+            if (o) o.value = String(v);
+          }
+          this.mostrarValoresPose();
+          this.alCambiarPose({ ...this.pose });
+        });
+        this.deslizadoresPose[clave] = r;
+        const l = document.createElement("label");
+        l.className = "lado-postura";
+        const s = document.createElement("small");
+        s.textContent = lado;
+        l.append(s, r);
+        return l;
+      };
+      lados.append(deslizador(izq, der, t("izq.")), deslizador(der, izq, t("der.")));
+      this.valoresPose[izq] = valor;
+      const cab = document.createElement("div");
+      cab.className = "cabecera-postura";
+      cab.append(titulo, valor);
+      f.append(cab, lados);
+      return f;
     };
     const recta = document.createElement("button");
     recta.className = "boton-texto";
-    recta.textContent = t("Postura recta");
+    recta.textContent = t("Postura base");
     recta.addEventListener("click", () => {
       this.posturaRecta();
       this.alCambiarPose({ ...this.pose });
     });
+    const natural = document.createElement("button");
+    natural.className = "boton-texto";
+    natural.textContent = t("Postura natural");
+    natural.title = t("Brazos bajados junto al cuerpo y piernas juntas");
+    natural.addEventListener("click", () => {
+      this.fijarPose({ ...POSE_RECTA, hombroL: -32, hombroR: -32, caderaL: -6, caderaR: -6 });
+    });
+    const enT = document.createElement("button");
+    enT.className = "boton-texto";
+    enT.textContent = t("En T");
+    enT.title = t("Brazos en horizontal (útil para mangas y axilas)");
+    enT.addEventListener("click", () => this.fijarPose({ ...POSE_RECTA, hombroL: 48, hombroR: 48 }));
+    const atajos = document.createElement("div");
+    atajos.className = "atajos-postura";
+    atajos.append(natural, enT, recta);
     postura.append(
-      articulacion("codoL", t("Codo izq.")),
-      articulacion("codoR", t("Codo der.")),
-      articulacion("rodillaL", t("Rodilla izq.")),
-      articulacion("rodillaR", t("Rodilla der.")),
-      recta,
+      atajos,
+      fila(t("Hombros"), "hombroL", "hombroR", t("abajo"), t("en T")),
+      fila(t("Codos"), "codoL", "codoR", t("recto"), t("doblado")),
+      fila(t("Caderas"), "caderaL", "caderaR", t("juntas"), t("abiertas")),
+      fila(t("Rodillas"), "rodillaL", "rodillaR", t("recta"), t("doblada")),
+      simetrica,
     );
 
     // Medidas reales del cliente: con ellas los lienzos nuevos salen a su escala real.
@@ -190,7 +256,7 @@ export class PanelCuerpo {
     this.element.append(
       cabecera,
       campo(t("Altura"), alturaFila),
-      campo(t("Sexo"), extremos(t("Mujer"), this.sexo, t("Hombre"))),
+      campo(t("Sexo"), this.sexo),
       campo(t("Complexión"), extremos(t("Delgada"), this.peso, t("Robusta"))),
       campo(t("Musculatura"), extremos(t("Poca"), this.musculatura, t("Mucha"))),
       campo(t("Tono de piel"), tonos),
@@ -198,15 +264,41 @@ export class PanelCuerpo {
       restablecer,
       campo(t("Medidas del cliente"), medidas),
       notaMedidas,
-      campo(t("Postura (solo para ver)"), postura),
+      campo(t("Postura"), postura),
     );
     this.sincronizar();
   }
 
-  /** Vuelve a la postura recta (sin avisar). */
+  /** Vuelve a la postura base (sin avisar). */
   posturaRecta(): void {
     this.pose = { ...POSE_RECTA };
     for (const r of Object.values(this.deslizadoresPose)) if (r) r.value = "0";
+    this.mostrarValoresPose();
+  }
+
+  private fijarPose(pose: Pose): void {
+    this.pose = { ...pose };
+    for (const [k, r] of Object.entries(this.deslizadoresPose) as [keyof Pose, HTMLInputElement][]) r.value = String(pose[k]);
+    this.mostrarValoresPose();
+    this.alCambiarPose({ ...this.pose });
+  }
+
+  private mostrarValoresPose(): void {
+    const pares: [keyof Pose, keyof Pose][] = [
+      ["hombroL", "hombroR"],
+      ["codoL", "codoR"],
+      ["caderaL", "caderaR"],
+      ["rodillaL", "rodillaR"],
+    ];
+    for (const [a, b] of pares) {
+      const el = this.valoresPose[a];
+      if (!el) continue;
+      el.textContent = this.pose[a] === this.pose[b] ? `${this.pose[a]}°` : `${this.pose[a]}° · ${this.pose[b]}°`;
+    }
+  }
+
+  private marcarSexo(valor: number): void {
+    for (const b of this.sexo.querySelectorAll<HTMLElement>("button")) b.classList.toggle("activo", Number(b.dataset.valor) === valor);
   }
 
   alternar(): void {
@@ -219,7 +311,7 @@ export class PanelCuerpo {
     const m = app.proyecto?.datos.modelo;
     const altura = Math.round(m?.altura || COMPLEXION_INICIAL.altura);
     this.altura.value = this.alturaNumero.value = String(altura);
-    this.sexo.value = String(Math.round((m?.sexo ?? COMPLEXION_INICIAL.sexo) * 100));
+    this.marcarSexo((m?.sexo ?? 0) >= 0.5 ? 1 : 0);
     this.peso.value = String(Math.round((m?.complexion ?? COMPLEXION_INICIAL.peso) * 100));
     this.musculatura.value = String(Math.round((m?.musculatura ?? COMPLEXION_INICIAL.musculatura) * 100));
     const tono = m?.tonoPiel ?? "#d8a98a";

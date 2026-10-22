@@ -1,5 +1,6 @@
 import { plural, t, traducible } from "../i18n";
 import * as THREE from "three";
+import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import type { IContentRenderer } from "dockview-core";
 import { aplanarEnSegundoPlano } from "../geometria/cliente";
@@ -7,6 +8,7 @@ import { corteExtraHasta, corteManual, corteSugerido, verticeMasCercano } from "
 import { medirDeformacion } from "../geometria/metricas";
 import { longitud, seleccionarPorEje, submalla, suavizarSeleccion, type Seleccion } from "../geometria/seleccion";
 import { prepararSimetria } from "../geometria/simetria";
+import { crearPlanTeselado, evaluarTeselado, type PlanTeselado } from "../geometria/teselado";
 import { botonIcono, seccion, segmentado } from "../ui/iconos";
 import { cargarCuerpo, ejeDeLaPierna, ejeDelBrazo, type Cuerpo } from "../modelos/cuerpo";
 import { aplicarComplexion, cargarFormas, COMPLEXION_INICIAL, type Complexion, type Formas } from "../modelos/formas";
@@ -66,7 +68,11 @@ export class Visor3D implements IContentRenderer {
     if (e.key === "Escape") this.presentar(false);
   };
   private alCambiarModelo = () => this.programarCuerpo();
+  /** Malla original del cuerpo: invisible, para el ratón (selección, cortes, pintar). */
   private mallaCuerpo: THREE.Mesh | null = null;
+  /** Lo que se ve: la misma malla redondeada con teselado de Phong. */
+  private vistaCuerpo: THREE.Mesh | null = null;
+  private planCuerpo: PlanTeselado | null = null;
   private normalesCuerpo: THREE.BufferAttribute | null = null;
   private centros = new Float32Array(0);
   private normalesCaras = new Float32Array(0);
@@ -443,12 +449,23 @@ export class Visor3D implements IContentRenderer {
   // ── Carga y escena ────────────────────────────────────────────────────────────
 
   private montarEscena(): void {
-    this.escena.add(new THREE.HemisphereLight(0xffffff, 0x3a3530, 1.5));
-    const luz = new THREE.DirectionalLight(0xffffff, 1.3);
+    // Luz de estudio: un entorno suave (reflejos difusos realistas) más una luz principal
+    // cálida, un relleno frío y un contraluz que dibuja la silueta.
+    const pmrem = new THREE.PMREMGenerator(this.renderer);
+    this.escena.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+    this.escena.environmentIntensity = 0.55;
+    pmrem.dispose();
+    this.renderer.toneMapping = THREE.NeutralToneMapping;
+    this.renderer.toneMappingExposure = 1.05;
+    this.escena.add(new THREE.HemisphereLight(0xfff4ec, 0x2a2420, 0.6));
+    const luz = new THREE.DirectionalLight(0xfff1e6, 1.6);
     luz.position.set(60, 200, 150);
     this.escena.add(luz);
-    const contraluz = new THREE.DirectionalLight(0xffffff, 0.5);
-    contraluz.position.set(-80, 120, -150);
+    const relleno = new THREE.DirectionalLight(0xdfe8ff, 0.35);
+    relleno.position.set(-120, 80, 90);
+    this.escena.add(relleno);
+    const contraluz = new THREE.DirectionalLight(0xffe2d2, 0.9);
+    contraluz.position.set(-80, 140, -160);
     this.escena.add(contraluz);
     this.escena.add(this.zonas3d);
     // Su geometría cambia con cada pincelada: sin recorte por frustum para no recalcular límites.
@@ -483,12 +500,18 @@ export class Visor3D implements IContentRenderer {
     this.cuerpo = this.cuerpoDelProyecto();
     const geometria = geometriaDe(this.cuerpo.vertices, this.cuerpo.caras);
     this.normalesCuerpo = geometria.getAttribute("normal") as THREE.BufferAttribute;
-    this.mallaCuerpo = new THREE.Mesh(
-      geometria,
-      new THREE.MeshStandardMaterial({ color: app.proyecto?.datos.modelo.tonoPiel ?? 0xd8a98a, roughness: 0.75 }),
-    );
+    this.mallaCuerpo = new THREE.Mesh(geometria, new THREE.MeshBasicMaterial());
+    this.mallaCuerpo.visible = false;
     this.escena.add(this.mallaCuerpo);
-    this.resaltado.geometry.setAttribute("position", geometria.getAttribute("position"));
+    this.planCuerpo = crearPlanTeselado(this.cuerpo.caras, this.cuerpo.vertices.length / 3, NIVEL_TESELADO);
+    const vista = new THREE.BufferGeometry();
+    vista.setAttribute("position", new THREE.BufferAttribute(new Float32Array(this.planCuerpo.n * 3), 3));
+    vista.setAttribute("normal", new THREE.BufferAttribute(new Float32Array(this.planCuerpo.n * 3), 3));
+    vista.setIndex(new THREE.BufferAttribute(this.planCuerpo.indice, 1));
+    this.vistaCuerpo = new THREE.Mesh(vista, materialPiel(app.proyecto?.datos.modelo.tonoPiel ?? "#d8a98a"));
+    this.escena.add(this.vistaCuerpo);
+    this.actualizarVistaCuerpo();
+    this.resaltado.geometry.setAttribute("position", vista.getAttribute("position"));
     // Sin índices dibujaría todos los vértices del cuerpo como triángulos sueltos.
     this.resaltado.geometry.setIndex(new THREE.BufferAttribute(new Uint32Array(0), 1));
     this.resaltado.visible = false;
@@ -506,7 +529,8 @@ export class Visor3D implements IContentRenderer {
     const m = app.proyecto?.datos.modelo;
     if (!m) return { ...COMPLEXION_INICIAL };
     return {
-      sexo: m.sexo ?? COMPLEXION_INICIAL.sexo,
+      // Hombre o mujer: los proyectos antiguos con valores intermedios se redondean.
+      sexo: (m.sexo ?? 0) >= 0.5 ? 1 : 0,
       musculatura: m.musculatura ?? COMPLEXION_INICIAL.musculatura,
       peso: m.complexion ?? COMPLEXION_INICIAL.peso,
       altura: m.altura || COMPLEXION_INICIAL.altura,
@@ -530,13 +554,6 @@ export class Visor3D implements IContentRenderer {
     if (!this.base) return null;
     const conForma = this.formas ? aplicarComplexion(this.base, this.formas, this.complexionDelProyecto()) : this.base;
     return medirContornos(conForma);
-  }
-
-  /** Con el cuerpo doblado no se seleccionan ni se aplanan zonas: el lienzo se hace en postura recta. */
-  private bloqueadoPorPose(): boolean {
-    if (esRecta(this.pose)) return false;
-    this.estadoTexto.textContent = t("Endereza la postura (Cuerpo… → Postura recta) para seleccionar o aplanar zonas.");
-    return true;
   }
 
   private suscribirProyecto(): void {
@@ -567,7 +584,7 @@ export class Visor3D implements IContentRenderer {
   private actualizarCuerpo(): void {
     if (!this.base || !this.mallaCuerpo) return;
     this.redibujar();
-    const material = this.mallaCuerpo.material as THREE.MeshStandardMaterial;
+    const material = this.vistaCuerpo!.material as THREE.MeshPhysicalMaterial;
     material.color.set(app.proyecto?.datos.modelo.tonoPiel ?? 0xd8a98a);
     this.cuerpo = this.cuerpoDelProyecto();
     const geometria = this.mallaCuerpo.geometry;
@@ -578,10 +595,30 @@ export class Visor3D implements IContentRenderer {
     geometria.computeBoundingSphere();
     geometria.computeBoundingBox();
     this.normalesCuerpo = geometria.getAttribute("normal") as THREE.BufferAttribute;
+    this.actualizarVistaCuerpo();
     this.precalcularCaras();
     this.actualizarResaltado();
     for (const [lienzo, m] of this.mallas) this.recolocarLienzo(lienzo, m);
     app.fijarCuerpo(this.cuerpo);
+  }
+
+  private actualizarVistaCuerpo(): void {
+    if (!this.vistaCuerpo || !this.planCuerpo || !this.mallaCuerpo) return;
+    const fuente = this.mallaCuerpo.geometry;
+    const g = this.vistaCuerpo.geometry;
+    const pos = g.getAttribute("position") as THREE.BufferAttribute;
+    const nor = g.getAttribute("normal") as THREE.BufferAttribute;
+    evaluarTeselado(
+      this.planCuerpo,
+      fuente.getAttribute("position").array,
+      fuente.getAttribute("normal").array,
+      pos.array as Float32Array,
+      nor.array as Float32Array,
+    );
+    pos.needsUpdate = true;
+    nor.needsUpdate = true;
+    g.computeBoundingSphere();
+    g.computeBoundingBox();
   }
 
   private precalcularCaras(): void {
@@ -610,7 +647,7 @@ export class Visor3D implements IContentRenderer {
   }
 
   private zonaRapida(indice: number): void {
-    if (!this.cuerpo || this.bloqueadoPorPose()) return;
+    if (!this.cuerpo) return;
     const zona = ZONAS_RAPIDAS[indice];
     const seleccion = zona.seleccionar(this.cuerpo);
     this.fijarSeleccion(seleccion.triangulos);
@@ -622,7 +659,6 @@ export class Visor3D implements IContentRenderer {
   // ── Selección a pincel ────────────────────────────────────────────────────────
 
   private alternarCorteManual(): void {
-    if (!this.modoCorteManual && this.bloqueadoPorPose()) return;
     this.modoCorteManual = !this.modoCorteManual;
     if (this.modoCorteManual && this.modoCorte) this.alternarModoCorte();
     if (this.modoCorteManual && this.modoSeleccion) this.alternarSeleccion();
@@ -668,7 +704,6 @@ export class Visor3D implements IContentRenderer {
   }
 
   private alternarModoCorte(): void {
-    if (!this.modoCorte && this.bloqueadoPorPose()) return;
     if (!this.modoCorte && this.modoCorteManual) this.alternarCorteManual();
     this.modoCorte = !this.modoCorte;
     if (this.modoCorte && this.modoSeleccion) this.alternarSeleccion();
@@ -723,7 +758,6 @@ export class Visor3D implements IContentRenderer {
   }
 
   private alternarSeleccion(): void {
-    if (!this.modoSeleccion && this.bloqueadoPorPose()) return;
     if (!this.modoSeleccion && this.modoCorte) this.alternarModoCorte();
     if (!this.modoSeleccion && this.modoLazo) this.alternarLazo();
     if (!this.modoSeleccion && this.modoPintar) this.alternarPintar();
@@ -801,7 +835,6 @@ export class Visor3D implements IContentRenderer {
   }
 
   private alternarLazo(): void {
-    if (!this.modoLazo && this.bloqueadoPorPose()) return;
     if (!this.modoLazo && this.modoCorte) this.alternarModoCorte();
     if (!this.modoLazo && this.modoSeleccion) this.alternarSeleccion();
     if (!this.modoLazo && this.modoPintar) this.alternarPintar();
@@ -1077,12 +1110,14 @@ export class Visor3D implements IContentRenderer {
     this.seleccionCacheada = null;
     if (this.cortesExtra.length || this.puntosCorte.length) this.quitarCortesExtra();
     this.programarCorte();
-    const indices = new Uint32Array(this.seleccionados.size * 3);
+    // Sobre la malla que se ve: los k² triángulos de cada triángulo elegido.
+    const plan = this.planCuerpo!;
+    const porCara = plan.k * plan.k * 3;
+    const indices = new Uint32Array(this.seleccionados.size * porCara);
     let k = 0;
     for (const t of this.seleccionados) {
-      indices[k++] = this.cuerpo.caras[3 * t];
-      indices[k++] = this.cuerpo.caras[3 * t + 1];
-      indices[k++] = this.cuerpo.caras[3 * t + 2];
+      indices.set(plan.indice.subarray(t * porCara, (t + 1) * porCara), k);
+      k += porCara;
     }
     this.resaltado.geometry.setIndex(new THREE.BufferAttribute(indices, 1));
     this.resaltado.visible = this.seleccionados.size > 0;
@@ -1091,12 +1126,16 @@ export class Visor3D implements IContentRenderer {
   // ── Aplanado: cada zona aplanada es un lienzo nuevo (RF-29) ─────────────────
 
   private async aplanar(): Promise<void> {
-    if (!this.cuerpo || this.bloqueadoPorPose()) return;
+    if (!this.cuerpo) return;
     if (this.seleccionados.size < 8) {
       this.estadoTexto.textContent = t("Selecciona primero una zona.");
       return;
     }
     const seleccion = this.seleccionActual()!;
+    // Se puede seleccionar con el cuerpo en cualquier postura, pero el lienzo se hace siempre
+    // con la piel en la postura base (sin doblar): la zona es la misma (mismos triángulos y
+    // vértices, en el mismo orden), solo cambian las posiciones.
+    const enReposo = esRecta(this.pose) ? seleccion : submalla(this.cuerpoSinPostura(), this.seleccionados);
     this.estadoTexto.textContent = t("Aplanando…");
     // El corte por defecto queda en la cara que no se ve (opuesta a la cámara), y el
     // lienzo se orienta como la vista actual: la derecha de la pantalla es la del lienzo.
@@ -1106,7 +1145,7 @@ export class Visor3D implements IContentRenderer {
       // Se aplana con el mismo corte que se está mostrando.
       const corte = this.corteActual(seleccion);
       const { aplanado, milisegundos } = await aplanarEnSegundoPlano(
-        seleccion.malla,
+        enReposo.malla,
         {
           direccionExterna: haciaCamara.toArray() as P3,
           extremos: corte?.extremos,
@@ -1116,9 +1155,9 @@ export class Visor3D implements IContentRenderer {
         derecha.toArray() as P3,
         haciaCamara.toArray() as P3,
       );
-      const deformacion = medirDeformacion(seleccion.malla, aplanado);
+      const deformacion = medirDeformacion(enReposo.malla, aplanado);
       const lienzo = new Lienzo(nuevoId(), nombreLibre(), {
-        malla: seleccion.malla,
+        malla: enReposo.malla,
         aplanado,
         errorPorCara: deformacion.porCara,
         triangulos: seleccion.triangulos,
@@ -1168,7 +1207,7 @@ export class Visor3D implements IContentRenderer {
         this.zonas3d.add(m.grupo);
       }
       // Los lienzos posteriores en el árbol se dibujan encima (RF-06).
-      const malla = m.grupo.children[0] as THREE.Mesh;
+      const malla = m.vista;
       const material = malla.material as THREE.MeshStandardMaterial;
       material.polygonOffsetFactor = -2 - orden;
       material.polygonOffsetUnits = -2 - orden;
@@ -1203,6 +1242,7 @@ export class Visor3D implements IContentRenderer {
     geometria.setAttribute("position", new THREE.BufferAttribute(posiciones, 3));
     geometria.setAttribute("normal", new THREE.BufferAttribute(normales, 3));
     geometria.computeBoundingSphere();
+    this.teselarLienzo(m);
     for (const hijo of [...m.resalte.children]) {
       m.resalte.remove(hijo);
       if (hijo instanceof THREE.Mesh || hijo instanceof THREE.Line) hijo.geometry.dispose();
@@ -1245,6 +1285,25 @@ export class Visor3D implements IContentRenderer {
     }
   }
 
+  private teselarLienzo(m: MallaLienzo): void {
+    const fuente = (m.grupo.children[0] as THREE.Mesh).geometry;
+    const g = m.vista.geometry;
+    const pos = g.getAttribute("position") as THREE.BufferAttribute;
+    const nor = g.getAttribute("normal") as THREE.BufferAttribute;
+    const uv = g.getAttribute("uv") as THREE.BufferAttribute;
+    evaluarTeselado(
+      m.plan,
+      fuente.getAttribute("position").array,
+      fuente.getAttribute("normal").array,
+      pos.array as Float32Array,
+      nor.array as Float32Array,
+      fuente.getAttribute("uv").array,
+      uv.array as Float32Array,
+    );
+    pos.needsUpdate = nor.needsUpdate = uv.needsUpdate = true;
+    g.computeBoundingSphere();
+  }
+
   private crearMallaLienzo(lienzo: Lienzo): MallaLienzo {
     const { posiciones, normales } = this.posicionesLienzo(lienzo);
     const { aplanado } = lienzo.zona;
@@ -1263,14 +1322,27 @@ export class Visor3D implements IContentRenderer {
     textura.needsUpdate = true;
     this.renderer.initTexture(textura);
 
-    const material = new THREE.MeshStandardMaterial({ map: textura, roughness: 0.75, polygonOffset: true });
+    const material = materialPiel("#ffffff", textura);
+    material.polygonOffset = true;
     const grupo = new THREE.Group();
-    grupo.add(new THREE.Mesh(geometria, material));
+    // Malla original (invisible, para el ratón) y la redondeada que se ve.
+    const recoger = new THREE.Mesh(geometria, new THREE.MeshBasicMaterial());
+    recoger.visible = false;
+    grupo.add(recoger);
     const resalte = new THREE.Group();
     this.construirResalte(lienzo, resalte);
     grupo.add(resalte);
+    const plan = crearPlanTeselado(aplanado.caras, aplanado.origen.length, NIVEL_TESELADO);
+    const vista = new THREE.BufferGeometry();
+    vista.setAttribute("position", new THREE.BufferAttribute(new Float32Array(plan.n * 3), 3));
+    vista.setAttribute("normal", new THREE.BufferAttribute(new Float32Array(plan.n * 3), 3));
+    vista.setAttribute("uv", new THREE.BufferAttribute(new Float32Array(plan.n * 2), 2));
+    vista.setIndex(new THREE.BufferAttribute(plan.indice, 1));
+    const mallaVista = new THREE.Mesh(vista, material);
+    grupo.add(mallaVista);
 
-    const m: MallaLienzo = { grupo, textura, resalte, pendiente: new RegionSucia(), desconectar: () => {} };
+    const m: MallaLienzo = { grupo, textura, resalte, vista: mallaVista, plan, pendiente: new RegionSucia(), desconectar: () => {} };
+    this.teselarLienzo(m);
     const alPrevia = (e: Event) => m.pendiente.añadir((e as CustomEvent<Rect>).detail);
     const alPropiedades = () => this.reconstruirLienzos();
     lienzo.addEventListener("previa", alPrevia);
@@ -1416,6 +1488,9 @@ interface MallaLienzo {
   grupo: THREE.Group;
   textura: THREE.Texture;
   resalte: THREE.Group;
+  /** Malla redondeada que se ve (la de grupo.children[0] es la original, para el ratón). */
+  vista: THREE.Mesh;
+  plan: PlanTeselado;
   /** Regiones de la textura (px de la vista previa) pendientes de subir a la GPU. */
   pendiente: RegionSucia;
   desconectar: () => void;
@@ -1485,6 +1560,26 @@ const ZONAS_RAPIDAS: ZonaRapida[] = [
 ];
 
 // ── Utilidades de interfaz ───────────────────────────────────────────────────────
+
+/** Cada triángulo de la malla se ve dividido en NIVEL² (teselado de Phong). */
+const NIVEL_TESELADO = 3;
+
+/**
+ * Material de piel: algo de brillo suave en ángulos rasantes (sheen) y un rojo leve en las
+ * sombras, para que no parezca plástico.
+ */
+function materialPiel(color: string, mapa?: THREE.Texture): THREE.MeshPhysicalMaterial {
+  return new THREE.MeshPhysicalMaterial({
+    color,
+    map: mapa ?? null,
+    roughness: 0.62,
+    metalness: 0,
+    sheen: 0.35,
+    sheenRoughness: 0.55,
+    sheenColor: new THREE.Color("#ffd2c2"),
+    specularIntensity: 0.35,
+  });
+}
 
 function geometriaDe(vertices: Float64Array, caras: Int32Array): THREE.BufferGeometry {
   const g = new THREE.BufferGeometry();

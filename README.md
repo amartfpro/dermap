@@ -51,11 +51,13 @@ el almacenamiento del navegador, no en disco).
    **Exportar .dermap** guarda el proyecto entero en un archivo (copia de seguridad o para otro
    ordenador) y **Abrir archivo .dermap…** lo abre como proyecto nuevo (con la aplicación
    instalada, también basta con hacer doble clic en el archivo).
-2. **Cuerpo** (visor 3D → **Cuerpo…**): altura real, sexo, complexión, musculatura y tono de
-   piel. Los lienzos siguen al cuerpo al cambiarlo. Con las **medidas del cliente** (contornos
+2. **Cuerpo** (visor 3D → **Cuerpo**): altura real, hombre o mujer, complexión, musculatura y
+   tono de piel. El modelo se ve suavizado (teselado de Phong) con un material y una luz de piel. Los lienzos siguen al cuerpo al cambiarlo. Con las **medidas del cliente** (contornos
    de brazo, antebrazo, muñeca, muslo, gemelo y tobillo tomados con cinta) los lienzos nuevos
-   salen a su escala real. **Postura** dobla codos y rodillas solo para
-   ver cómo se deforma el diseño.
+   salen a su escala real. **Postura** sube o baja los hombros (de brazos
+   al costado a «en T»), abre o cierra las caderas y dobla codos y rodillas, con atajos
+   «Postura natural» y «En T». Se puede seleccionar zonas en cualquier postura; el lienzo se
+   aplana siempre en la postura base.
 3. **Zona** (visor 3D): una «Zona rápida», **Seleccionar** (pincel) o **Lazo** (rodear lo que
    se ve); Mayús quita. En mangas, la línea azul es el corte: va por la cara que no estás
    mirando, o márcalo tú con **Corte manual**. **Corte extra** abre pinzas en zonas muy curvas.

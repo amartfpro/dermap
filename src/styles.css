@@ -2070,3 +2070,61 @@ body.en-inicio > #espacio {
 .barra .marca {
   margin-right: 6px;
 }
+
+/* Postura (panel Cuerpo) */
+.atajos-postura {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.fila-postura {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 0 4px;
+  border-top: 1px solid var(--borde-suave);
+}
+
+.cabecera-postura {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+}
+
+.valor-postura {
+  color: var(--texto-suave);
+  font-variant-numeric: tabular-nums;
+}
+
+.lados-postura {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.lado-postura {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.lado-postura small {
+  color: var(--texto-tenue);
+  font-size: 11px;
+  width: 26px;
+}
+
+.lado-postura .deslizador {
+  flex: 1;
+  width: auto;
+  min-width: 0;
+}
+
+.ventana-cuerpo .segmentado.sexo .boton-texto {
+  flex: 1;
+}
+
+.ventana-cuerpo .segmentado.sexo {
+  display: flex;
+}
