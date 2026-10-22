@@ -1,7 +1,9 @@
 import { app } from "../estado";
 import type { Lienzo } from "../lienzo/lienzo";
 import { listarProyectos, ProyectoAbierto } from "./proyecto";
-import { sistemaArchivos } from "./sistema-archivos";
+import { enTauri, sistemaArchivos } from "./sistema-archivos";
+import { empaquetarProyecto, EXTENSION, importarPaquete } from "./paquete";
+import { guardarExportacion } from "../exportar/guardar";
 
 /**
  * Operaciones de proyecto que afectan a toda la aplicación: abrir, crear, añadir y quitar
@@ -98,4 +100,54 @@ function activar(p: ProyectoAbierto): void {
   } catch {
     // Sin almacenamiento local: simplemente no se recuerda.
   }
+}
+
+/**
+ * Guarda el proyecto abierto en un solo archivo .dermap (RF-53). Devuelve la ruta elegida,
+ * o null si se canceló.
+ */
+export async function exportarProyecto(): Promise<string | null> {
+  const p = app.proyecto;
+  if (!p) return null;
+  await p.guardar();
+  const bytes = await empaquetarProyecto(await sistemaArchivos(), p.carpeta);
+  return guardarExportacion(bytes, p.datos.nombre, {
+    descripcion: "Proyecto de Dermap",
+    extension: EXTENSION,
+    mime: "application/zip",
+  });
+}
+
+/**
+ * Pide un archivo .dermap, lo importa como proyecto nuevo y lo abre. Devuelve false si
+ * se canceló.
+ */
+export async function importarProyecto(progreso?: (t: string) => void): Promise<boolean> {
+  const bytes = await elegirArchivoDermap();
+  if (!bytes) return false;
+  progreso?.("Importando proyecto…");
+  const carpeta = await importarPaquete(await sistemaArchivos(), bytes);
+  await abrirProyecto(carpeta, progreso);
+  return true;
+}
+
+async function elegirArchivoDermap(): Promise<Uint8Array | null> {
+  if (enTauri()) {
+    const { open } = await import("@tauri-apps/plugin-dialog");
+    const { readFile } = await import("@tauri-apps/plugin-fs");
+    const ruta = await open({ multiple: false, directory: false, filters: [{ name: "Proyecto de Dermap", extensions: [EXTENSION] }] });
+    // El plugin de diálogos añade el archivo elegido a los permisos de lectura.
+    return typeof ruta === "string" ? readFile(ruta) : null;
+  }
+  return new Promise((resolver) => {
+    const entrada = document.createElement("input");
+    entrada.type = "file";
+    entrada.accept = `.${EXTENSION},application/zip`;
+    entrada.addEventListener("change", async () => {
+      const archivo = entrada.files?.[0];
+      resolver(archivo ? new Uint8Array(await archivo.arrayBuffer()) : null);
+    });
+    entrada.addEventListener("cancel", () => resolver(null));
+    entrada.click();
+  });
 }

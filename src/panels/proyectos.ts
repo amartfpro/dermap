@@ -1,7 +1,15 @@
 import type { IContentRenderer } from "dockview-core";
 import { confirmar } from "../dialogos";
 import { app } from "../estado";
-import { abrirProyecto, crearProyecto, duplicarLienzo, eliminarNodo, proyectos } from "../proyectos/gestor";
+import {
+  abrirProyecto,
+  crearProyecto,
+  duplicarLienzo,
+  eliminarNodo,
+  exportarProyecto,
+  importarProyecto,
+  proyectos,
+} from "../proyectos/gestor";
 import type { NodoArbol } from "../proyectos/modelo";
 import type { ProyectoAbierto } from "../proyectos/proyecto";
 import { sistemaArchivos } from "../proyectos/sistema-archivos";
@@ -63,7 +71,11 @@ export class PanelProyectos implements IContentRenderer {
     nuevaCarpeta.title = "Nueva carpeta, por ejemplo «Tatuajes previos» o «Propuestas»";
     const guardar = boton("Guardar", () => void this.proyecto?.guardar());
     guardar.title = "Guardar ahora (Ctrl+S). Se guarda solo cada pocos segundos.";
-    this.acciones.append(nuevaCarpeta, guardar);
+    const exportar = boton("Exportar…", () => void this.exportar());
+    exportar.title = "Guardar todo el proyecto en un solo archivo .dermap (copia de seguridad o para otro ordenador)";
+    const importar = boton("Importar…", () => void this.importar());
+    importar.title = "Abrir un archivo .dermap como proyecto nuevo";
+    this.acciones.append(nuevaCarpeta, guardar, exportar, importar);
 
     this.arbol = document.createElement("div");
     this.arbol.className = "arbol";
@@ -310,6 +322,27 @@ export class PanelProyectos implements IContentRenderer {
     });
     campo.addEventListener("click", (e) => e.stopPropagation());
     campo.addEventListener("blur", () => terminar(true));
+  }
+
+  private async exportar(): Promise<void> {
+    if (!this.proyecto) return;
+    this.pie.textContent = "Preparando el archivo .dermap…";
+    try {
+      const ruta = await exportarProyecto();
+      this.pie.textContent = ruta ? `Proyecto exportado: ${ruta}` : "Exportación cancelada.";
+    } catch (error) {
+      this.pie.textContent = `No se pudo exportar: ${error instanceof Error ? error.message : String(error)}`;
+      this.pie.classList.add("error");
+    }
+  }
+
+  private async importar(): Promise<void> {
+    try {
+      if (await importarProyecto((t) => (this.pie.textContent = t))) await this.rellenarSelector();
+    } catch (error) {
+      this.pie.textContent = `No se pudo importar: ${error instanceof Error ? error.message : String(error)}`;
+      this.pie.classList.add("error");
+    }
   }
 
   private nombreCarpetaLibre(): string {
