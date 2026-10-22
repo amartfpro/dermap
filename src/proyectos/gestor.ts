@@ -41,6 +41,26 @@ export async function cerrarProyecto(): Promise<void> {
   app.fijarProyecto(null, []);
 }
 
+/**
+ * Elimina del disco el proyecto abierto, con todos sus lienzos (RF-01). No se puede
+ * deshacer: el panel pide confirmación antes.
+ */
+export async function eliminarProyectoActual(): Promise<string | null> {
+  const p = app.proyecto;
+  if (!p) return null;
+  const { carpeta, nombre } = p;
+  if (alCambiarArbol) p.removeEventListener("arbol", alCambiarArbol);
+  p.cerrar();
+  app.fijarProyecto(null, []);
+  await (await sistemaArchivos()).borrar(carpeta);
+  try {
+    if (localStorage.getItem(CLAVE_ULTIMO) === carpeta) localStorage.removeItem(CLAVE_ULTIMO);
+  } catch {
+    // Sin almacenamiento local.
+  }
+  return nombre;
+}
+
 /** Proyecto abierto o, si no hay ninguno, uno nuevo «Sin título». */
 export async function asegurarProyecto(): Promise<ProyectoAbierto> {
   if (app.proyecto) return app.proyecto;

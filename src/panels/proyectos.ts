@@ -6,6 +6,7 @@ import {
   crearProyecto,
   duplicarLienzo,
   eliminarNodo,
+  eliminarProyectoActual,
   exportarProyecto,
   importarProyecto,
   proyectos,
@@ -127,6 +128,7 @@ export class PanelProyectos implements IContentRenderer {
       new Option(this.proyecto ? `Proyecto: ${this.proyecto.nombre}` : "Elige o crea un proyecto…", "", true, true),
       ...lista.filter((p) => p.carpeta !== this.proyecto?.carpeta).map((p) => new Option(p.nombre, p.carpeta)),
       new Option("+ Nuevo proyecto…", "__nuevo__"),
+      ...(this.proyecto ? [new Option(`Eliminar «${this.proyecto.nombre}»…`, "__eliminar__")] : []),
     );
   }
 
@@ -134,6 +136,10 @@ export class PanelProyectos implements IContentRenderer {
     const valor = this.selector.value;
     this.selector.value = "";
     if (!valor) return;
+    if (valor === "__eliminar__") {
+      await this.eliminarProyecto();
+      return;
+    }
     if (valor === "__nuevo__") {
       this.formulario.hidden = false;
       this.campoNombre.value = "";
@@ -146,6 +152,28 @@ export class PanelProyectos implements IContentRenderer {
     } catch (error) {
       this.pie.textContent = `No se pudo abrir el proyecto: ${error instanceof Error ? error.message : String(error)}`;
     }
+  }
+
+  private async eliminarProyecto(): Promise<void> {
+    const p = this.proyecto;
+    if (!p) return;
+    const n = p.nodosLienzo().length;
+    const ok = await confirmar(
+      `¿Eliminar el proyecto «${p.nombre}» y sus ${n} ${n === 1 ? "lienzo" : "lienzos"}? Se borra del disco y no se puede deshacer. ` +
+        "Si quieres conservar una copia, usa antes «Exportar…».",
+      "Eliminar proyecto",
+    );
+    if (!ok) {
+      await this.rellenarSelector();
+      return;
+    }
+    try {
+      const nombre = await eliminarProyectoActual();
+      this.pie.textContent = `Proyecto «${nombre}» eliminado.`;
+    } catch (error) {
+      this.pie.textContent = `No se pudo eliminar: ${error instanceof Error ? error.message : String(error)}`;
+    }
+    await this.rellenarSelector();
   }
 
   private async nuevoProyecto(): Promise<void> {
