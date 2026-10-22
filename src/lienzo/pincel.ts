@@ -14,6 +14,9 @@ import {
 
 export type Herramienta = "pincel" | "goma";
 
+/** Forma de la estampa: círculo continuo o nube de puntos (puntillismo, RF-34). */
+export type FormaPunta = "redonda" | "puntos";
+
 /** Ajustes del pincel (RF-30). Los tamaños se expresan en milímetros reales sobre la piel. */
 export interface AjustesPincel {
   herramienta: Herramienta;
@@ -28,6 +31,8 @@ export interface AjustesPincel {
   presionTamano: boolean;
   /** La presión del lápiz cambia la intensidad (acumulación, como un aerógrafo). */
   presionOpacidad: boolean;
+  /** Estampa continua o puntillismo. */
+  forma: FormaPunta;
 }
 
 export const AJUSTES_INICIALES: AjustesPincel = {
@@ -38,7 +43,21 @@ export const AJUSTES_INICIALES: AjustesPincel = {
   dureza: 0.9,
   presionTamano: true,
   presionOpacidad: false,
+  forma: "redonda",
 };
+
+/** Pinceles predefinidos para tatuaje (RF-34). Solo cambian los ajustes del pincel. */
+export const PRESETS: { nombre: string; ajustes: Partial<AjustesPincel> }[] = [
+  { nombre: "Línea fina", ajustes: { herramienta: "pincel", tamano: 0.6, opacidad: 1, dureza: 0.95, presionTamano: true, presionOpacidad: false, forma: "redonda" } },
+  { nombre: "Línea", ajustes: { herramienta: "pincel", tamano: 1.5, opacidad: 1, dureza: 0.9, presionTamano: true, presionOpacidad: false, forma: "redonda" } },
+  { nombre: "Línea gruesa", ajustes: { herramienta: "pincel", tamano: 3, opacidad: 1, dureza: 0.9, presionTamano: true, presionOpacidad: false, forma: "redonda" } },
+  { nombre: "Relleno", ajustes: { herramienta: "pincel", tamano: 8, opacidad: 1, dureza: 0.8, presionTamano: false, presionOpacidad: false, forma: "redonda" } },
+  { nombre: "Sombreado suave", ajustes: { herramienta: "pincel", tamano: 10, opacidad: 0.5, dureza: 0.05, presionTamano: false, presionOpacidad: true, forma: "redonda" } },
+  { nombre: "Puntillismo", ajustes: { herramienta: "pincel", tamano: 6, opacidad: 1, dureza: 1, presionTamano: false, presionOpacidad: true, forma: "puntos" } },
+];
+
+/** Diámetro de cada punto del puntillismo, en mm (una aguja de liner). */
+const PUNTO_MM = 0.35;
 
 /** Distancia entre estampas, como fracción del diámetro. */
 const ESPACIADO = 0.12;
@@ -99,7 +118,8 @@ export class Trazo {
     private readonly alto: number,
   ) {
     // La goma usa una punta negra: solo importa su alfa.
-    this.punta = Punta.obtener(ajustes.herramienta === "goma" ? "#000000" : ajustes.color, ajustes.dureza);
+    const color = ajustes.herramienta === "goma" ? "#000000" : ajustes.color;
+    this.punta = Punta.obtener(color, ajustes.forma === "puntos" ? 0.85 : ajustes.dureza);
   }
 
   /**
@@ -115,8 +135,9 @@ export class Trazo {
   ): Rect[] {
     if (!this.ultimo) {
       this.ultimo = { x, y, presion };
+      const puntos = this.puntosDeEstampa(presion);
       const zonas = [new DOMMatrix(), ...transformaciones([x, y], [x, y], this.diametro(presion))].map((m) =>
-        this.estampar(x, y, presion, m),
+        this.estampar(x, y, presion, m, puntos),
       );
       for (const z of zonas) this.rect = unir(this.rect, z);
       return zonas;
@@ -134,8 +155,11 @@ export class Trazo {
       const p = a.presion + (presion - a.presion) * t;
       const px = a.x + (x - a.x) * t;
       const py = a.y + (y - a.y) * t;
-      matrices.forEach((m, k) => (sucio[k] = unir(sucio[k], this.estampar(px, py, p, m))));
-      const paso = Math.max(0.5, ESPACIADO * this.diametro(p));
+      // Los puntos se sortean una vez por estampa, para que la copia al otro lado de la costura coincida.
+      const puntos = this.puntosDeEstampa(p);
+      matrices.forEach((m, k) => (sucio[k] = unir(sucio[k], this.estampar(px, py, p, m, puntos))));
+      const espaciado = this.ajustes.forma === "puntos" ? 0.35 : ESPACIADO;
+      const paso = Math.max(0.5, espaciado * this.diametro(p));
       recorrido += paso;
       if (distancia === 0) break;
     }
@@ -150,11 +174,35 @@ export class Trazo {
     return Math.max(1, this.ajustes.tamano * this.pxPorMm * factor);
   }
 
-  private estampar(x: number, y: number, presion: number, m: DOMMatrix): Rect {
+  /**
+   * Puntillismo: desplazamientos (en fracciones del radio) de los puntos de una estampa.
+   * La presión, si controla la intensidad, cambia la cantidad de puntos, no su opacidad.
+   */
+  private puntosDeEstampa(presion: number): Float32Array | null {
+    if (this.ajustes.forma !== "puntos") return null;
+    const d = this.diametro(presion);
+    const punto = PUNTO_MM * this.pxPorMm;
+    const densidad = this.ajustes.presionOpacidad ? presion ** 1.5 : 0.6;
+    const media = Math.max(0.3, ((d / punto) ** 2) * 0.06 * densidad);
+    let n = Math.floor(media);
+    if (Math.random() < media - n) n++;
+    const puntos = new Float32Array(2 * n);
+    for (let i = 0; i < n; i++) {
+      // Uniforme en el disco.
+      const r = Math.sqrt(Math.random());
+      const a = Math.random() * Math.PI * 2;
+      puntos[2 * i] = r * Math.cos(a);
+      puntos[2 * i + 1] = r * Math.sin(a);
+    }
+    return puntos;
+  }
+
+  private estampar(x: number, y: number, presion: number, m: DOMMatrix, puntos: Float32Array | null = null): Rect {
     const escala = Math.hypot(m.a, m.b);
     const p = m.transformPoint({ x, y });
     const d = this.diametro(presion) * escala;
     const r = d / 2;
+    if (puntos) return this.estamparPuntos(p, r, escala, m, puntos);
     const alfa = this.ajustes.presionOpacidad ? Math.max(0.03, presion ** 1.5) * 0.4 : 1;
     const zona = rectDePunto(p.x, p.y, r + 1);
     for (const [tx, ty] of teselasEn(zona, this.ancho, this.alto)) {
@@ -169,5 +217,30 @@ export class Trazo {
       ctx.drawImage(this.punta, p.x - r - tx * TESELA, p.y - r - ty * TESELA, d, d);
     }
     return zona;
+  }
+
+  private estamparPuntos(c: { x: number; y: number }, r: number, escala: number, m: DOMMatrix, puntos: Float32Array): Rect {
+    const dp = Math.max(1.5, PUNTO_MM * this.pxPorMm * escala);
+    let zona = rectVacio();
+    for (let i = 0; i < puntos.length; i += 2) {
+      // El desplazamiento se gira con la matriz de la costura (sin la traslación).
+      const ox = puntos[i] * r, oy = puntos[i + 1] * r;
+      const px = c.x + (m.a * ox + m.c * oy) / escala;
+      const py = c.y + (m.b * ox + m.d * oy) / escala;
+      const z = rectDePunto(px, py, dp / 2 + 1);
+      zona = unir(zona, z);
+      for (const [tx, ty] of teselasEn(z, this.ancho, this.alto)) {
+        const clave = claveTesela(tx, ty);
+        let t = this.buffer.get(clave);
+        if (!t) {
+          t = crearLamina(TESELA, TESELA);
+          this.buffer.set(clave, t);
+        }
+        const ctx = contexto(t);
+        ctx.globalAlpha = 1;
+        ctx.drawImage(this.punta, px - dp / 2 - tx * TESELA, py - dp / 2 - ty * TESELA, dp, dp);
+      }
+    }
+    return zona.x1 > zona.x0 ? zona : rectDePunto(c.x, c.y, 0);
   }
 }

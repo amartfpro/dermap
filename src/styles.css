@@ -178,6 +178,10 @@ body {
   flex-direction: column;
 }
 
+.panel-lienzo canvas.modo-gotero {
+  cursor: crosshair;
+}
+
 .panel-lienzo canvas {
   flex: 1;
   height: auto;
@@ -230,6 +234,8 @@ body {
 
 .grupo {
   display: flex;
+  flex-wrap: wrap;
+  row-gap: 4px;
   align-items: center;
   gap: 6px;
   padding-right: 10px;

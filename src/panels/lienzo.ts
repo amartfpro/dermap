@@ -2,13 +2,14 @@ import type { IContentRenderer } from "dockview-core";
 import { app } from "../estado";
 import { PX_POR_MM } from "../lienzo/geometria-zona";
 import { ImagenFlotante } from "../lienzo/imagen";
+import { PRESETS } from "../lienzo/pincel";
 import type { Lienzo } from "../lienzo/lienzo";
 import type { Rect } from "../lienzo/teselas";
 import { abrirDialogoExportar } from "./exportar";
 
 type P = { x: number; y: number };
 type Arrastre =
-  | { tipo: "dibujo" }
+  | { tipo: "dibujo"; ultimo: P }
   | { tipo: "desplazar"; inicio: P; vista: DOMMatrix }
   | { tipo: "girar"; centro: P; angulo0: number; vista: DOMMatrix }
   | { tipo: "imagen-mover"; ultimo: P }
@@ -23,6 +24,7 @@ const COLOR_PAPEL = "#f4efe9";
  *
  *  - Lápiz o botón izquierdo: dibujar.
  *  - Botón central, o Espacio + arrastrar: desplazar. Rueda: zoom. Mayús + rueda o R + arrastrar: girar.
+ *  - Mayús + clic: línea recta desde el final del trazo anterior. Alt + clic o I: cuentagotas.
  *  - B pincel · E goma · [ ] tamaño · Ctrl+Z deshacer · Ctrl+Mayús+Z o Ctrl+Y rehacer · 0 encajar.
  */
 export class PanelLienzo implements IContentRenderer {
@@ -43,11 +45,16 @@ export class PanelLienzo implements IContentRenderer {
   private puntero: P | null = null;
   private espacio = false;
   private teclaR = false;
+  /** Cuentagotas activado con el botón o la tecla I: el próximo clic toma el color. */
+  private cuentagotas = false;
+  private mayus = false;
+  /** Final del último trazo, para la línea recta con Mayús (RF-35). */
+  private ultimoPunto: P | null = null;
   private verDeformacion = false;
   private flotante: ImagenFlotante | null = null;
   private repintar = false;
 
-  private controles: Record<string, HTMLInputElement | HTMLButtonElement> = {};
+  private controles: Record<string, HTMLInputElement | HTMLButtonElement | HTMLSelectElement> = {};
 
   private alCambiarActivo = () => {
     this.mostrar(app.activo);
@@ -168,6 +175,7 @@ export class PanelLienzo implements IContentRenderer {
     this.cancelarImagen();
     this.desconectar();
     this.lienzo = lienzo;
+    this.ultimoPunto = null;
     if (lienzo) {
       lienzo.addEventListener("previa", this.alCambiarPrevia);
       lienzo.addEventListener("propiedades", this.alCambiarPrevia);
@@ -196,6 +204,20 @@ export class PanelLienzo implements IContentRenderer {
     const goma = boton("Goma", () => app.cambiarAjustes({ herramienta: "goma" }));
     goma.title = "Goma (E)";
 
+    const preset = document.createElement("select");
+    preset.title = "Pinceles para tatuaje";
+    preset.className = "selector-preset";
+    preset.append(new Option("Pincel…", ""), ...PRESETS.map((p, i) => new Option(p.nombre, String(i))));
+    preset.addEventListener("change", () => {
+      const p = PRESETS[Number(preset.value)];
+      if (p) app.cambiarAjustes(p.ajustes);
+    });
+    const gotero = boton("Cuentagotas", () => {
+      this.cuentagotas = !this.cuentagotas;
+      this.sincronizarControles();
+    });
+    gotero.title = "Tomar un color del dibujo (I, o Alt + clic)";
+
     const color = document.createElement("input");
     color.type = "color";
     color.value = a.color;
@@ -210,6 +232,8 @@ export class PanelLienzo implements IContentRenderer {
     opacidad.addEventListener("input", () => app.cambiarAjustes({ opacidad: Number(opacidad.value) / 100 }));
     const dureza = deslizador(0, 100, a.dureza * 100, "Dureza del borde: alta para líneas, baja para sombreado");
     dureza.addEventListener("input", () => app.cambiarAjustes({ dureza: Number(dureza.value) / 100 }));
+    const puntos = casilla("Puntos", a.forma === "puntos", (v) => app.cambiarAjustes({ forma: v ? "puntos" : "redonda" }));
+    puntos.title = "Puntillismo: la estampa es una nube de puntos de aguja";
     const presion = casilla("Presión → intensidad", a.presionOpacidad, (v) => app.cambiarAjustes({ presionOpacidad: v }));
     presion.title = "Con el lápiz, la presión también controla la intensidad (útil para sombrear)";
 
@@ -231,6 +255,8 @@ export class PanelLienzo implements IContentRenderer {
     this.controles = {
       pincel,
       goma,
+      gotero,
+      preset,
       color,
       tamano,
       opacidad,
@@ -239,10 +265,11 @@ export class PanelLienzo implements IContentRenderer {
       rehacer,
       cuadricula: cuadricula.querySelector("input")!,
       presion: presion.querySelector("input")!,
+      puntos: puntos.querySelector("input")!,
     };
     this.barra.append(
-      grupo(pincel, goma, color),
-      grupo(etiqueta("Tamaño", tamano), etiqueta("Opacidad", opacidad), etiqueta("Dureza", dureza), presion),
+      grupo(preset, pincel, goma, gotero, color),
+      grupo(etiqueta("Tamaño", tamano), etiqueta("Opacidad", opacidad), etiqueta("Dureza", dureza), puntos, presion),
       grupo(deshacer, rehacer),
       grupo(cuadricula, deformacion, encajar),
       grupo(exportar),
@@ -253,6 +280,12 @@ export class PanelLienzo implements IContentRenderer {
     const a = app.ajustes;
     this.controles.pincel.classList.toggle("activo", a.herramienta === "pincel");
     this.controles.goma.classList.toggle("activo", a.herramienta === "goma");
+    this.controles.gotero.classList.toggle("activo", this.cuentagotas);
+    this.canvas.classList.toggle("modo-gotero", this.cuentagotas);
+    // El selector muestra el pincel predefinido que coincide con los ajustes actuales, si lo hay.
+    const i = PRESETS.findIndex((p) => Object.entries(p.ajustes).every(([k, v]) => a[k as keyof typeof a] === v));
+    (this.controles.preset as HTMLSelectElement).value = i >= 0 ? String(i) : "";
+    (this.controles.puntos as HTMLInputElement).checked = a.forma === "puntos";
     (this.controles.color as HTMLInputElement).value = a.color;
     (this.controles.tamano as HTMLInputElement).value = String(tamanoADeslizador(a.tamano));
     (this.controles.opacidad as HTMLInputElement).value = String(Math.round(a.opacidad * 100));
@@ -364,12 +397,27 @@ export class PanelLienzo implements IContentRenderer {
       this.arrastre = this.empezarArrastreImagen(c, d);
       return;
     }
-    if (l.empezarTrazo(app.ajustes, d.x, d.y, presionDe(e))) this.arrastre = { tipo: "dibujo" };
+    if (this.cuentagotas || e.altKey) {
+      this.tomarColor(d);
+      return;
+    }
+    if (e.shiftKey && this.ultimoPunto) {
+      // Línea recta desde el final del trazo anterior (RF-35).
+      const o = this.ultimoPunto;
+      if (l.empezarTrazo(app.ajustes, o.x, o.y, 0.5)) {
+        l.continuarTrazo(d.x, d.y, presionDe(e));
+        l.terminarTrazo();
+        this.ultimoPunto = d;
+      }
+      return;
+    }
+    if (l.empezarTrazo(app.ajustes, d.x, d.y, presionDe(e))) this.arrastre = { tipo: "dibujo", ultimo: d };
     else this.info.textContent = `La capa «${l.doc.activa.nombre}» está ${l.doc.activa.bloqueada ? "bloqueada" : "oculta"}.`;
   }
 
   private punteroMovido(e: PointerEvent): void {
     this.puntero = this.aCanvas(e);
+    this.mayus = e.shiftKey;
     const a = this.arrastre;
     if (!a) {
       this.pedirRepintado(); // cursor del pincel
@@ -381,6 +429,7 @@ export class PanelLienzo implements IContentRenderer {
         for (const ev of e.getCoalescedEvents?.() ?? [e]) {
           const d = this.aDocumento(ev);
           this.lienzo?.continuarTrazo(d.x, d.y, presionDe(ev));
+          a.ultimo = d;
         }
         break;
       case "desplazar":
@@ -421,7 +470,10 @@ export class PanelLienzo implements IContentRenderer {
     if (this.canvas.hasPointerCapture(e.pointerId)) this.canvas.releasePointerCapture(e.pointerId);
     const a = this.arrastre;
     this.arrastre = null;
-    if (a?.tipo === "dibujo") this.lienzo?.terminarTrazo();
+    if (a?.tipo === "dibujo") {
+      this.lienzo?.terminarTrazo();
+      this.ultimoPunto = a.ultimo;
+    }
     if (a?.tipo === "desplazar" || a?.tipo === "girar") this.actualizarInfo();
     this.pedirRepintado();
   }
@@ -452,6 +504,9 @@ export class PanelLienzo implements IContentRenderer {
       app.cambiarAjustes({ herramienta: "pincel" });
     } else if (tecla === "e") {
       app.cambiarAjustes({ herramienta: "goma" });
+    } else if (tecla === "i") {
+      this.cuentagotas = !this.cuentagotas;
+      this.sincronizarControles();
     } else if (e.key === "[" || e.key === "]") {
       const factor = e.key === "]" ? 1.25 : 0.8;
       app.cambiarAjustes({ tamano: Math.min(40, Math.max(0.2, app.ajustes.tamano * factor)) });
@@ -461,6 +516,9 @@ export class PanelLienzo implements IContentRenderer {
       this.fijarImagen();
     } else if (e.key === "Escape" && this.flotante) {
       this.cancelarImagen();
+    } else if (e.key === "Escape" && this.cuentagotas) {
+      this.cuentagotas = false;
+      this.sincronizarControles();
     }
   }
 
@@ -471,6 +529,29 @@ export class PanelLienzo implements IContentRenderer {
     } else if (e.key.toLowerCase() === "r") {
       this.teclaR = false;
     }
+  }
+
+  /**
+   * Cuentagotas: color de la tinta compuesta (sin la piel) bajo el puntero. Si no hay tinta
+   * no cambia nada. Vuelve al pincel, como en los programas de dibujo.
+   */
+  private tomarColor(d: P): void {
+    const l = this.lienzo;
+    if (!l) return;
+    this.cuentagotas = false;
+    const x = Math.floor(d.x), y = Math.floor(d.y);
+    const lamina = new OffscreenCanvas(1, 1);
+    const ctx = lamina.getContext("2d", { willReadFrequently: true })!;
+    ctx.translate(-x, -y);
+    l.doc.componer(ctx, { x0: x, y0: y, x1: x + 1, y1: y + 1 });
+    const [r, g, b, alfa] = ctx.getImageData(0, 0, 1, 1).data;
+    if (alfa < 8) {
+      this.info.textContent = "No hay tinta en ese punto.";
+      this.sincronizarControles();
+      return;
+    }
+    const hex = "#" + [r, g, b].map((c) => c.toString(16).padStart(2, "0")).join("");
+    app.cambiarAjustes({ color: hex, herramienta: "pincel" });
   }
 
   // ── Imagen importada ──────────────────────────────────────────────────────────
@@ -623,7 +704,20 @@ export class PanelLienzo implements IContentRenderer {
 
   /** Círculo del tamaño real del pincel bajo el puntero. */
   private pintarCursor(ctx: CanvasRenderingContext2D, escala: number): void {
-    if (!this.puntero || this.espacio || this.arrastre?.tipo === "desplazar") return;
+    if (!this.puntero || this.espacio || this.cuentagotas || this.arrastre?.tipo === "desplazar") return;
+    if (this.mayus && this.ultimoPunto && !this.arrastre) {
+      // Vista previa de la línea recta que se trazará con Mayús + clic.
+      const o = this.vista.transformPoint(this.ultimoPunto);
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.setLineDash([6 * window.devicePixelRatio, 4 * window.devicePixelRatio]);
+      ctx.lineWidth = window.devicePixelRatio;
+      ctx.strokeStyle = "rgba(255, 140, 40, 0.9)";
+      ctx.beginPath();
+      ctx.moveTo(o.x, o.y);
+      ctx.lineTo(this.puntero.x, this.puntero.y);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
     const radio = (app.ajustes.tamano * PX_POR_MM * escala) / 2;
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.lineWidth = window.devicePixelRatio;
