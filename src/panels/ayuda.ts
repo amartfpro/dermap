@@ -35,6 +35,7 @@ const SECCIONES: { titulo: string; filas: [string, string][] }[] = [
       [traducible("0"), traducible("Ver el lienzo entero")],
       [traducible("Vista recta"), traducible("Mangas: la piel desenrollada en un rectángulo; una línea horizontal es un anillo")],
       [traducible("Intro · Esc"), traducible("Aplicar · cancelar la imagen flotante")],
+      [traducible("Mayús+H · Mayús+V"), traducible("Voltear la imagen flotante en horizontal · en vertical")],
     ],
   },
   {

@@ -65,7 +65,6 @@
   "Cliente": "Client",
   "Codo der.": "Right elbow",
   "Codo izq.": "Left elbow",
-  "Coloca la imagen: arrastra para mover, esquinas para escalar, punto superior para girar.": "Place the image: drag to move, corners to scale, top handle to rotate.",
   "Colocar en el lienzo": "Place on the canvas",
   "Color": "Color",
   "Complexión": "Build",
@@ -416,5 +415,10 @@
   "De «{lienzo}» (espejo)": "From “{lienzo}” (mirrored)",
   "De «{lienzo}»": "From “{lienzo}”",
   "En espejo (papel de inyección de tinta o calco a mano)": "Mirrored (inkjet stencil paper or hand tracing)",
-  "EN ESPEJO": "MIRRORED"
+  "EN ESPEJO": "MIRRORED",
+  "Voltear ↔": "Flip ↔",
+  "Voltear ↕": "Flip ↕",
+  "Coloca la imagen: arrastra para mover, esquinas para escalar, punto superior para girar (Mayús: de 15 en 15°).": "Place the image: drag to move, corners to scale, top handle to rotate (Shift: 15° steps).",
+  "Mayús+H · Mayús+V": "Shift+H · Shift+V",
+  "Voltear la imagen flotante en horizontal · en vertical": "Flip the floating image horizontally · vertically"
 }

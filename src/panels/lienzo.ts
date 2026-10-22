@@ -143,9 +143,11 @@ export class PanelLienzo implements IContentRenderer {
     this.barraImagen.className = "herramientas aviso-imagen";
     this.barraImagen.hidden = true;
     const textoImagen = document.createElement("span");
-    textoImagen.textContent = t("Coloca la imagen: arrastra para mover, esquinas para escalar, punto superior para girar.");
+    textoImagen.textContent = t("Coloca la imagen: arrastra para mover, esquinas para escalar, punto superior para girar (Mayús: de 15 en 15°).");
     this.barraImagen.append(
       textoImagen,
+      boton(t("Voltear ↔"), () => this.voltearImagen(true)),
+      boton(t("Voltear ↕"), () => this.voltearImagen(false)),
       boton(t("Aplicar (Intro)"), () => this.fijarImagen(), "primario"),
       boton(t("Cancelar (Esc)"), () => this.cancelarImagen()),
     );
@@ -753,7 +755,10 @@ export class PanelLienzo implements IContentRenderer {
         const centro = this.flotante!.centro();
         this.flotante!.matriz = a.matriz0;
         const angulo = Math.atan2(d.y - centro.y, d.x - centro.x);
-        this.flotante!.girar(((angulo - a.angulo0) * 180) / Math.PI);
+        let grados = ((angulo - a.angulo0) * 180) / Math.PI;
+        // Con Mayús, el giro va de 15 en 15 grados.
+        if (e.shiftKey) grados = Math.round(grados / 15) * 15;
+        this.flotante!.girar(grados);
         break;
       }
     }
@@ -862,6 +867,8 @@ export class PanelLienzo implements IContentRenderer {
       this.encajar();
     } else if (e.key === "Enter" && this.flotante) {
       this.fijarImagen();
+    } else if (this.flotante && e.shiftKey && (e.code === "KeyH" || e.code === "KeyV")) {
+      this.voltearImagen(e.code === "KeyH");
     } else if (e.key === "Escape" && this.flotante) {
       this.cancelarImagen();
     } else if (e.key === "Escape" && this.cuentagotas) {
@@ -974,6 +981,12 @@ export class PanelLienzo implements IContentRenderer {
   }
 
   /** Coloca una imagen sobre el lienzo para moverla, escalarla y girarla antes de fijarla. */
+  private voltearImagen(horizontal: boolean): void {
+    if (!this.flotante) return;
+    this.flotante.voltear(horizontal);
+    this.pedirRepintado();
+  }
+
   colocarImagen(imagen: ImageBitmap, nombre: string, matriz?: DOMMatrix): void {
     if (!this.lienzo) return;
     if (this.recta) this.alternarRecta();

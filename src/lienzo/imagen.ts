@@ -65,6 +65,13 @@ export class ImagenFlotante {
     this.matriz = new DOMMatrix().translate(c.x, c.y).rotate(grados).translate(-c.x, -c.y).multiply(this.matriz);
   }
 
+  /** Voltea la imagen en su sitio (en sus propios ejes: horizontal o vertical). */
+  voltear(horizontal: boolean): void {
+    const { width: w, height: h } = this.imagen;
+    const local = horizontal ? new DOMMatrix().translate(w, 0).scale(-1, 1) : new DOMMatrix().translate(0, h).scale(1, -1);
+    this.matriz = this.matriz.multiply(local);
+  }
+
   rect(): Rect {
     return transformarRect({ x0: 0, y0: 0, x1: this.imagen.width, y1: this.imagen.height }, this.matriz);
   }
