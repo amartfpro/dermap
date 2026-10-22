@@ -2,6 +2,7 @@ import type { IContentRenderer } from "dockview-core";
 import { app } from "../estado";
 import { MODOS_FUSION, nuevoId, type Capa, type ModoFusion } from "../lienzo/capa";
 import type { Lienzo } from "../lienzo/lienzo";
+import { transferirDibujo } from "../lienzo/transferir";
 import { boton, panelLienzoActual } from "./lienzo";
 
 /**
@@ -40,6 +41,9 @@ export class PanelCapas implements IContentRenderer {
       titulado(boton("↑", () => this.mover(1)), "Subir la capa"),
       titulado(boton("↓", () => this.mover(-1)), "Bajar la capa"),
       titulado(boton("Importar imagen…", () => archivo.click()), "Importar un PNG o JPG como capa nueva"),
+      titulado(boton("Copiar", () => void panelLienzoActual()?.copiar()), "Copiar la capa activa (Ctrl+C)"),
+      titulado(boton("Pegar", () => panelLienzoActual()?.pegar()), "Pegar la capa copiada, en este u otro lienzo (Ctrl+V)"),
+      this.selectorTraer(),
       archivo,
     );
 
@@ -115,6 +119,56 @@ export class PanelCapas implements IContentRenderer {
     } catch {
       window.alert(`No se pudo abrir «${archivo.name}». Usa una imagen PNG o JPG.`);
     }
+  }
+
+  /**
+   * «Traer dibujo de…»: lista los demás lienzos del proyecto que comparten piel con el
+   * activo y copia su dibujo a una capa nueva, recolocado a través del cuerpo (RF-29).
+   */
+  private selectorTraer(): HTMLSelectElement {
+    const s = document.createElement("select");
+    s.className = "desplegable";
+    s.title = "Copiar el dibujo de otro lienzo que cubra la misma piel (por ejemplo, al rehacer una zona con otro corte)";
+    const rellenar = () => {
+      s.replaceChildren(new Option("Traer dibujo de…", ""));
+      const actual = this.lienzo;
+      if (!actual) return;
+      const propios = new Set(actual.zona.triangulos);
+      for (const otro of app.lienzos) {
+        if (otro === actual) continue;
+        let comunes = 0;
+        for (const t of otro.zona.triangulos) if (propios.has(t)) comunes++;
+        const pct = Math.round((100 * comunes) / propios.size);
+        const o = new Option(comunes ? `${otro.nombre} (${pct} % común)` : `${otro.nombre} (no coincide)`, otro.id);
+        o.disabled = comunes === 0;
+        s.append(o);
+      }
+      if (s.options.length === 1) s.append(Object.assign(new Option("No hay otros lienzos", ""), { disabled: true }));
+    };
+    rellenar();
+    s.addEventListener("pointerdown", rellenar);
+    s.addEventListener("focus", rellenar);
+    s.addEventListener("change", () => {
+      const origen = app.lienzos.find((l) => l.id === s.value);
+      s.value = "";
+      if (!origen || !this.lienzo) return;
+      const { comunes, total } = transferirDibujo(origen, this.lienzo);
+      if (comunes < total) {
+        const fuera = Math.round((100 * (total - comunes)) / total);
+        this.aviso(`Dibujo traído de «${origen.nombre}». El ${fuera} % de esta zona no estaba en el original y queda vacío.`);
+      } else this.aviso(`Dibujo traído de «${origen.nombre}».`);
+    });
+    return s;
+  }
+
+  private aviso(texto: string): void {
+    this.propiedades.title = texto;
+    const p = document.createElement("p");
+    p.className = "aviso-capas";
+    p.textContent = texto;
+    this.element.querySelector(".aviso-capas")?.remove();
+    this.propiedades.after(p);
+    setTimeout(() => p.remove(), 8000);
   }
 
   // ── Pintado ───────────────────────────────────────────────────────────────────

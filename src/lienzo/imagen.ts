@@ -13,7 +13,12 @@ export class ImagenFlotante {
     readonly imagen: ImageBitmap,
     readonly nombre: string,
     lienzo: Lienzo,
+    matriz?: DOMMatrix,
   ) {
+    if (matriz) {
+      this.matriz = matriz;
+      return;
+    }
     // Centrada y ocupando el 60 % del ancho de la zona (o del alto, si es más estrecha).
     const { ancho, alto } = lienzo.geo;
     const escala = Math.min((ancho * 0.6) / imagen.width, (alto * 0.6) / imagen.height);

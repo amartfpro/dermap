@@ -3,6 +3,7 @@ import { app } from "../estado";
 import { PX_POR_MM } from "../lienzo/geometria-zona";
 import { ImagenFlotante } from "../lienzo/imagen";
 import { PRESETS } from "../lienzo/pincel";
+import { copiarCapa, obtenerCopia } from "../lienzo/portapapeles";
 import type { Lienzo } from "../lienzo/lienzo";
 import type { Rect } from "../lienzo/teselas";
 import { abrirDialogoExportar } from "./exportar";
@@ -492,6 +493,12 @@ export class PanelLienzo implements IContentRenderer {
     } else if (ctrl && tecla === "y") {
       e.preventDefault();
       void this.lienzo?.rehacer();
+    } else if (ctrl && tecla === "c") {
+      e.preventDefault();
+      void this.copiar();
+    } else if (ctrl && tecla === "v") {
+      e.preventDefault();
+      this.pegar();
     } else if (ctrl) {
       return;
     } else if (e.key === " ") {
@@ -556,10 +563,35 @@ export class PanelLienzo implements IContentRenderer {
 
   // ── Imagen importada ──────────────────────────────────────────────────────────
 
-  /** Coloca una imagen sobre el lienzo para moverla, escalarla y girarla antes de fijarla. */
-  colocarImagen(imagen: ImageBitmap, nombre: string): void {
+  /** Copia la capa activa al portapapeles de Dermap (RF-33). */
+  async copiar(): Promise<void> {
     if (!this.lienzo) return;
-    this.flotante = new ImagenFlotante(imagen, nombre, this.lienzo);
+    const ok = await copiarCapa(this.lienzo);
+    this.info.textContent = ok
+      ? `Capa «${this.lienzo.doc.activa.nombre}» copiada. Pégala con Ctrl+V en este u otro lienzo.`
+      : "La capa activa está vacía.";
+  }
+
+  /**
+   * Pega la capa copiada como imagen flotante: en su sitio si es el mismo lienzo y centrada
+   * en otro, siempre a tamaño real.
+   */
+  pegar(): void {
+    const copia = obtenerCopia();
+    if (!copia || !this.lienzo) return;
+    const { ancho, alto } = this.lienzo.geo;
+    const w = copia.rect.x1 - copia.rect.x0, h = copia.rect.y1 - copia.rect.y0;
+    const matriz =
+      copia.lienzoId === this.lienzo.id
+        ? new DOMMatrix().translate(copia.rect.x0, copia.rect.y0)
+        : new DOMMatrix().translate(Math.round((ancho - w) / 2), Math.round((alto - h) / 2));
+    this.colocarImagen(copia.imagen, `${copia.nombre} (copia)`, matriz);
+  }
+
+  /** Coloca una imagen sobre el lienzo para moverla, escalarla y girarla antes de fijarla. */
+  colocarImagen(imagen: ImageBitmap, nombre: string, matriz?: DOMMatrix): void {
+    if (!this.lienzo) return;
+    this.flotante = new ImagenFlotante(imagen, nombre, this.lienzo, matriz);
     this.barraImagen.hidden = false;
     this.pedirRepintado();
   }
