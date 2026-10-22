@@ -8,6 +8,7 @@ import { longitud, seleccionarPorEje, submalla, suavizarSeleccion, type Seleccio
 import { cargarCuerpo, ejeDeLaPierna, ejeDelBrazo, type Cuerpo } from "../modelos/cuerpo";
 import { aplicarComplexion, cargarFormas, COMPLEXION_INICIAL, type Complexion, type Formas } from "../modelos/formas";
 import type { ProyectoAbierto } from "../proyectos/proyecto";
+import { enTauri } from "../proyectos/sistema-archivos";
 import { PanelCuerpo } from "./cuerpo";
 import { aplicarPose, esRecta, POSE_RECTA, type Pose } from "../modelos/pose";
 import { app } from "../estado";
@@ -337,13 +338,13 @@ export class Visor3D implements IContentRenderer {
       this.alternarGiro(true);
       this.pintarVersiones();
       window.addEventListener("keydown", this.alTeclaPresentacion);
-      void document.documentElement.requestFullscreen?.().catch(() => {});
+      void pantallaCompleta(true);
     } else {
       for (const { objeto, visible } of this.visiblesAntes) objeto.visible = visible;
       this.resaltarActivo();
       this.alternarGiro(false);
       window.removeEventListener("keydown", this.alTeclaPresentacion);
-      if (document.fullscreenElement) void document.exitFullscreen().catch(() => {});
+      void pantallaCompleta(false);
     }
     this.ajustarTamano();
   }
@@ -1301,6 +1302,25 @@ export class Visor3D implements IContentRenderer {
     const vertical = THREE.MathUtils.degToRad(this.camara.fov);
     const horizontal = 2 * Math.atan(Math.tan(vertical / 2) * this.camara.aspect);
     return (radio / Math.sin(Math.min(vertical, horizontal) / 2)) * 1.05;
+  }
+}
+
+/**
+ * Pantalla completa para la presentación: en la aplicación, con la ventana nativa (el API del
+ * navegador no siempre funciona en el WebView de macOS); en el navegador, con el estándar.
+ */
+async function pantallaCompleta(activar: boolean): Promise<void> {
+  try {
+    if (enTauri()) {
+      const { getCurrentWindow } = await import("@tauri-apps/api/window");
+      await getCurrentWindow().setFullscreen(activar);
+    } else if (activar) {
+      await document.documentElement.requestFullscreen?.();
+    } else if (document.fullscreenElement) {
+      await document.exitFullscreen();
+    }
+  } catch {
+    // Sin pantalla completa la presentación ocupa igualmente toda la ventana.
   }
 }
 

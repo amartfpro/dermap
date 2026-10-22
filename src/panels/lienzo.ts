@@ -6,7 +6,8 @@ import { PRESETS } from "../lienzo/pincel";
 import { nuevoId } from "../lienzo/capa";
 import { copiarCapa, obtenerCopia } from "../lienzo/portapapeles";
 import { puntosDeForma, rellenar, restringir, Seleccion } from "../lienzo/herramientas";
-import type { Herramienta } from "../lienzo/pincel";
+import type { AjustesPincel, Herramienta } from "../lienzo/pincel";
+import { VistaRecta } from "../lienzo/vista-recta";
 import type { Lienzo } from "../lienzo/lienzo";
 import type { Rect } from "../lienzo/teselas";
 import { abrirDialogoExportar } from "./exportar";
@@ -14,6 +15,7 @@ import { abrirDialogoExportar } from "./exportar";
 type P = { x: number; y: number };
 type Arrastre =
   | { tipo: "dibujo"; ultimo: P }
+  | { tipo: "dibujo-recta" }
   | { tipo: "desplazar"; inicio: P; vista: DOMMatrix }
   | { tipo: "girar"; centro: P; angulo0: number; vista: DOMMatrix }
   | { tipo: "imagen-mover"; ultimo: P }
@@ -97,6 +99,12 @@ export class PanelLienzo implements IContentRenderer {
   /** Selección con lazo activa (RF-34). */
   private seleccion: Seleccion | null = null;
   private paleta = leerPaleta();
+  /** Vista rectangular de una manga (RF-38), si está activa. */
+  private recta: VistaRecta | null = null;
+  private rectaPendiente = false;
+  /** Trazo en curso en la vista rectangular: último punto del rectángulo y del lienzo. */
+  private trazoRecta: { ultimo: P; enLienzo: P | null; activo: boolean; ajustes: AjustesPincel } | null = null;
+  private botonRecta!: HTMLButtonElement;
   private filaPaleta!: HTMLElement;
   private verDeformacion = false;
   private flotante: ImagenFlotante | null = null;
@@ -110,7 +118,10 @@ export class PanelLienzo implements IContentRenderer {
   };
   private alCambiarAbiertos = () => this.pintarPestanas();
   private alCambiarAjustes = () => this.sincronizarControles();
-  private alCambiarPrevia = () => this.pedirRepintado();
+  private alCambiarPrevia = () => {
+    if (this.recta) this.programarRecta();
+    this.pedirRepintado();
+  };
   private alCambiarHistorial = () => this.sincronizarControles();
   private alTeclaAbajo = (e: KeyboardEvent) => this.teclaAbajo(e);
   private alTeclaArriba = (e: KeyboardEvent) => this.teclaArriba(e);
@@ -225,6 +236,7 @@ export class PanelLienzo implements IContentRenderer {
     this.lienzo = lienzo;
     this.ultimoPunto = null;
     this.seleccion = null;
+    this.recta = null;
     if (lienzo) {
       lienzo.addEventListener("previa", this.alCambiarPrevia);
       lienzo.addEventListener("propiedades", this.alCambiarPrevia);
@@ -313,6 +325,8 @@ export class PanelLienzo implements IContentRenderer {
       this.verDeformacion = v;
       this.pedirRepintado();
     });
+    this.botonRecta = boton("Vista recta", () => this.alternarRecta());
+    this.botonRecta.title = "Mangas: ver y dibujar la piel desenrollada en un rectángulo (una línea horizontal es un anillo alrededor del brazo)";
     const encajar = boton("Encajar", () => this.encajar());
     encajar.title = "Ver el lienzo entero (0)";
     const exportar = boton("Exportar stencil…", () => this.lienzo && abrirDialogoExportar(this.lienzo));
@@ -343,7 +357,7 @@ export class PanelLienzo implements IContentRenderer {
       grupo(relleno, lazo, linea, rectangulo, elipse),
       grupo(etiqueta("Tamaño", tamano), etiqueta("Opacidad", opacidad), etiqueta("Dureza", dureza), puntos, presion),
       grupo(deshacer, rehacer),
-      grupo(cuadricula, deformacion, encajar),
+      grupo(cuadricula, deformacion, this.botonRecta, encajar),
       grupo(exportar),
     );
   }
@@ -353,6 +367,10 @@ export class PanelLienzo implements IContentRenderer {
     this.controles.pincel.classList.toggle("activo", a.herramienta === "pincel");
     this.controles.goma.classList.toggle("activo", a.herramienta === "goma");
     this.controles.gotero.classList.toggle("activo", this.cuentagotas);
+    if (this.botonRecta) {
+      this.botonRecta.classList.toggle("activo", !!this.recta);
+      this.botonRecta.disabled = this.lienzo?.zona.aplanado.tipo !== "manga";
+    }
     for (const b of this.barra.querySelectorAll<HTMLElement>("[data-herramienta]")) {
       b.classList.toggle("activo", b.dataset.herramienta === a.herramienta);
     }
@@ -433,12 +451,95 @@ export class PanelLienzo implements IContentRenderer {
     this.pedirRepintado();
   }
 
+  /** Tamaño de lo que se muestra: el lienzo o, en la vista recta, el rectángulo. */
+  private tamanoVisible(): { ancho: number; alto: number } {
+    return this.recta ?? this.lienzo!.geo;
+  }
+
+  private alternarRecta(): void {
+    const l = this.lienzo;
+    if (!l) return;
+    if (this.recta) {
+      this.recta = null;
+    } else {
+      if (l.zona.aplanado.tipo !== "manga") {
+        this.info.textContent = "La vista recta es para mangas (zonas que rodean el brazo o la pierna).";
+        return;
+      }
+      if (this.flotante) this.cancelarImagen();
+      this.seleccion = null;
+      this.recta = new VistaRecta(l);
+    }
+    this.ultimoPunto = null;
+    this.encajar();
+    this.sincronizarControles();
+  }
+
+  /** La tinta del rectángulo se rehace como mucho cada 120 ms mientras se dibuja. */
+  private programarRecta(): void {
+    if (this.rectaPendiente) return;
+    this.rectaPendiente = true;
+    setTimeout(() => {
+      this.rectaPendiente = false;
+      this.recta?.actualizar();
+      this.pedirRepintado();
+    }, 120);
+  }
+
+  /** Punto del lienzo bajo un punto de lo que se ve (en la vista recta, se convierte). */
+  private aLienzo(d: P): P | null {
+    return this.recta ? this.recta.aLienzo(d.x, d.y) : d;
+  }
+
+  /**
+   * Trazo en la vista recta: cada tramo se subdivide y se lleva al lienzo punto a punto
+   * (las rectas del rectángulo son curvas en el lienzo); al salir de la zona o cruzar el
+   * corte, el trazo se corta y sigue al otro lado.
+   */
+  private puntoRecta(d: P, presion: number): void {
+    const t = this.trazoRecta;
+    const l = this.lienzo;
+    if (!t || !l || !this.recta) return;
+    const dist = Math.hypot(d.x - t.ultimo.x, d.y - t.ultimo.y);
+    const pasos = t.enLienzo === null && !t.activo && dist === 0 ? 1 : Math.max(1, Math.ceil(dist / 8));
+    for (let i = 1; i <= pasos; i++) {
+      const q = { x: t.ultimo.x + ((d.x - t.ultimo.x) * i) / pasos, y: t.ultimo.y + ((d.y - t.ultimo.y) * i) / pasos };
+      const c = this.recta.aLienzo(q.x, q.y);
+      const paso = dist / pasos;
+      if (!c || (t.activo && t.enLienzo && Math.hypot(c.x - t.enLienzo.x, c.y - t.enLienzo.y) > 6 * paso + 60)) {
+        if (t.activo) l.terminarTrazo();
+        t.activo = false;
+      }
+      if (c) {
+        if (!t.activo) {
+          t.activo = l.empezarTrazo(t.ajustes, c.x, c.y, presion);
+          if (!t.activo) this.info.textContent = `La capa «${l.doc.activa.nombre}» está ${l.doc.activa.bloqueada ? "bloqueada" : "oculta"}.`;
+        } else l.continuarTrazo(c.x, c.y, presion);
+      }
+      t.enLienzo = c;
+    }
+    t.ultimo = d;
+  }
+
+  private trazarRecta(puntos: P[], presion: number, ajustes: AjustesPincel): void {
+    if (!puntos.length) return;
+    this.trazoRecta = { ultimo: puntos[0], enLienzo: null, activo: false, ajustes };
+    for (const p of puntos) this.puntoRecta(p, presion);
+    this.terminarRecta();
+  }
+
+  private terminarRecta(): void {
+    if (this.trazoRecta?.activo) this.lienzo?.terminarTrazo();
+    this.trazoRecta = null;
+  }
+
   private encajar(): void {
     const l = this.lienzo;
     if (!l || this.canvas.width === 0) return;
-    const escala = Math.min(this.canvas.width / l.geo.ancho, this.canvas.height / l.geo.alto) * 0.94;
+    const { ancho, alto } = this.tamanoVisible();
+    const escala = Math.min(this.canvas.width / ancho, this.canvas.height / alto) * 0.94;
     this.vista = new DOMMatrix()
-      .translate((this.canvas.width - l.geo.ancho * escala) / 2, (this.canvas.height - l.geo.alto * escala) / 2)
+      .translate((this.canvas.width - ancho * escala) / 2, (this.canvas.height - alto * escala) / 2)
       .scale(escala);
     this.actualizarInfo();
     this.pedirRepintado();
@@ -503,6 +604,10 @@ export class PanelLienzo implements IContentRenderer {
       this.arrastre = this.empezarArrastreImagen(c, d);
       return;
     }
+    if (this.recta) {
+      this.punteroAbajoRecta(e, d);
+      return;
+    }
     if (this.cuentagotas || e.altKey) {
       this.tomarColor(d);
       return;
@@ -543,6 +648,41 @@ export class PanelLienzo implements IContentRenderer {
     else this.info.textContent = `La capa «${l.doc.activa.nombre}» está ${l.doc.activa.bloqueada ? "bloqueada" : "oculta"}.`;
   }
 
+  /** Herramientas en la vista recta: se convierte cada punto al lienzo. */
+  private punteroAbajoRecta(e: PointerEvent, d: P): void {
+    const l = this.lienzo!;
+    const h = app.ajustes.herramienta;
+    if (this.cuentagotas || e.altKey) {
+      const c = this.aLienzo(d);
+      if (c) this.tomarColor(c);
+      return;
+    }
+    if (h === "lazo") {
+      this.info.textContent = "El lazo funciona en la vista normal del lienzo.";
+      return;
+    }
+    if (h === "relleno") {
+      const c = this.aLienzo(d);
+      const a = app.ajustes;
+      if (!c || !rellenar(l, c.x, c.y, a.color, a.opacidad)) this.info.textContent = "Haz clic dentro de la zona para rellenar.";
+      return;
+    }
+    if (esForma(h)) {
+      this.arrastre = { tipo: "forma", forma: h, a: d, b: d };
+      return;
+    }
+    const ajustes = { ...app.ajustes, herramienta: h === "goma" ? ("goma" as const) : ("pincel" as const) };
+    if (e.shiftKey && this.ultimoPunto) {
+      this.trazarRecta([this.ultimoPunto, d], presionDe(e), ajustes);
+      this.ultimoPunto = d;
+      return;
+    }
+    this.trazoRecta = { ultimo: d, enLienzo: null, activo: false, ajustes };
+    this.puntoRecta(d, presionDe(e));
+    this.arrastre = { tipo: "dibujo-recta" };
+    this.ultimoPunto = d;
+  }
+
   private punteroMovido(e: PointerEvent): void {
     this.puntero = this.aCanvas(e);
     this.mayus = e.shiftKey;
@@ -562,6 +702,13 @@ export class PanelLienzo implements IContentRenderer {
         break;
       case "desplazar":
         this.vista = new DOMMatrix().translate(c.x - a.inicio.x, c.y - a.inicio.y).multiply(a.vista);
+        break;
+      case "dibujo-recta":
+        for (const ev of e.getCoalescedEvents?.() ?? [e]) {
+          const d = this.aDocumento(ev);
+          this.puntoRecta(d, presionDe(ev));
+          this.ultimoPunto = d;
+        }
         break;
       case "lazo": {
         const d = this.aDocumento(e);
@@ -619,6 +766,7 @@ export class PanelLienzo implements IContentRenderer {
       if (this.seleccion)
         this.info.textContent = "Selección: arrástrala para moverla · Supr borra · Ctrl+C copia · Ctrl+X corta · Esc la quita";
     }
+    if (a?.tipo === "dibujo-recta") this.terminarRecta();
     if (a?.tipo === "forma") this.trazarForma(a.forma, a.a, a.b);
     if (a?.tipo === "desplazar" || a?.tipo === "girar") this.actualizarInfo();
     this.pedirRepintado();
@@ -749,6 +897,11 @@ export class PanelLienzo implements IContentRenderer {
     if (!l || Math.hypot(b.x - a.x, b.y - a.y) < 2) return;
     const puntos = puntosDeForma(forma, a, b);
     const ajustes = { ...app.ajustes, herramienta: "pincel" as const };
+    if (this.recta) {
+      this.trazarRecta(puntos, 1, ajustes);
+      this.ultimoPunto = puntos[puntos.length - 1];
+      return;
+    }
     if (!l.empezarTrazo(ajustes, puntos[0].x, puntos[0].y, 1)) return;
     for (const p of puntos.slice(1)) l.continuarTrazo(p.x, p.y, 1);
     l.terminarTrazo();
@@ -799,6 +952,7 @@ export class PanelLienzo implements IContentRenderer {
   pegar(): void {
     const copia = obtenerCopia();
     if (!copia || !this.lienzo) return;
+    if (this.recta) this.alternarRecta();
     const { ancho, alto } = this.lienzo.geo;
     const w = copia.rect.x1 - copia.rect.x0, h = copia.rect.y1 - copia.rect.y0;
     const matriz =
@@ -811,6 +965,7 @@ export class PanelLienzo implements IContentRenderer {
   /** Coloca una imagen sobre el lienzo para moverla, escalarla y girarla antes de fijarla. */
   colocarImagen(imagen: ImageBitmap, nombre: string, matriz?: DOMMatrix): void {
     if (!this.lienzo) return;
+    if (this.recta) this.alternarRecta();
     this.flotante = new ImagenFlotante(imagen, nombre, this.lienzo, matriz);
     this.barraImagen.hidden = false;
     this.pedirRepintado();
@@ -893,6 +1048,13 @@ export class PanelLienzo implements IContentRenderer {
     ctx.setTransform(this.vista);
     ctx.imageSmoothingQuality = "high";
 
+    if (this.recta) {
+      this.pintarRecta(ctx, escala, visible);
+      this.pintarSeleccion(ctx, escala);
+      this.pintarCursor(ctx, escala);
+      return;
+    }
+
     // Papel, cuadrícula y tinta, recortados a la zona.
     ctx.save();
     ctx.clip(geo.recorte);
@@ -923,6 +1085,33 @@ export class PanelLienzo implements IContentRenderer {
     this.pintarSeleccion(ctx, escala);
     if (this.flotante) this.pintarImagen(ctx);
     else this.pintarCursor(ctx, escala);
+  }
+
+  /** Vista recta: papel con cuadrícula recta, tinta desenrollada y contorno de la zona. */
+  private pintarRecta(ctx: CanvasRenderingContext2D, escala: number, visible: Rect): void {
+    const r = this.recta!;
+    const l = this.lienzo!;
+    ctx.save();
+    ctx.fillStyle = COLOR_PAPEL;
+    ctx.fillRect(r.margen, r.margen, r.ancho - 2 * r.margen, r.alto - 2 * r.margen);
+    ctx.beginPath();
+    ctx.rect(r.margen, r.margen, r.ancho - 2 * r.margen, r.alto - 2 * r.margen);
+    ctx.clip();
+    if (l.cuadricula) l.pintarCuadricula(ctx, 1, "rgba(120, 110, 100, 0.18)", "rgba(120, 110, 100, 0.35)", visible, 1 / escala);
+    ctx.restore();
+    ctx.drawImage(r.imagen, 0, 0, r.imagen.width / r.escala, r.imagen.height / r.escala);
+    ctx.lineWidth = 1.5 / escala;
+    ctx.strokeStyle = "#8a8f98";
+    ctx.stroke(r.contorno);
+    // Los bordes izquierdo y derecho son el corte: se tocan alrededor del brazo.
+    ctx.strokeStyle = "#e0483e";
+    ctx.lineWidth = 2.5 / escala;
+    ctx.beginPath();
+    ctx.moveTo(r.margen, r.margen);
+    ctx.lineTo(r.margen, r.alto - r.margen);
+    ctx.moveTo(r.ancho - r.margen, r.margen);
+    ctx.lineTo(r.ancho - r.margen, r.alto - r.margen);
+    ctx.stroke();
   }
 
   /** Lazo en curso, selección activa y vista previa de las formas. */

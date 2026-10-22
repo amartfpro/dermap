@@ -31,6 +31,7 @@ const SECCIONES: { titulo: string; filas: [string, string][] }[] = [
       ["Espacio + arrastrar · rueda", "Desplazar · zoom"],
       ["R + arrastrar · Mayús + rueda", "Girar el lienzo"],
       ["0", "Ver el lienzo entero"],
+      ["Vista recta", "Mangas: la piel desenrollada en un rectángulo; una línea horizontal es un anillo"],
       ["Intro · Esc", "Aplicar · cancelar la imagen flotante"],
     ],
   },

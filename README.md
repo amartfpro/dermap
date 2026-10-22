@@ -48,7 +48,8 @@ el almacenamiento del navegador, no en disco).
    el proyecto entero en un archivo `.dermap` (copia de seguridad o para otro ordenador) e
    **Importar…** lo abre como proyecto nuevo.
 2. **Cuerpo** (visor 3D → **Cuerpo…**): altura real, sexo, complexión, musculatura y tono de
-   piel. Los lienzos siguen al cuerpo al cambiarlo.
+   piel. Los lienzos siguen al cuerpo al cambiarlo. **Postura** dobla codos y rodillas solo para
+   ver cómo se deforma el diseño.
 3. **Zona** (visor 3D): una «Zona rápida», **Seleccionar** (pincel) o **Lazo** (rodear lo que
    se ve); Mayús quita. En mangas, la línea roja es el corte: va por la cara que no estás
    mirando, o márcalo tú con **Corte manual**. **Corte extra** abre pinzas en zonas muy curvas.
@@ -56,7 +57,9 @@ el almacenamiento del navegador, no en disco).
 4. **Dibujo** (panel Lienzo): pinceles para tatuaje (línea fina, línea, relleno, sombreado,
    puntillismo), goma, cuentagotas, relleno, lazo para mover/copiar/borrar, línea, rectángulo y
    elipse, paleta guardable, presión de la tableta y tamaño en milímetros reales. Lo que dibujas
-   aparece en el 3D al momento y los trazos continúan al otro lado de la costura.
+   aparece en el 3D al momento y los trazos continúan al otro lado de la costura. En mangas,
+   **Vista recta** muestra la piel desenrollada en un rectángulo (una línea horizontal es un
+   anillo alrededor del brazo), y **Pintar en 3D** dibuja directamente sobre el modelo.
 5. **Capas**: crear, duplicar, reordenar, ocultar, bloquear, opacidad, modo de fusión,
    **Importar imagen…** (PNG/JPG), **Copiar/Pegar** entre lienzos y **Traer dibujo de…**, que
    recoloca el dibujo de otro lienzo sobre la misma piel (para rehacer una zona con otro corte).

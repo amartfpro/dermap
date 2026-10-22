@@ -36,6 +36,8 @@
     "fs:allow-exists",
     "fs:allow-stat",
     "fs:allow-remove",
-    "core:window:allow-destroy"
+    "core:window:allow-destroy",
+    "core:window:allow-set-fullscreen",
+    "core:window:allow-is-fullscreen"
   ]
 }
