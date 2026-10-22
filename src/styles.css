@@ -31,7 +31,7 @@ body {
 .barra {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: 8px;
   height: 34px;
   padding: 0 12px;
   border-bottom: 1px solid var(--borde);
@@ -686,4 +686,104 @@ body {
   font-size: 11px;
   opacity: 0.65;
   line-height: 1.4;
+}
+
+/* Barra superior */
+.barra .hueco {
+  flex: 1;
+}
+
+.barra .cliente {
+  color: var(--texto-suave);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Ficha del cliente */
+.modal-ficha {
+  width: min(560px, calc(100vw - 32px));
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.rejilla-ficha {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px 14px;
+}
+
+.campo-ficha {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.campo-ficha > span {
+  font-size: 12px;
+  color: var(--texto-suave);
+}
+
+.campo-ficha input,
+.campo-ficha textarea {
+  background: var(--fondo);
+  color: var(--texto);
+  border: 1px solid var(--borde);
+  border-radius: 4px;
+  padding: 6px 8px;
+  font: inherit;
+}
+
+.campo-ficha textarea {
+  resize: vertical;
+}
+
+.campo-ficha input:focus,
+.campo-ficha textarea:focus {
+  outline: 1px solid var(--acento);
+  border-color: var(--acento);
+}
+
+.modal-ficha .nota {
+  margin: 0;
+  font-size: 12px;
+  color: var(--texto-suave);
+}
+
+/* Modo presentación (RF-46) */
+.barra-presentacion {
+  display: none;
+}
+
+.panel.presentando {
+  position: fixed;
+  inset: 0;
+  z-index: 900;
+  background: #16181b;
+}
+
+.panel.presentando > .herramientas,
+.panel.presentando > .etiqueta-flotante,
+.panel.presentando > .ventana-cuerpo {
+  display: none;
+}
+
+.panel.presentando > .barra-presentacion {
+  display: flex;
+  gap: 6px;
+  position: absolute;
+  left: 50%;
+  bottom: 22px;
+  transform: translateX(-50%);
+  padding: 6px 8px;
+  background: rgba(30, 32, 36, 0.82);
+  border: 1px solid var(--borde);
+  border-radius: 8px;
+  opacity: 0.35;
+  transition: opacity 0.2s;
+}
+
+.panel.presentando > .barra-presentacion:hover {
+  opacity: 1;
 }

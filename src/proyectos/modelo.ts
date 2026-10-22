@@ -22,8 +22,13 @@ export interface Proyecto {
   arbol: NodoArbol[];
 }
 
+/** Ficha del cliente (RF-05). Los campos opcionales no existían en los primeros proyectos. */
 export interface FichaCliente {
   cliente: string;
+  telefono?: string;
+  correo?: string;
+  /** Fecha de la cita (AAAA-MM-DD), si la hay. */
+  cita?: string;
   notas: string;
   creado: string; // ISO 8601
   modificado: string;

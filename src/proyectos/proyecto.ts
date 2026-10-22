@@ -12,6 +12,7 @@ import {
   type NodoLienzo,
   type Proyecto,
   type ModeloCuerpo,
+  type FichaCliente,
 } from "./modelo";
 import { escribirTextoSeguro, type SistemaArchivos } from "./sistema-archivos";
 
@@ -278,6 +279,13 @@ export class ProyectoAbierto extends EventTarget {
     this.datos.modelo = { ...this.datos.modelo, ...cambios };
     if (cambios.tonoPiel) for (const l of this.lienzos.values()) l.cambiar({ tonoPiel: cambios.tonoPiel });
     this.dispatchEvent(new Event("modelo"));
+    this.programarGuardado();
+  }
+
+  /** Cambia la ficha del cliente (RF-05). Emite «ficha». */
+  cambiarFicha(cambios: Partial<Omit<FichaCliente, "creado" | "modificado">>): void {
+    this.datos.ficha = { ...this.datos.ficha, ...cambios };
+    this.dispatchEvent(new Event("ficha"));
     this.programarGuardado();
   }
 

@@ -1,7 +1,8 @@
 import { createDockview, themeVisualStudio, type DockviewApi, type IContentRenderer } from "dockview-core";
 import "./vendor/dockview-8.6.1.css"; // hoja de estilos de dockview (MIT), copiada del paquete «dockview»
 import { PanelProyectos } from "./panels/proyectos";
-import { Visor3D } from "./panels/visor3d";
+import { Visor3D, visorActual } from "./panels/visor3d";
+import { abrirFicha } from "./panels/ficha";
 import { PanelLienzo } from "./panels/lienzo";
 import { PanelCapas } from "./panels/capas";
 import { app } from "./estado";
@@ -76,6 +77,16 @@ dock.onDidLayoutChange(() => {
 });
 
 document.getElementById("restablecer")!.addEventListener("click", () => layoutInicial(dock));
+document.getElementById("ficha")!.addEventListener("click", () => void abrirFicha());
+document.getElementById("presentar")!.addEventListener("click", () => visorActual()?.presentar(true));
+
+// Nombre del cliente en la barra superior.
+const etiquetaCliente = document.getElementById("cliente")!;
+const mostrarCliente = () => {
+  const p = app.proyecto;
+  etiquetaCliente.textContent = p ? `· ${p.datos.ficha.cliente || p.datos.nombre}` : "";
+};
+app.addEventListener("proyecto", mostrarCliente);
 
 // ── Proyectos: reabrir el último, guardar con Ctrl+S y antes de cerrar ───────────
 
@@ -85,6 +96,9 @@ window.addEventListener("keydown", (e) => {
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s") {
     e.preventDefault();
     void app.proyecto?.guardar();
+  } else if (e.key === "F5") {
+    e.preventDefault(); // en la aplicación, F5 no recarga: presenta
+    visorActual()?.presentar(true);
   }
 });
 

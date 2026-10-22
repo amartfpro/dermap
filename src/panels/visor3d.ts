@@ -46,6 +46,13 @@ export class Visor3D implements IContentRenderer {
   private cuerpoPendiente = false;
   private panelCuerpo!: PanelCuerpo;
   private alCambiarProyecto = () => this.suscribirProyecto();
+  private barraPresentacion: HTMLElement;
+  private presentando = false;
+  private botonGirar!: HTMLButtonElement;
+  private visiblesAntes: { objeto: THREE.Object3D; visible: boolean }[] = [];
+  private alTeclaPresentacion = (e: KeyboardEvent) => {
+    if (e.key === "Escape") this.presentar(false);
+  };
   private alCambiarModelo = () => this.programarCuerpo();
   private mallaCuerpo: THREE.Mesh | null = null;
   private normalesCuerpo: THREE.BufferAttribute | null = null;
@@ -127,12 +134,17 @@ export class Visor3D implements IContentRenderer {
       titulo(boton("Cuerpo…", () => this.panelCuerpo.alternar()), "Altura, complexión y tono de piel del cliente"),
     );
     this.panelCuerpo = new PanelCuerpo();
-    this.element.append(barra, this.estadoTexto, this.panelCuerpo.element);
+    this.barraPresentacion = this.montarBarraPresentacion();
+    this.element.append(barra, this.estadoTexto, this.panelCuerpo.element, this.barraPresentacion);
 
     this.controles = new OrbitControls(this.camara, this.renderer.domElement);
     this.controles.enableDamping = true;
     // El corte por defecto va por la cara que no se ve: al girar la vista, se recalcula.
     this.controles.addEventListener("change", () => this.programarCorte());
+    // Si el tatuador mueve la cámara durante la presentación, se para el giro automático.
+    this.controles.addEventListener("start", () => {
+      if (this.controles.autoRotate) this.alternarGiro(false);
+    });
 
     this.montarEscena();
     app.addEventListener("lienzos", this.alCambiarLienzos);
@@ -155,6 +167,7 @@ export class Visor3D implements IContentRenderer {
       this.renderer.render(this.escena, this.camara);
     });
 
+    visores.push(this);
     void this.cargar();
   }
 
@@ -165,10 +178,79 @@ export class Visor3D implements IContentRenderer {
   }
 
   onHide(): void {
+    if (this.presentando) return;
     this.activo = false;
   }
 
+  // ── Modo presentación (RF-46) ───────────────────────────────────────────────
+
+  private montarBarraPresentacion(): HTMLElement {
+    const barra = document.createElement("div");
+    barra.className = "barra-presentacion";
+    const vista = (nombre: string, direccion: P3) =>
+      boton(nombre, () => {
+        if (!this.cuerpo) return;
+        this.alternarGiro(false);
+        this.encuadrar([0, this.cuerpo.altura / 2, 0], this.cuerpo.altura / 2, direccion);
+      });
+    this.botonGirar = boton("Girar", () => this.alternarGiro(!this.controles.autoRotate));
+    barra.append(
+      vista("Frente", [0, 0.1, 1]),
+      vista("Espalda", [0, 0.1, -1]),
+      vista("Izquierda", [1, 0.1, 0.05]),
+      vista("Derecha", [-1, 0.1, 0.05]),
+      this.botonGirar,
+      titulo(boton("Imagen…", () => void this.exportarImagen()), "Guardar esta vista en PNG"),
+      titulo(boton("Salir", () => this.presentar(false)), "Salir de la presentación (Esc)"),
+    );
+    return barra;
+  }
+
+  private alternarGiro(activo: boolean): void {
+    this.controles.autoRotate = activo;
+    this.controles.autoRotateSpeed = 1.2;
+    this.botonGirar.classList.toggle("activo", activo);
+  }
+
+  /**
+   * Presentación para el cliente: el cuerpo con todos los lienzos visibles a pantalla
+   * completa, sin herramientas ni marcas de edición, girando despacio.
+   */
+  presentar(activar = !this.presentando): void {
+    if (activar === this.presentando) return;
+    this.presentando = activar;
+    this.element.classList.toggle("presentando", activar);
+    if (activar) {
+      const ocultar = [this.resaltado, this.previaCorte, this.grupoCortesExtra, ...[...this.mallas.values()].map((m) => m.resalte)];
+      this.visiblesAntes = ocultar.map((objeto) => ({ objeto, visible: objeto.visible }));
+      for (const o of ocultar) o.visible = false;
+      if (this.modoSeleccion) this.alternarSeleccion();
+      if (this.modoCorte) this.alternarModoCorte();
+      this.activo = true;
+      if (this.cuerpo) this.encuadrar([0, this.cuerpo.altura / 2, 0], this.cuerpo.altura / 2, [0, 0.1, 1]);
+      this.alternarGiro(true);
+      window.addEventListener("keydown", this.alTeclaPresentacion);
+      void document.documentElement.requestFullscreen?.().catch(() => {});
+    } else {
+      for (const { objeto, visible } of this.visiblesAntes) objeto.visible = visible;
+      this.resaltarActivo();
+      this.alternarGiro(false);
+      window.removeEventListener("keydown", this.alTeclaPresentacion);
+      if (document.fullscreenElement) void document.exitFullscreen().catch(() => {});
+    }
+    this.ajustarTamano();
+  }
+
+  private encuadrar(centro: P3, radio: number, direccion: P3): void {
+    this.controles.target.set(...centro);
+    const dir = new THREE.Vector3(...direccion).normalize();
+    this.camara.position.copy(this.controles.target).addScaledVector(dir, this.distanciaPara(radio));
+    this.controles.update();
+  }
+
   dispose(): void {
+    if (this.presentando) this.presentar(false);
+    visores.splice(visores.indexOf(this), 1);
     this.renderer.setAnimationLoop(null);
     this.observador.disconnect();
     this.controles.dispose();
@@ -319,10 +401,7 @@ export class Visor3D implements IContentRenderer {
     if (!this.cuerpo) return;
     const vista = VISTAS[indice];
     const { centro, radio, direccion } = vista.encuadre(this.cuerpo);
-    this.controles.target.set(...centro);
-    const dir = new THREE.Vector3(...direccion).normalize();
-    this.camara.position.copy(this.controles.target).addScaledVector(dir, this.distanciaPara(radio));
-    this.controles.update();
+    this.encuadrar(centro, radio, direccion);
   }
 
   private zonaRapida(indice: number): void {
@@ -702,7 +781,7 @@ export class Visor3D implements IContentRenderer {
   }
 
   private resaltarActivo(): void {
-    for (const [lienzo, m] of this.mallas) m.resalte.visible = lienzo === app.activo;
+    for (const [lienzo, m] of this.mallas) m.resalte.visible = lienzo === app.activo && !this.presentando;
   }
 
   /** Sube a la GPU solo las regiones de textura que han cambiado (P3). */
@@ -774,6 +853,13 @@ export class Visor3D implements IContentRenderer {
     const horizontal = 2 * Math.atan(Math.tan(vertical / 2) * this.camara.aspect);
     return (radio / Math.sin(Math.min(vertical, horizontal) / 2)) * 1.05;
   }
+}
+
+const visores: Visor3D[] = [];
+
+/** Visor 3D abierto (para el botón «Presentar» de la barra superior). */
+export function visorActual(): Visor3D | null {
+  return visores[visores.length - 1] ?? null;
 }
 
 interface MallaLienzo {
