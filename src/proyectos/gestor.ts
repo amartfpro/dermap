@@ -172,3 +172,32 @@ async function elegirArchivoDermap(): Promise<Uint8Array | null> {
     entrada.click();
   });
 }
+
+/**
+ * Abre un archivo .dermap por su ruta (doble clic en el archivo con la aplicación instalada):
+ * se importa como proyecto nuevo, igual que con «Importar…».
+ */
+export async function importarDesdeRuta(ruta: string, progreso?: (t: string) => void): Promise<void> {
+  const { invoke } = await import("@tauri-apps/api/core");
+  progreso?.(t("Importando proyecto…"));
+  const bytes = new Uint8Array(await invoke<ArrayBuffer>("leer_dermap", { ruta }));
+  const carpeta = await importarPaquete(await sistemaArchivos(), bytes);
+  await abrirProyecto(carpeta, progreso);
+}
+
+/** Si la aplicación se abrió con un archivo .dermap, lo importa (Windows, Linux y macOS). */
+export async function abrirArchivoInicial(progreso?: (t: string) => void): Promise<void> {
+  if (!enTauri()) return;
+  const { invoke } = await import("@tauri-apps/api/core");
+  const { listen } = await import("@tauri-apps/api/event");
+  const abrir = (ruta: string) =>
+    importarDesdeRuta(ruta, progreso).catch((error) => console.error("No se pudo abrir el archivo .dermap", error));
+  // macOS avisa con un evento si el archivo llega con la aplicación ya abierta.
+  await listen<string>("abrir-dermap", () => {
+    void invoke<string | null>("archivo_al_abrir").then((ruta) => {
+      if (ruta) void abrir(ruta);
+    });
+  });
+  const ruta = await invoke<string | null>("archivo_al_abrir");
+  if (ruta) await abrir(ruta);
+}

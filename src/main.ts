@@ -8,7 +8,7 @@ import { abrirAyuda } from "./panels/ayuda";
 import { PanelLienzo } from "./panels/lienzo";
 import { PanelCapas } from "./panels/capas";
 import { app } from "./estado";
-import { abrirUltimo } from "./proyectos/gestor";
+import { abrirArchivoInicial, abrirUltimo } from "./proyectos/gestor";
 import { enTauri, sistemaArchivos } from "./proyectos/sistema-archivos";
 
 const CLAVE_LAYOUT = "dermap.layout.v2";
@@ -124,7 +124,9 @@ app.addEventListener("proyecto", mostrarCliente);
 
 // ── Proyectos: reabrir el último, guardar con Ctrl+S y antes de cerrar ───────────
 
-void abrirUltimo((texto) => app.dispatchEvent(new CustomEvent("progreso", { detail: texto }))).catch((error) => console.error("No se pudo abrir el último proyecto", error));
+void abrirUltimo((texto) => app.dispatchEvent(new CustomEvent("progreso", { detail: texto })))
+  .catch((error) => console.error("No se pudo abrir el último proyecto", error))
+  .then(() => abrirArchivoInicial((texto) => app.dispatchEvent(new CustomEvent("progreso", { detail: texto }))));
 
 window.addEventListener("keydown", (e) => {
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s") {

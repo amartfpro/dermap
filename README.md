@@ -46,7 +46,8 @@ el almacenamiento del navegador, no en disco).
 1. **Proyecto** (panel izquierdo): uno por cliente, en `Documentos/Dermap/`. **Ficha del
    cliente** (arriba) guarda nombre, contacto, fecha de la cita y notas. **Exportar…** guarda
    el proyecto entero en un archivo `.dermap` (copia de seguridad o para otro ordenador) e
-   **Importar…** lo abre como proyecto nuevo.
+   **Importar…** lo abre como proyecto nuevo (con la aplicación instalada, también basta con
+   hacer doble clic en el archivo `.dermap`).
 2. **Cuerpo** (visor 3D → **Cuerpo…**): altura real, sexo, complexión, musculatura y tono de
    piel. Los lienzos siguen al cuerpo al cambiarlo. **Postura** dobla codos y rodillas solo para
    ver cómo se deforma el diseño.
