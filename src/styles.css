@@ -771,6 +771,9 @@ body {
 
 .panel.presentando > .barra-presentacion {
   display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  max-width: calc(100% - 40px);
   gap: 6px;
   position: absolute;
   left: 50%;
@@ -826,4 +829,17 @@ body {
   min-width: 0;
   height: 18px;
   line-height: 16px;
+}
+
+.versiones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding-right: 8px;
+  margin-right: 4px;
+  border-right: 1px solid var(--borde);
+}
+
+.versiones:empty {
+  display: none;
 }

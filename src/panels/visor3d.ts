@@ -49,6 +49,7 @@ export class Visor3D implements IContentRenderer {
   private barraPresentacion: HTMLElement;
   private presentando = false;
   private botonGirar!: HTMLButtonElement;
+  private versiones!: HTMLElement;
   private visiblesAntes: { objeto: THREE.Object3D; visible: boolean }[] = [];
   private alTeclaPresentacion = (e: KeyboardEvent) => {
     if (e.key === "Escape") this.presentar(false);
@@ -99,8 +100,17 @@ export class Visor3D implements IContentRenderer {
 
   private zonas3d = new THREE.Group();
   private mallas = new Map<Lienzo, MallaLienzo>();
-  private alCambiarLienzos = () => this.reconstruirLienzos();
-  private alCambiarActivo = () => this.resaltarActivo();
+  private alCambiarLienzos = () => {
+    this.reconstruirLienzos();
+    if (this.presentando) this.pintarVersiones();
+  };
+  private alCambiarActivo = () => {
+    this.resaltarActivo();
+    // RF-41: al cambiar de lienzo, la cámara va a su zona.
+    if (app.activo && app.activo !== this.ultimoActivo && !this.presentando) this.encuadrarZona(app.activo);
+    this.ultimoActivo = app.activo;
+  };
+  private ultimoActivo: Lienzo | null = null;
 
   constructor() {
     this.element = document.createElement("div");
@@ -148,6 +158,7 @@ export class Visor3D implements IContentRenderer {
       titulo(boton("Quitar cortes", () => this.quitarCortesExtra()), "Quitar los cortes extra"),
       boton("Aplanar zona", () => void this.aplanar()),
       titulo(boton("Imagen 3D…", () => void this.exportarImagen()), "Guardar la vista actual en PNG para enseñarla al cliente"),
+      titulo(boton("Ver zona", () => app.activo && this.encuadrarZona(app.activo)), "Centrar la cámara en la zona del lienzo activo"),
       titulo(boton("Cuerpo…", () => this.panelCuerpo.alternar()), "Altura, complexión y tono de piel del cliente"),
     );
     this.capaLazo = document.createElement("canvas");
@@ -214,7 +225,10 @@ export class Visor3D implements IContentRenderer {
         this.encuadrar([0, this.cuerpo.altura / 2, 0], this.cuerpo.altura / 2, direccion);
       });
     this.botonGirar = boton("Girar", () => this.alternarGiro(!this.controles.autoRotate));
+    this.versiones = document.createElement("div");
+    this.versiones.className = "versiones";
     barra.append(
+      this.versiones,
       vista("Frente", [0, 0.1, 1]),
       vista("Espalda", [0, 0.1, -1]),
       vista("Izquierda", [1, 0.1, 0.05]),
@@ -224,6 +238,24 @@ export class Visor3D implements IContentRenderer {
       titulo(boton("Salir", () => this.presentar(false)), "Salir de la presentación (Esc)"),
     );
     return barra;
+  }
+
+  /**
+   * Lienzos del proyecto como botones para enseñarlos u ocultarlos durante la presentación:
+   * así se comparan versiones del diseño delante del cliente (RF-46).
+   */
+  private pintarVersiones(): void {
+    const p = app.proyecto;
+    this.versiones.replaceChildren();
+    if (!p || !this.presentando) return;
+    const nodos = p.nodosLienzo();
+    if (nodos.length < 2) return;
+    for (const nodo of nodos) {
+      const b = boton(nodo.nombre, () => p.alternarVisible(nodo.id));
+      b.classList.toggle("activo", nodo.visible !== false);
+      b.title = "Mostrar u ocultar este lienzo";
+      this.versiones.append(b);
+    }
   }
 
   private alternarGiro(activo: boolean): void {
@@ -251,6 +283,7 @@ export class Visor3D implements IContentRenderer {
       this.activo = true;
       if (this.cuerpo) this.encuadrar([0, this.cuerpo.altura / 2, 0], this.cuerpo.altura / 2, [0, 0.1, 1]);
       this.alternarGiro(true);
+      this.pintarVersiones();
       window.addEventListener("keydown", this.alTeclaPresentacion);
       void document.documentElement.requestFullscreen?.().catch(() => {});
     } else {
@@ -261,6 +294,35 @@ export class Visor3D implements IContentRenderer {
       if (document.fullscreenElement) void document.exitFullscreen().catch(() => {});
     }
     this.ajustarTamano();
+  }
+
+  /**
+   * Encuadra la zona de un lienzo: centro y tamaño de sus vértices en el cuerpo actual,
+   * mirando desde la dirección media de su piel (en mangas, que la rodean, desde la vista actual).
+   */
+  encuadrarZona(lienzo: Lienzo): void {
+    if (!this.cuerpo || !this.normalesCuerpo) return;
+    const v = this.cuerpo.vertices;
+    const n = this.normalesCuerpo;
+    const indices = lienzo.zona.verticeBase;
+    const centro = new THREE.Vector3();
+    const normal = new THREE.Vector3();
+    for (const b of indices) {
+      centro.x += v[3 * b];
+      centro.y += v[3 * b + 1];
+      centro.z += v[3 * b + 2];
+      normal.x += n.getX(b);
+      normal.y += n.getY(b);
+      normal.z += n.getZ(b);
+    }
+    centro.divideScalar(indices.length);
+    let radio = 0;
+    for (const b of indices) radio = Math.max(radio, Math.hypot(v[3 * b] - centro.x, v[3 * b + 1] - centro.y, v[3 * b + 2] - centro.z));
+    const direccion =
+      normal.length() / indices.length > 0.35
+        ? normal.normalize()
+        : this.camara.position.clone().sub(this.controles.target).normalize();
+    this.encuadrar(centro.toArray() as P3, Math.max(8, radio * 1.1), direccion.toArray() as P3);
   }
 
   private encuadrar(centro: P3, radio: number, direccion: P3): void {
