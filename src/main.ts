@@ -132,5 +132,8 @@ if (enTauri()) {
 
 // Acceso para las pruebas automáticas en navegador (solo con ?prueba en la URL).
 if (new URLSearchParams(location.search).has("prueba")) {
+  void import("./proyectos/paquete").then((paquete) => {
+    (window as unknown as { dermap: unknown }).dermap = { app, sistemaArchivos, paquete };
+  });
   (window as unknown as { dermap: unknown }).dermap = { app, sistemaArchivos };
 }

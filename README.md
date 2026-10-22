@@ -10,6 +10,16 @@ Funciona sin conexión y sin servidor. Se distribuye como un instalador normal p
 > Estado: prototipo funcional. Se puede usar de principio a fin, pero aún no es una versión
 > estable: guarda copias de tus proyectos importantes.
 
+## Instalar sin compilar
+
+En GitHub, pestaña **Actions → Instaladores → Run workflow**: en unos 15 minutos compila el
+instalador de Windows (`.msi` y `.exe`) y el de macOS (`.dmg`), que se descargan desde la
+ejecución terminada (sección «Artifacts»). También se lanza al subir una etiqueta de versión
+(`git tag v0.2.0 && git push --tags`), que deja además un borrador de *release*.
+
+Los instaladores aún no están firmados: Windows avisa con SmartScreen («Más información →
+Ejecutar de todas formas») y macOS pide abrirlo con clic derecho → Abrir la primera vez.
+
 ## Preparar el entorno en Windows
 
 1. **Node.js** 20.19 o posterior.
@@ -33,36 +43,49 @@ el almacenamiento del navegador, no en disco).
 
 ## Cómo se usa
 
-1. **Proyecto** (panel izquierdo): uno por cliente. Elige uno o crea uno nuevo; se guardan en
-   `Documentos/Dermap/`. Si aplanas una zona sin proyecto abierto, se crea «Sin título».
-2. **Zona** (visor 3D): elige una «Zona rápida» (manga, antebrazo, pierna) o pinta una con
-   «Seleccionar» (Mayús + arrastrar para quitar; con la selección activa la cámara gira con el
-   botón derecho). Pulsa **Aplanar zona**: se crea un lienzo nuevo en el proyecto. Si la zona es
-   una manga, el corte va por la cara que no estás mirando; la vista «cara interna» lo muestra.
-3. **Dibujo** (panel Lienzo): pincel y goma con presión, color, tamaño en milímetros reales,
-   opacidad y dureza. Lo que dibujas aparece en el 3D al momento, y un trazo que cruza la
-   costura continúa al otro lado del corte.
-4. **Capas** (panel Capas): crear, duplicar, reordenar, ocultar, bloquear, opacidad, modo de
-   fusión, y **Importar imagen…** para traer un PNG o JPG y colocarlo (mover, escalar, girar).
-5. **Exportar stencil…**: PDF A4 a escala real (en piezas con solape si no cabe) o PNG a 300 ppp,
+1. **Proyecto** (panel izquierdo): uno por cliente, en `Documentos/Dermap/`. **Ficha del
+   cliente** (arriba) guarda nombre, contacto, fecha de la cita y notas. **Exportar…** guarda
+   el proyecto entero en un archivo `.dermap` (copia de seguridad o para otro ordenador) e
+   **Importar…** lo abre como proyecto nuevo.
+2. **Cuerpo** (visor 3D → **Cuerpo…**): altura real, sexo, complexión, musculatura y tono de
+   piel. Los lienzos siguen al cuerpo al cambiarlo.
+3. **Zona** (visor 3D): una «Zona rápida», **Seleccionar** (pincel) o **Lazo** (rodear lo que
+   se ve); Mayús quita. En mangas, la línea roja es el corte: va por la cara que no estás
+   mirando, o márcalo tú con **Corte manual**. **Corte extra** abre pinzas en zonas muy curvas.
+   **Aplanar zona** crea un lienzo nuevo a escala real.
+4. **Dibujo** (panel Lienzo): pinceles para tatuaje (línea fina, línea, relleno, sombreado,
+   puntillismo), goma, cuentagotas, relleno, lazo para mover/copiar/borrar, línea, rectángulo y
+   elipse, paleta guardable, presión de la tableta y tamaño en milímetros reales. Lo que dibujas
+   aparece en el 3D al momento y los trazos continúan al otro lado de la costura.
+5. **Capas**: crear, duplicar, reordenar, ocultar, bloquear, opacidad, modo de fusión,
+   **Importar imagen…** (PNG/JPG), **Copiar/Pegar** entre lienzos y **Traer dibujo de…**, que
+   recoloca el dibujo de otro lienzo sobre la misma piel (para rehacer una zona con otro corte).
+6. **Exportar stencil…**: PDF A4 a escala real (en piezas con solape si no cabe) o PNG a 300 ppp,
    con las capas que elijas y en negro puro para la impresora térmica. **Imagen 3D…** guarda la
-   vista del visor para enseñársela al cliente.
+   vista del visor.
+7. **Presentar** (o F5): el 3D a pantalla completa para el cliente, girando, con botones para
+   mostrar u ocultar cada lienzo y comparar versiones (duplica un lienzo con ⧉ para hacer otra).
 
 Para tatuajes ya hechos o cicatrices, crea lienzos aparte (por ejemplo en una carpeta
 «Previos»): todos los lienzos visibles se ven a la vez en el 3D.
 
 ### Atajos
 
+Todos están en la ayuda (botón **?** o F1). Los principales:
+
 | Acción | Atajo |
 | --- | --- |
-| Pincel / goma | B / E |
+| Pincel / goma / relleno / lazo / formas | B / E / G / L / U |
+| Cuentagotas | I, o Alt + clic |
 | Tamaño del pincel | [ y ] |
+| Línea recta | Mayús + clic |
 | Deshacer / rehacer | Ctrl+Z / Ctrl+Mayús+Z (o Ctrl+Y) |
+| Copiar / cortar / pegar | Ctrl+C / Ctrl+X / Ctrl+V |
+| Capa nueva / duplicar / cambiar | Ctrl+Mayús+N / Ctrl+J / Alt+↑↓ |
+| Desplazar / zoom / girar el lienzo | Espacio + arrastrar / rueda / R + arrastrar |
+| Vistas del 3D / zona activa | 1–9 / F (con el ratón sobre el visor) |
 | Guardar ahora | Ctrl+S (también se guarda solo) |
-| Desplazar el lienzo | Botón central, o Espacio + arrastrar |
-| Zoom | Rueda |
-| Girar el lienzo | Mayús + rueda, o R + arrastrar |
-| Ver el lienzo entero | 0 |
+| Presentar / ayuda | F5 / F1 |
 
 ## Tecnologías
 
@@ -70,8 +93,10 @@ Para tatuajes ya hechos o cicatrices, crea lienzos aparte (por ejemplo en una ca
 - **TypeScript + Vite**: todo el código propio (`src/`).
 - **Three.js**: visor 3D. **dockview**: paneles acoplables.
 - **libigl compilado a WebAssembly**: aplanado de zonas (LSCM + SLIM) en un Web Worker.
-- **pdf-lib**: exportación del stencil en PDF.
-- Cuerpo: malla base de [MakeHuman](https://github.com/makehumancommunity/makehuman) (CC0).
+- **pdf-lib**: exportación del stencil en PDF. **fflate**: archivos `.dermap` (ZIP).
+- Cuerpo: malla base y formas de [MakeHuman](https://github.com/makehumancommunity/makehuman) (CC0).
+- Todas las dependencias tienen licencias permisivas (MIT, BSD, Apache, MPL); libigl se usa
+  con su licencia MPL 2.0.
 
 ## Estructura
 
@@ -79,12 +104,14 @@ Para tatuajes ya hechos o cicatrices, crea lienzos aparte (por ejemplo en una ca
 src/
   main.ts              arranque, paneles, guardado al cerrar
   estado.ts            estado compartido: proyecto, lienzos, pestañas, pincel
-  panels/              proyectos, visor 3D, lienzo, capas, diálogo de exportación
-  lienzo/              motor de dibujo: teselas, capas, pincel, historial, geometría de la zona
+  panels/              proyectos, visor 3D, lienzo, capas, cuerpo, ficha, ayuda, exportación
+  lienzo/              motor de dibujo: teselas, capas, pincel, historial, herramientas,
+                       portapapeles, transferencia entre lienzos, geometría de la zona
   geometria/           módulo WebAssembly del aplanado, Web Worker, selección de zonas
-  proyectos/           formato en disco, guardado y carga, sistema de archivos
+  proyectos/           formato en disco, guardado y carga, archivo .dermap, sistema de archivos
   exportar/            stencil PDF/PNG
-  modelos/             cuerpo base
+  modelos/             cuerpo base y formas (complexión)
+pruebas/               pruebas automáticas (npm test)
 geometria/             código C++ del aplanado (libigl)
 scripts/               conversión de MakeHuman, compilación del WebAssembly, medición P1
 src-tauri/             configuración de Tauri y permisos
@@ -105,10 +132,14 @@ Documentos/Dermap/<Proyecto>/
 
 ## Desarrollo
 
+- `npm test`: pruebas automáticas (formato, historial, regiones, plan de hojas, archivo
+  `.dermap`, complexión, selección, cortes y aplanado real con el WebAssembly en Node).
 - `npx tsx scripts/medir-aplanado.ts`: mide la prueba P1 (tiempo, deformación y solapes del aplanado).
 - `scripts/compilar-geometria.sh`: recompila `src/geometria/dermap_geom.wasm` (solo si se cambia
   el C++; necesita wasi-sdk 25, libigl 2.5 y Eigen 3.4, ver el script).
 - `npx tsx scripts/convertir-makehuman.ts base.obj`: regenera el cuerpo base.
+- `npx tsx scripts/convertir-formas.ts base.obj carpeta-de-targets`: regenera las formas de
+  complexión (los targets de MakeHuman que lista el script).
 
 La especificación de requisitos y el documento de diseño están en documentos compartidos aparte.
 Los identificadores RF-xx y RNF-xx del código remiten a la especificación.
