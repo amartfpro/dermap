@@ -1,14 +1,15 @@
+import { traducible } from "../i18n";
 import { claveTesela, contexto, crearLamina, TESELA, type Lamina } from "./teselas";
 
 export type ModoFusion = "normal" | "multiply" | "screen" | "overlay" | "darken" | "lighten";
 
 export const MODOS_FUSION: { modo: ModoFusion; nombre: string }[] = [
-  { modo: "normal", nombre: "Normal" },
-  { modo: "multiply", nombre: "Multiplicar" },
-  { modo: "screen", nombre: "Trama" },
-  { modo: "overlay", nombre: "Superponer" },
-  { modo: "darken", nombre: "Oscurecer" },
-  { modo: "lighten", nombre: "Aclarar" },
+  { modo: "normal", nombre: traducible("Normal") },
+  { modo: "multiply", nombre: traducible("Multiplicar") },
+  { modo: "screen", nombre: traducible("Trama") },
+  { modo: "overlay", nombre: traducible("Superponer") },
+  { modo: "darken", nombre: traducible("Oscurecer") },
+  { modo: "lighten", nombre: traducible("Aclarar") },
 ];
 
 export function operacionCanvas(modo: ModoFusion): GlobalCompositeOperation {

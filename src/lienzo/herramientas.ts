@@ -1,3 +1,4 @@
+import { t } from "../i18n";
 import type { Lienzo } from "./lienzo";
 import { fijarCopia } from "./portapapeles";
 import { teselasEn, TESELA, type Rect } from "./teselas";
@@ -164,7 +165,7 @@ export class Seleccion {
   async copiar(lienzo: Lienzo): Promise<boolean> {
     const lamina = this.extraer(lienzo);
     if (!lamina) return false;
-    await fijarCopia(await createImageBitmap(lamina), `${lienzo.doc.activa.nombre} (selección)`, lienzo.id, this.rect);
+    await fijarCopia(await createImageBitmap(lamina), t("{nombre} (selección)", { nombre: lienzo.doc.activa.nombre }), lienzo.id, this.rect);
     return true;
   }
 }

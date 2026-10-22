@@ -14,7 +14,7 @@ export interface Peticion {
 
 export type Respuesta =
   | { id: number; ok: true; aplanado: import("./aplanador").Aplanado; milisegundos: number }
-  | { id: number; ok: false; mensaje: string };
+  | { id: number; ok: false; mensaje: string; codigo?: number };
 
 const listo = fetch(urlWasm)
   .then((r) => r.arrayBuffer())
@@ -32,7 +32,8 @@ self.onmessage = async ({ data }: MessageEvent<Peticion>) => {
     );
     self.postMessage(respuesta, transferibles);
   } catch (error) {
-    const mensaje = error instanceof ErrorAplanado ? error.message : `Error inesperado: ${String(error)}`;
-    self.postMessage({ id: data.id, ok: false, mensaje } satisfies Respuesta);
+    // El código se traduce en la ventana principal (el trabajador no sabe el idioma elegido).
+    const codigo = error instanceof ErrorAplanado ? error.codigo : undefined;
+    self.postMessage({ id: data.id, ok: false, mensaje: String(error), codigo } satisfies Respuesta);
   }
 };

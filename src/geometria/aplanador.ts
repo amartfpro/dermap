@@ -1,3 +1,4 @@
+import { t, traducible } from "../i18n";
 /**
  * Envoltorio del módulo de geometría en WebAssembly (geometria/dermap_geom.cpp).
  * No depende del DOM: funciona en un Web Worker y en Node (para las mediciones).
@@ -46,15 +47,15 @@ export interface Aplanado {
 }
 
 const MENSAJES: Record<number, string> = {
-  1: "La zona debe tener un solo borde (parche) o dos (manga). Amplía la selección para cerrar los huecos.",
-  2: "No se encontró un camino de corte entre los dos bordes de la manga.",
-  3: "El corte debe empezar en un borde de la manga y terminar en el otro.",
-  4: "No se pudo aplanar la zona.",
+  1: traducible("La zona debe tener un solo borde (parche) o dos (manga). Amplía la selección para cerrar los huecos."),
+  2: traducible("No se encontró un camino de corte entre los dos bordes de la manga."),
+  3: traducible("El corte debe empezar en un borde de la manga y terminar en el otro."),
+  4: traducible("No se pudo aplanar la zona."),
 };
 
 export class ErrorAplanado extends Error {
   constructor(readonly codigo: number) {
-    super(MENSAJES[codigo] ?? `Error de geometría ${codigo}`);
+    super(MENSAJES[codigo] ? t(MENSAJES[codigo]) : t("Error de geometría {codigo}", { codigo }));
   }
 }
 

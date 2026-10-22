@@ -1,3 +1,4 @@
+import { t, traducible } from "../i18n";
 import type { IContentRenderer } from "dockview-core";
 import { app } from "../estado";
 import { PX_POR_MM } from "../lienzo/geometria-zona";
@@ -55,13 +56,13 @@ function guardarPaleta(p: string[]): void {
 const COLOR_PAPEL = "#f4efe9";
 
 const NOMBRES_HERRAMIENTA: Record<Herramienta, string> = {
-  pincel: "pincel",
-  goma: "goma",
-  relleno: "relleno",
-  lazo: "lazo",
-  linea: "línea",
-  rectangulo: "rectángulo",
-  elipse: "elipse",
+  pincel: traducible("pincel"),
+  goma: traducible("goma"),
+  relleno: traducible("relleno"),
+  lazo: traducible("lazo"),
+  linea: traducible("línea"),
+  rectangulo: traducible("rectángulo"),
+  elipse: traducible("elipse"),
 };
 
 /**
@@ -142,11 +143,11 @@ export class PanelLienzo implements IContentRenderer {
     this.barraImagen.className = "herramientas aviso-imagen";
     this.barraImagen.hidden = true;
     const textoImagen = document.createElement("span");
-    textoImagen.textContent = "Coloca la imagen: arrastra para mover, esquinas para escalar, punto superior para girar.";
+    textoImagen.textContent = t("Coloca la imagen: arrastra para mover, esquinas para escalar, punto superior para girar.");
     this.barraImagen.append(
       textoImagen,
-      boton("Aplicar (Intro)", () => this.fijarImagen(), "primario"),
-      boton("Cancelar (Esc)", () => this.cancelarImagen()),
+      boton(t("Aplicar (Intro)"), () => this.fijarImagen(), "primario"),
+      boton(t("Cancelar (Esc)"), () => this.cancelarImagen()),
     );
 
     this.canvas = document.createElement("canvas");
@@ -155,7 +156,7 @@ export class PanelLienzo implements IContentRenderer {
 
     this.aviso = document.createElement("div");
     this.aviso.className = "aviso centrado";
-    this.aviso.textContent = "Aplana una zona desde el visor 3D, o abre un lienzo del proyecto, para empezar a dibujar.";
+    this.aviso.textContent = t("Aplana una zona desde el visor 3D, o abre un lienzo del proyecto, para empezar a dibujar.");
 
     this.info = document.createElement("div");
     this.info.className = "etiqueta-flotante";
@@ -198,8 +199,8 @@ export class PanelLienzo implements IContentRenderer {
       nombre.textContent = l.nombre;
       const cerrar = document.createElement("button");
       cerrar.className = "icono";
-      cerrar.textContent = "×";
-      cerrar.title = "Cerrar pestaña (el lienzo sigue en el proyecto y en el 3D)";
+      cerrar.textContent = t("×");
+      cerrar.title = t("Cerrar pestaña (el lienzo sigue en el proyecto y en el 3D)");
       cerrar.addEventListener("click", (e) => {
         e.stopPropagation();
         app.cerrar(l);
@@ -262,15 +263,15 @@ export class PanelLienzo implements IContentRenderer {
 
   private montarHerramientas(): void {
     const a = app.ajustes;
-    const pincel = boton("Pincel", () => app.cambiarAjustes({ herramienta: "pincel" }));
-    pincel.title = "Pincel (B)";
-    const goma = boton("Goma", () => app.cambiarAjustes({ herramienta: "goma" }));
-    goma.title = "Goma (E)";
+    const pincel = boton(t("Pincel"), () => app.cambiarAjustes({ herramienta: "pincel" }));
+    pincel.title = t("Pincel (B)");
+    const goma = boton(t("Goma"), () => app.cambiarAjustes({ herramienta: "goma" }));
+    goma.title = t("Goma (E)");
 
     const preset = document.createElement("select");
-    preset.title = "Pinceles para tatuaje";
+    preset.title = t("Pinceles para tatuaje");
     preset.className = "selector-preset";
-    preset.append(new Option("Pincel…", ""), ...PRESETS.map((p, i) => new Option(p.nombre, String(i))));
+    preset.append(new Option(t("Pincel…"), ""), ...PRESETS.map((p, i) => new Option(t(p.nombre), String(i))));
     preset.addEventListener("change", () => {
       const p = PRESETS[Number(preset.value)];
       if (p) app.cambiarAjustes(p.ajustes);
@@ -281,56 +282,56 @@ export class PanelLienzo implements IContentRenderer {
       b.dataset.herramienta = h;
       return b;
     };
-    const relleno = herramienta("Relleno", "relleno", "Cubo de relleno: rellena la zona cerrada bajo el clic (G)");
-    const lazo = herramienta("Lazo", "lazo", "Selección con lazo: rodea una parte para moverla, copiarla o borrarla (L)");
-    const linea = herramienta("╱", "linea", "Línea (U). Mayús: ángulos de 15°");
-    const rectangulo = herramienta("▭", "rectangulo", "Rectángulo (U). Mayús: cuadrado");
-    const elipse = herramienta("◯", "elipse", "Elipse (U). Mayús: círculo");
+    const relleno = herramienta(t("Relleno"), "relleno", t("Cubo de relleno: rellena la zona cerrada bajo el clic (G)"));
+    const lazo = herramienta(t("Lazo"), "lazo", t("Selección con lazo: rodea una parte para moverla, copiarla o borrarla (L)"));
+    const linea = herramienta("╱", "linea", t("Línea (U). Mayús: ángulos de 15°"));
+    const rectangulo = herramienta("▭", "rectangulo", t("Rectángulo (U). Mayús: cuadrado"));
+    const elipse = herramienta("◯", "elipse", t("Elipse (U). Mayús: círculo"));
     this.filaPaleta = document.createElement("div");
     this.filaPaleta.className = "paleta";
     this.pintarPaleta();
 
-    const gotero = boton("Cuentagotas", () => {
+    const gotero = boton(t("Cuentagotas"), () => {
       this.cuentagotas = !this.cuentagotas;
       this.sincronizarControles();
     });
-    gotero.title = "Tomar un color del dibujo (I, o Alt + clic)";
+    gotero.title = t("Tomar un color del dibujo (I, o Alt + clic)");
 
     const color = document.createElement("input");
     color.type = "color";
     color.value = a.color;
-    color.title = "Color";
+    color.title = t("Color");
     color.className = "selector-color";
     color.addEventListener("input", () => app.cambiarAjustes({ color: color.value }));
 
     // Tamaño en escala logarítmica: de 0,2 a 40 mm.
-    const tamano = deslizador(0, 1000, tamanoADeslizador(a.tamano), "Tamaño ([ y ])");
+    const tamano = deslizador(0, 1000, tamanoADeslizador(a.tamano), t("Tamaño ([ y ])"));
     tamano.addEventListener("input", () => app.cambiarAjustes({ tamano: deslizadorATamano(Number(tamano.value)) }));
-    const opacidad = deslizador(1, 100, a.opacidad * 100, "Opacidad del trazo");
+    const opacidad = deslizador(1, 100, a.opacidad * 100, t("Opacidad del trazo"));
     opacidad.addEventListener("input", () => app.cambiarAjustes({ opacidad: Number(opacidad.value) / 100 }));
-    const dureza = deslizador(0, 100, a.dureza * 100, "Dureza del borde: alta para líneas, baja para sombreado");
+    const dureza = deslizador(0, 100, a.dureza * 100, t("Dureza del borde: alta para líneas, baja para sombreado"));
     dureza.addEventListener("input", () => app.cambiarAjustes({ dureza: Number(dureza.value) / 100 }));
-    const puntos = casilla("Puntos", a.forma === "puntos", (v) => app.cambiarAjustes({ forma: v ? "puntos" : "redonda" }));
-    puntos.title = "Puntillismo: la estampa es una nube de puntos de aguja";
-    const presion = casilla("Presión → intensidad", a.presionOpacidad, (v) => app.cambiarAjustes({ presionOpacidad: v }));
-    presion.title = "Con el lápiz, la presión también controla la intensidad (útil para sombrear)";
+    const puntos = casilla(t("Puntos"), a.forma === "puntos", (v) => app.cambiarAjustes({ forma: v ? "puntos" : "redonda" }));
+    puntos.title = t("Puntillismo: la estampa es una nube de puntos de aguja");
+    const presion = casilla(t("Presión → intensidad"), a.presionOpacidad, (v) => app.cambiarAjustes({ presionOpacidad: v }));
+    presion.title = t("Con el lápiz, la presión también controla la intensidad (útil para sombrear)");
 
-    const deshacer = boton("↶", () => void this.lienzo?.deshacer());
-    deshacer.title = "Deshacer (Ctrl+Z)";
-    const rehacer = boton("↷", () => void this.lienzo?.rehacer());
-    rehacer.title = "Rehacer (Ctrl+Mayús+Z)";
+    const deshacer = boton(t("↶"), () => void this.lienzo?.deshacer());
+    deshacer.title = t("Deshacer (Ctrl+Z)");
+    const rehacer = boton(t("↷"), () => void this.lienzo?.rehacer());
+    rehacer.title = t("Rehacer (Ctrl+Mayús+Z)");
 
-    const cuadricula = casilla("Cuadrícula", true, (v) => this.lienzo?.cambiar({ cuadricula: v }));
-    const deformacion = casilla("Deformación", false, (v) => {
+    const cuadricula = casilla(t("Cuadrícula"), true, (v) => this.lienzo?.cambiar({ cuadricula: v }));
+    const deformacion = casilla(t("Deformación"), false, (v) => {
       this.verDeformacion = v;
       this.pedirRepintado();
     });
-    this.botonRecta = boton("Vista recta", () => this.alternarRecta());
-    this.botonRecta.title = "Mangas: ver y dibujar la piel desenrollada en un rectángulo (una línea horizontal es un anillo alrededor del brazo)";
-    const encajar = boton("Encajar", () => this.encajar());
-    encajar.title = "Ver el lienzo entero (0)";
-    const exportar = boton("Exportar stencil…", () => this.lienzo && abrirDialogoExportar(this.lienzo));
-    exportar.title = "Stencil a escala real en PDF (A4) o PNG";
+    this.botonRecta = boton(t("Vista recta"), () => this.alternarRecta());
+    this.botonRecta.title = t("Mangas: ver y dibujar la piel desenrollada en un rectángulo (una línea horizontal es un anillo alrededor del brazo)");
+    const encajar = boton(t("Encajar"), () => this.encajar());
+    encajar.title = t("Ver el lienzo entero (0)");
+    const exportar = boton(t("Exportar stencil…"), () => this.lienzo && abrirDialogoExportar(this.lienzo));
+    exportar.title = t("Stencil a escala real en PDF (A4) o PNG");
 
     this.controles = {
       pincel,
@@ -355,7 +356,7 @@ export class PanelLienzo implements IContentRenderer {
     this.barra.append(
       grupo(preset, pincel, goma, gotero, color, this.filaPaleta),
       grupo(relleno, lazo, linea, rectangulo, elipse),
-      grupo(etiqueta("Tamaño", tamano), etiqueta("Opacidad", opacidad), etiqueta("Dureza", dureza), puntos, presion),
+      grupo(etiqueta(t("Tamaño"), tamano), etiqueta(t("Opacidad"), opacidad), etiqueta(t("Dureza"), dureza), puntos, presion),
       grupo(deshacer, rehacer),
       grupo(cuadricula, deformacion, this.botonRecta, encajar),
       grupo(exportar),
@@ -410,14 +411,14 @@ export class PanelLienzo implements IContentRenderer {
       });
       this.filaPaleta.append(m);
     }
-    const mas = boton("+", () => {
+    const mas = boton(t("+"), () => {
       if (!this.paleta.includes(app.ajustes.color)) {
         this.paleta.push(app.ajustes.color);
         guardarPaleta(this.paleta);
         this.pintarPaleta();
       }
     });
-    mas.title = "Añadir el color actual a la paleta (clic derecho en un color para quitarlo)";
+    mas.title = t("Añadir el color actual a la paleta (clic derecho en un color para quitarlo)");
     mas.classList.add("mas-paleta");
     this.filaPaleta.append(mas);
   }
@@ -430,11 +431,18 @@ export class PanelLienzo implements IContentRenderer {
     const [w, h] = this.lienzo.geo.tamanoCm;
     const a = app.ajustes;
     const capa = this.lienzo.doc.activa;
-    const bloqueo = capa.bloqueada ? " (bloqueada)" : !capa.visible ? " (oculta)" : "";
+    const bloqueo = capa.bloqueada ? t(" (bloqueada)") : !capa.visible ? t(" (oculta)") : "";
     this.info.textContent =
-      `${this.lienzo.nombre} · ${w.toFixed(1)} × ${h.toFixed(1)} cm · capa «${capa.nombre}»${bloqueo} · ` +
-      `${NOMBRES_HERRAMIENTA[a.herramienta]} ${a.tamano < 1 ? a.tamano.toFixed(2) : a.tamano.toFixed(1)} mm · ` +
-      `zoom ${Math.round((this.escalaVista() / window.devicePixelRatio) * 100)} %`;
+      t("{lienzo} · {ancho} × {alto} cm · capa «{capa}»{bloqueo} · {herramienta} {mm} mm · zoom {zoom} %", {
+        lienzo: this.lienzo.nombre,
+        ancho: w.toFixed(1),
+        alto: h.toFixed(1),
+        capa: capa.nombre,
+        bloqueo,
+        herramienta: t(NOMBRES_HERRAMIENTA[a.herramienta]),
+        mm: a.tamano < 1 ? a.tamano.toFixed(2) : a.tamano.toFixed(1),
+        zoom: Math.round((this.escalaVista() / window.devicePixelRatio) * 100),
+      });
   }
 
   // ── Vista ─────────────────────────────────────────────────────────────────────
@@ -463,7 +471,7 @@ export class PanelLienzo implements IContentRenderer {
       this.recta = null;
     } else {
       if (l.zona.aplanado.tipo !== "manga") {
-        this.info.textContent = "La vista recta es para mangas (zonas que rodean el brazo o la pierna).";
+        this.info.textContent = t("La vista recta es para mangas (zonas que rodean el brazo o la pierna).");
         return;
       }
       if (this.flotante) this.cancelarImagen();
@@ -497,28 +505,28 @@ export class PanelLienzo implements IContentRenderer {
    * corte, el trazo se corta y sigue al otro lado.
    */
   private puntoRecta(d: P, presion: number): void {
-    const t = this.trazoRecta;
+    const tr = this.trazoRecta;
     const l = this.lienzo;
-    if (!t || !l || !this.recta) return;
-    const dist = Math.hypot(d.x - t.ultimo.x, d.y - t.ultimo.y);
-    const pasos = t.enLienzo === null && !t.activo && dist === 0 ? 1 : Math.max(1, Math.ceil(dist / 8));
+    if (!tr || !l || !this.recta) return;
+    const dist = Math.hypot(d.x - tr.ultimo.x, d.y - tr.ultimo.y);
+    const pasos = tr.enLienzo === null && !tr.activo && dist === 0 ? 1 : Math.max(1, Math.ceil(dist / 8));
     for (let i = 1; i <= pasos; i++) {
-      const q = { x: t.ultimo.x + ((d.x - t.ultimo.x) * i) / pasos, y: t.ultimo.y + ((d.y - t.ultimo.y) * i) / pasos };
+      const q = { x: tr.ultimo.x + ((d.x - tr.ultimo.x) * i) / pasos, y: tr.ultimo.y + ((d.y - tr.ultimo.y) * i) / pasos };
       const c = this.recta.aLienzo(q.x, q.y);
       const paso = dist / pasos;
-      if (!c || (t.activo && t.enLienzo && Math.hypot(c.x - t.enLienzo.x, c.y - t.enLienzo.y) > 6 * paso + 60)) {
-        if (t.activo) l.terminarTrazo();
-        t.activo = false;
+      if (!c || (tr.activo && tr.enLienzo && Math.hypot(c.x - tr.enLienzo.x, c.y - tr.enLienzo.y) > 6 * paso + 60)) {
+        if (tr.activo) l.terminarTrazo();
+        tr.activo = false;
       }
       if (c) {
-        if (!t.activo) {
-          t.activo = l.empezarTrazo(t.ajustes, c.x, c.y, presion);
-          if (!t.activo) this.info.textContent = `La capa «${l.doc.activa.nombre}» está ${l.doc.activa.bloqueada ? "bloqueada" : "oculta"}.`;
+        if (!tr.activo) {
+          tr.activo = l.empezarTrazo(tr.ajustes, c.x, c.y, presion);
+          if (!tr.activo) this.info.textContent = capaNoEditable(l.doc.activa);
         } else l.continuarTrazo(c.x, c.y, presion);
       }
-      t.enLienzo = c;
+      tr.enLienzo = c;
     }
-    t.ultimo = d;
+    tr.ultimo = d;
   }
 
   private trazarRecta(puntos: P[], presion: number, ajustes: AjustesPincel): void {
@@ -617,8 +625,8 @@ export class PanelLienzo implements IContentRenderer {
       const a = app.ajustes;
       if (!rellenar(l, d.x, d.y, a.color, a.opacidad))
         this.info.textContent = l.doc.activa.bloqueada || !l.doc.activa.visible
-          ? `La capa «${l.doc.activa.nombre}» está ${l.doc.activa.bloqueada ? "bloqueada" : "oculta"}.`
-          : "Haz clic dentro de la zona para rellenar.";
+          ? capaNoEditable(l.doc.activa)
+          : t("Haz clic dentro de la zona para rellenar.");
       return;
     }
     if (h === "lazo") {
@@ -645,7 +653,7 @@ export class PanelLienzo implements IContentRenderer {
       return;
     }
     if (l.empezarTrazo(app.ajustes, d.x, d.y, presionDe(e))) this.arrastre = { tipo: "dibujo", ultimo: d };
-    else this.info.textContent = `La capa «${l.doc.activa.nombre}» está ${l.doc.activa.bloqueada ? "bloqueada" : "oculta"}.`;
+    else this.info.textContent = capaNoEditable(l.doc.activa);
   }
 
   /** Herramientas en la vista recta: se convierte cada punto al lienzo. */
@@ -658,13 +666,13 @@ export class PanelLienzo implements IContentRenderer {
       return;
     }
     if (h === "lazo") {
-      this.info.textContent = "El lazo funciona en la vista normal del lienzo.";
+      this.info.textContent = t("El lazo funciona en la vista normal del lienzo.");
       return;
     }
     if (h === "relleno") {
       const c = this.aLienzo(d);
       const a = app.ajustes;
-      if (!c || !rellenar(l, c.x, c.y, a.color, a.opacidad)) this.info.textContent = "Haz clic dentro de la zona para rellenar.";
+      if (!c || !rellenar(l, c.x, c.y, a.color, a.opacidad)) this.info.textContent = t("Haz clic dentro de la zona para rellenar.");
       return;
     }
     if (esForma(h)) {
@@ -764,7 +772,7 @@ export class PanelLienzo implements IContentRenderer {
       const r = a.puntos.length >= 3 ? new Seleccion(a.puntos) : null;
       this.seleccion = r && r.rect.x1 - r.rect.x0 > 4 && r.rect.y1 - r.rect.y0 > 4 ? r : null;
       if (this.seleccion)
-        this.info.textContent = "Selección: arrástrala para moverla · Supr borra · Ctrl+C copia · Ctrl+X corta · Esc la quita";
+        this.info.textContent = t("Selección: arrástrala para moverla · Supr borra · Ctrl+C copia · Ctrl+X corta · Esc la quita");
     }
     if (a?.tipo === "dibujo-recta") this.terminarRecta();
     if (a?.tipo === "forma") this.trazarForma(a.forma, a.a, a.b);
@@ -802,7 +810,7 @@ export class PanelLienzo implements IContentRenderer {
       const l = this.lienzo;
       const origen = l.doc.activa;
       l.historial.registrar(l.doc.instantaneaCapas("Duplicar capa"));
-      l.doc.insertarCapa(origen.duplicar(nuevoId(), `${origen.nombre} copia`), l.doc.capas.indexOf(origen) + 1);
+      l.doc.insertarCapa(origen.duplicar(nuevoId(), t("{nombre} copia", { nombre: origen.nombre })), l.doc.capas.indexOf(origen) + 1);
     } else if (ctrl && tecla === "d") {
       e.preventDefault();
       this.seleccion = null;
@@ -883,7 +891,7 @@ export class PanelLienzo implements IContentRenderer {
     l.doc.componer(ctx, { x0: x, y0: y, x1: x + 1, y1: y + 1 });
     const [r, g, b, alfa] = ctx.getImageData(0, 0, 1, 1).data;
     if (alfa < 8) {
-      this.info.textContent = "No hay tinta en ese punto.";
+      this.info.textContent = t("No hay tinta en ese punto.");
       this.sincronizarControles();
       return;
     }
@@ -918,13 +926,13 @@ export class PanelLienzo implements IContentRenderer {
     if (!l || !sel) return;
     const lamina = sel.extraer(l);
     if (!lamina) {
-      this.info.textContent = "No hay dibujo dentro de la selección.";
+      this.info.textContent = t("No hay dibujo dentro de la selección.");
       return;
     }
     const imagen = await createImageBitmap(lamina);
     sel.borrar(l, "Mover selección");
     this.seleccion = null;
-    this.colocarImagen(imagen, `${l.doc.activa.nombre} (movido)`, new DOMMatrix().translate(sel.rect.x0, sel.rect.y0));
+    this.colocarImagen(imagen, t("{nombre} (movido)", { nombre: l.doc.activa.nombre }), new DOMMatrix().translate(sel.rect.x0, sel.rect.y0));
     this.arrastre = { tipo: "imagen-mover", ultimo: d };
     void c;
   }
@@ -936,13 +944,13 @@ export class PanelLienzo implements IContentRenderer {
     if (!this.lienzo) return;
     if (this.seleccion) {
       const ok = await this.seleccion.copiar(this.lienzo);
-      this.info.textContent = ok ? "Selección copiada. Pégala con Ctrl+V en este u otro lienzo." : "No hay dibujo dentro de la selección.";
+      this.info.textContent = ok ? t("Selección copiada. Pégala con Ctrl+V en este u otro lienzo.") : t("No hay dibujo dentro de la selección.");
       return;
     }
     const ok = await copiarCapa(this.lienzo);
     this.info.textContent = ok
-      ? `Capa «${this.lienzo.doc.activa.nombre}» copiada. Pégala con Ctrl+V en este u otro lienzo.`
-      : "La capa activa está vacía.";
+      ? t("Capa «{capa}» copiada. Pégala con Ctrl+V en este u otro lienzo.", { capa: this.lienzo.doc.activa.nombre })
+      : t("La capa activa está vacía.");
   }
 
   /**
@@ -959,7 +967,7 @@ export class PanelLienzo implements IContentRenderer {
       copia.lienzoId === this.lienzo.id
         ? new DOMMatrix().translate(copia.rect.x0, copia.rect.y0)
         : new DOMMatrix().translate(Math.round((ancho - w) / 2), Math.round((alto - h) / 2));
-    this.colocarImagen(copia.imagen, `${copia.nombre} (copia)`, matriz);
+    this.colocarImagen(copia.imagen, t("{nombre} (copia)", { nombre: copia.nombre }), matriz);
   }
 
   /** Coloca una imagen sobre el lienzo para moverla, escalarla y girarla antes de fijarla. */
@@ -1271,4 +1279,11 @@ function grupo(...hijos: HTMLElement[]): HTMLElement {
   g.className = "grupo";
   g.append(...hijos);
   return g;
+}
+
+/** Mensaje de por qué no se puede dibujar en una capa. */
+function capaNoEditable(capa: { nombre: string; bloqueada: boolean }): string {
+  return capa.bloqueada
+    ? t("La capa «{capa}» está bloqueada.", { capa: capa.nombre })
+    : t("La capa «{capa}» está oculta.", { capa: capa.nombre });
 }

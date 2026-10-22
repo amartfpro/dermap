@@ -1,3 +1,4 @@
+import { t } from "../i18n";
 import { app } from "../estado";
 import { ALTURA_MAXIMA, ALTURA_MINIMA, COMPLEXION_INICIAL } from "../modelos/formas";
 import { asegurarProyecto } from "../proyectos/gestor";
@@ -32,11 +33,11 @@ export class PanelCuerpo {
     const cabecera = document.createElement("div");
     cabecera.className = "ventana-cabecera";
     const titulo = document.createElement("strong");
-    titulo.textContent = "Cuerpo del cliente";
+    titulo.textContent = t("Cuerpo del cliente");
     const cerrar = document.createElement("button");
     cerrar.className = "boton-texto";
-    cerrar.textContent = "×";
-    cerrar.title = "Cerrar";
+    cerrar.textContent = t("×");
+    cerrar.title = t("Cerrar");
     cerrar.addEventListener("click", () => (this.element.hidden = true));
     cabecera.append(titulo, cerrar);
 
@@ -66,7 +67,7 @@ export class PanelCuerpo {
     this.color = document.createElement("input");
     this.color.type = "color";
     this.color.className = "selector-color";
-    this.color.title = "Otro tono";
+    this.color.title = t("Otro tono");
     // «change» y no «input»: cambiar el tono recompone la vista previa de todos los lienzos.
     this.color.addEventListener("change", () => this.cambiar({ tonoPiel: this.color.value }));
     const tonos = document.createElement("div");
@@ -85,12 +86,12 @@ export class PanelCuerpo {
     const alturaFila = document.createElement("div");
     alturaFila.className = "fila-altura";
     const cm = document.createElement("span");
-    cm.textContent = "cm";
+    cm.textContent = t("cm");
     alturaFila.append(this.altura, this.alturaNumero, cm);
 
     const restablecer = document.createElement("button");
     restablecer.className = "boton-texto";
-    restablecer.textContent = "Restablecer";
+    restablecer.textContent = t("Restablecer");
     restablecer.addEventListener("click", () =>
       this.cambiar({
         altura: COMPLEXION_INICIAL.altura,
@@ -102,7 +103,7 @@ export class PanelCuerpo {
     const nota = document.createElement("p");
     nota.className = "nota";
     nota.textContent =
-      "Es una aproximación para ver el diseño en proporción: la medida real del stencil es la del lienzo, en centímetros.";
+      t("Es una aproximación para ver el diseño en proporción: la medida real del stencil es la del lienzo, en centímetros.");
 
     // Postura (RF-13): solo para ver cómo se deforma el diseño; no se guarda ni cambia los lienzos.
     const postura = document.createElement("div");
@@ -110,7 +111,7 @@ export class PanelCuerpo {
     const articulacion = (clave: keyof Pose, nombre: string) => {
       const r = rango(0, 140, 1);
       r.value = "0";
-      r.title = `${nombre}: grados de flexión`;
+      r.title = t("{articulacion}: grados de flexión", { articulacion: nombre });
       r.addEventListener("input", () => {
         this.pose = { ...this.pose, [clave]: Number(r.value) };
         this.alCambiarPose({ ...this.pose });
@@ -118,36 +119,36 @@ export class PanelCuerpo {
       this.deslizadoresPose[clave] = r;
       const fila = document.createElement("div");
       fila.className = "extremos";
-      const t = document.createElement("small");
-      t.textContent = nombre;
-      fila.append(t, r);
+      const etiqueta = document.createElement("small");
+      etiqueta.textContent = nombre;
+      fila.append(etiqueta, r);
       return fila;
     };
     const recta = document.createElement("button");
     recta.className = "boton-texto";
-    recta.textContent = "Postura recta";
+    recta.textContent = t("Postura recta");
     recta.addEventListener("click", () => {
       this.posturaRecta();
       this.alCambiarPose({ ...this.pose });
     });
     postura.append(
-      articulacion("codoL", "Codo izq."),
-      articulacion("codoR", "Codo der."),
-      articulacion("rodillaL", "Rodilla izq."),
-      articulacion("rodillaR", "Rodilla der."),
+      articulacion("codoL", t("Codo izq.")),
+      articulacion("codoR", t("Codo der.")),
+      articulacion("rodillaL", t("Rodilla izq.")),
+      articulacion("rodillaR", t("Rodilla der.")),
       recta,
     );
 
     this.element.append(
       cabecera,
-      campo("Altura", alturaFila),
-      campo("Sexo", extremos("Mujer", this.sexo, "Hombre")),
-      campo("Complexión", extremos("Delgada", this.peso, "Robusta")),
-      campo("Musculatura", extremos("Poca", this.musculatura, "Mucha")),
-      campo("Tono de piel", tonos),
+      campo(t("Altura"), alturaFila),
+      campo(t("Sexo"), extremos(t("Mujer"), this.sexo, t("Hombre"))),
+      campo(t("Complexión"), extremos(t("Delgada"), this.peso, t("Robusta"))),
+      campo(t("Musculatura"), extremos(t("Poca"), this.musculatura, t("Mucha"))),
+      campo(t("Tono de piel"), tonos),
       nota,
       restablecer,
-      campo("Postura (solo para ver)", postura),
+      campo(t("Postura (solo para ver)"), postura),
     );
     this.sincronizar();
   }

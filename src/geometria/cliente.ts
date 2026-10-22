@@ -1,4 +1,5 @@
-import type { Aplanado, Malla, OpcionesAplanado } from "./aplanador";
+import { ErrorAplanado, type Aplanado, type Malla, type OpcionesAplanado } from "./aplanador";
+import { t } from "../i18n";
 import type { Peticion, Respuesta } from "./trabajador";
 
 let trabajador: Worker | null = null;
@@ -18,7 +19,7 @@ function obtenerTrabajador(): Worker {
     if (!p) return;
     pendientes.delete(data.id);
     if (data.ok) p.resolver({ aplanado: data.aplanado, milisegundos: data.milisegundos });
-    else p.rechazar(new Error(data.mensaje));
+    else p.rechazar(data.codigo !== undefined ? new ErrorAplanado(data.codigo) : new Error(t("Error inesperado: {error}", { error: data.mensaje })));
   };
   return trabajador;
 }

@@ -1,3 +1,4 @@
+import { plural, t } from "../i18n";
 import type { IContentRenderer } from "dockview-core";
 import { confirmar } from "../dialogos";
 import { app } from "../estado";
@@ -51,31 +52,31 @@ export class PanelProyectos implements IContentRenderer {
     this.formulario.className = "formulario-en-linea";
     this.formulario.hidden = true;
     this.campoNombre = document.createElement("input");
-    this.campoNombre.placeholder = "Nombre del cliente o del proyecto";
+    this.campoNombre.placeholder = t("Nombre del cliente o del proyecto");
     this.campoNombre.className = "campo-nombre";
     const crear = document.createElement("button");
     crear.type = "submit";
     crear.className = "boton-texto primario";
-    crear.textContent = "Crear";
-    this.formulario.append(this.campoNombre, crear, boton("Cancelar", () => (this.formulario.hidden = true)));
+    crear.textContent = t("Crear");
+    this.formulario.append(this.campoNombre, crear, boton(t("Cancelar"), () => (this.formulario.hidden = true)));
     this.formulario.addEventListener("submit", (e) => {
       e.preventDefault();
       void this.nuevoProyecto();
     });
 
     this.acciones = document.createElement("div");
-    this.acciones.className = "herramientas";
-    const nuevaCarpeta = boton("+ Carpeta", () => {
+    this.acciones.className = "herramientas envolver";
+    const nuevaCarpeta = boton(t("+ Carpeta"), () => {
       const nodo = this.proyecto?.crearCarpeta(this.nombreCarpetaLibre());
       if (nodo) requestAnimationFrame(() => this.empezarRenombrado(nodo.id));
     });
-    nuevaCarpeta.title = "Nueva carpeta, por ejemplo «Tatuajes previos» o «Propuestas»";
-    const guardar = boton("Guardar", () => void this.proyecto?.guardar());
-    guardar.title = "Guardar ahora (Ctrl+S). Se guarda solo cada pocos segundos.";
-    const exportar = boton("Exportar…", () => void this.exportar());
-    exportar.title = "Guardar todo el proyecto en un solo archivo .dermap (copia de seguridad o para otro ordenador)";
-    const importar = boton("Importar…", () => void this.importar());
-    importar.title = "Abrir un archivo .dermap como proyecto nuevo";
+    nuevaCarpeta.title = t("Nueva carpeta, por ejemplo «Tatuajes previos» o «Propuestas»");
+    const guardar = boton(t("Guardar"), () => void this.proyecto?.guardar());
+    guardar.title = t("Guardar ahora (Ctrl+S). Se guarda solo cada pocos segundos.");
+    const exportar = boton(t("Exportar…"), () => void this.exportar());
+    exportar.title = t("Guardar todo el proyecto en un solo archivo .dermap (copia de seguridad o para otro ordenador)");
+    const importar = boton(t("Importar…"), () => void this.importar());
+    importar.title = t("Abrir un archivo .dermap como proyecto nuevo");
     this.acciones.append(nuevaCarpeta, guardar, exportar, importar);
 
     this.arbol = document.createElement("div");
@@ -125,10 +126,10 @@ export class PanelProyectos implements IContentRenderer {
   private async rellenarSelector(): Promise<void> {
     const lista = await proyectos().catch(() => []);
     this.selector.replaceChildren(
-      new Option(this.proyecto ? `Proyecto: ${this.proyecto.nombre}` : "Elige o crea un proyecto…", "", true, true),
+      new Option(this.proyecto ? t("Proyecto: {nombre}", { nombre: this.proyecto.nombre }) : t("Elige o crea un proyecto…"), "", true, true),
       ...lista.filter((p) => p.carpeta !== this.proyecto?.carpeta).map((p) => new Option(p.nombre, p.carpeta)),
-      new Option("+ Nuevo proyecto…", "__nuevo__"),
-      ...(this.proyecto ? [new Option(`Eliminar «${this.proyecto.nombre}»…`, "__eliminar__")] : []),
+      new Option(t("+ Nuevo proyecto…"), "__nuevo__"),
+      ...(this.proyecto ? [new Option(t("Eliminar «{nombre}»…", { nombre: this.proyecto.nombre }), "__eliminar__")] : []),
     );
   }
 
@@ -146,11 +147,11 @@ export class PanelProyectos implements IContentRenderer {
       this.campoNombre.focus();
       return;
     }
-    this.pie.textContent = "Abriendo proyecto…";
+    this.pie.textContent = t("Abriendo proyecto…");
     try {
       await abrirProyecto(valor, (t) => (this.pie.textContent = t));
     } catch (error) {
-      this.pie.textContent = `No se pudo abrir el proyecto: ${error instanceof Error ? error.message : String(error)}`;
+      this.pie.textContent = t("No se pudo abrir el proyecto: {error}", { error: error instanceof Error ? error.message : String(error) });
     }
   }
 
@@ -159,9 +160,12 @@ export class PanelProyectos implements IContentRenderer {
     if (!p) return;
     const n = p.nodosLienzo().length;
     const ok = await confirmar(
-      `¿Eliminar el proyecto «${p.nombre}» y sus ${n} ${n === 1 ? "lienzo" : "lienzos"}? Se borra del disco y no se puede deshacer. ` +
-        "Si quieres conservar una copia, usa antes «Exportar…».",
-      "Eliminar proyecto",
+      plural(
+        n,
+        "¿Eliminar el proyecto «{nombre}» y su lienzo? Se borra del disco y no se puede deshacer. Si quieres conservar una copia, usa antes «Exportar…».",
+        "¿Eliminar el proyecto «{nombre}» y sus {n} lienzos? Se borra del disco y no se puede deshacer. Si quieres conservar una copia, usa antes «Exportar…».",
+      ).replace("{nombre}", p.nombre),
+      t("Eliminar proyecto"),
     );
     if (!ok) {
       await this.rellenarSelector();
@@ -169,9 +173,9 @@ export class PanelProyectos implements IContentRenderer {
     }
     try {
       const nombre = await eliminarProyectoActual();
-      this.pie.textContent = `Proyecto «${nombre}» eliminado.`;
+      this.pie.textContent = t("Proyecto «{nombre}» eliminado.", { nombre: nombre ?? "" });
     } catch (error) {
-      this.pie.textContent = `No se pudo eliminar: ${error instanceof Error ? error.message : String(error)}`;
+      this.pie.textContent = t("No se pudo eliminar: {error}", { error: error instanceof Error ? error.message : String(error) });
     }
     await this.rellenarSelector();
   }
@@ -183,7 +187,7 @@ export class PanelProyectos implements IContentRenderer {
     try {
       await crearProyecto(nombre);
     } catch (error) {
-      this.pie.textContent = `No se pudo crear el proyecto: ${error instanceof Error ? error.message : String(error)}`;
+      this.pie.textContent = t("No se pudo crear el proyecto: {error}", { error: error instanceof Error ? error.message : String(error) });
     }
   }
 
@@ -193,12 +197,12 @@ export class PanelProyectos implements IContentRenderer {
     this.arbol.replaceChildren();
     const p = this.proyecto;
     if (!p) {
-      this.arbol.append(aviso("No hay ningún proyecto abierto. Crea uno (un proyecto por cliente) o elige uno de la lista. Si aplanas una zona sin proyecto, se crea uno «Sin título»."));
+      this.arbol.append(aviso(t("No hay ningún proyecto abierto. Crea uno (un proyecto por cliente) o elige uno de la lista. Si aplanas una zona sin proyecto, se crea uno «Sin título».")));
       void this.pintarPie();
       return;
     }
     if (p.datos.arbol.length === 0)
-      this.arbol.append(aviso("Proyecto vacío. Selecciona una zona en el visor 3D y pulsa «Aplanar zona» para crear el primer lienzo: un tatuaje nuevo, uno existente o una cicatriz."));
+      this.arbol.append(aviso(t("Proyecto vacío. Selecciona una zona en el visor 3D y pulsa «Aplanar zona» para crear el primer lienzo: un tatuaje nuevo, uno existente o una cicatriz.")));
     const pintar = (lista: NodoArbol[], nivel: number, visiblePadre: boolean) => {
       for (const nodo of lista) {
         this.arbol.append(this.fila(nodo, nivel, visiblePadre));
@@ -213,14 +217,14 @@ export class PanelProyectos implements IContentRenderer {
     const p = this.proyecto;
     const donde = await (await sistemaArchivos()).descripcion();
     if (!p) {
-      this.pie.textContent = `Los proyectos se guardan en ${donde}.`;
+      this.pie.textContent = t("Los proyectos se guardan en {donde}.", { donde });
       return;
     }
     const estado = {
-      guardado: "Guardado",
-      pendiente: "Cambios sin guardar",
-      guardando: "Guardando…",
-      error: `Error al guardar: ${p.ultimoError}`,
+      guardado: t("Guardado"),
+      pendiente: t("Cambios sin guardar"),
+      guardando: t("Guardando…"),
+      error: t("Error al guardar: {error}", { error: p.ultimoError }),
     }[p.estadoGuardado];
     this.pie.textContent = `${estado} · ${donde}`;
     this.pie.classList.toggle("error", p.estadoGuardado === "error");
@@ -239,7 +243,7 @@ export class PanelProyectos implements IContentRenderer {
     const fallo = p.noAbiertos.get(nodo.id);
     if (fallo) {
       fila.classList.add("dañada");
-      fila.title = `No se pudo abrir: ${fallo}`;
+      fila.title = t("No se pudo abrir: {error}", { error: fallo });
     }
 
     const flecha = document.createElement("span");
@@ -254,7 +258,7 @@ export class PanelProyectos implements IContentRenderer {
     const ojo = document.createElement("button");
     ojo.className = "icono";
     ojo.textContent = nodo.visible ? "◉" : "○";
-    ojo.title = nodo.visible ? "Ocultar en el 3D" : "Mostrar en el 3D";
+    ojo.title = nodo.visible ? t("Ocultar en el 3D") : t("Mostrar en el 3D");
     ojo.addEventListener("click", (e) => {
       e.stopPropagation();
       p.alternarVisible(nodo.id);
@@ -262,11 +266,11 @@ export class PanelProyectos implements IContentRenderer {
     const icono = document.createElement("span");
     icono.className = "tipo";
     icono.textContent = nodo.tipo === "carpeta" ? "▤" : lienzo?.zona.aplanado.tipo === "manga" ? "◫" : "▭";
-    icono.title = nodo.tipo === "carpeta" ? "Carpeta" : lienzo?.zona.aplanado.tipo === "manga" ? "Manga (con corte)" : "Parche";
+    icono.title = nodo.tipo === "carpeta" ? t("Carpeta") : lienzo?.zona.aplanado.tipo === "manga" ? t("Manga (con corte)") : t("Parche");
     const nombre = document.createElement("span");
     nombre.className = "nombre";
-    nombre.textContent = fallo ? `${nodo.nombre} (no se pudo abrir)` : nodo.nombre;
-    nombre.title = "Doble clic para renombrar";
+    nombre.textContent = fallo ? t("{nombre} (no se pudo abrir)", { nombre: nodo.nombre }) : nodo.nombre;
+    nombre.title = t("Doble clic para renombrar");
     nombre.addEventListener("dblclick", (e) => {
       e.stopPropagation();
       this.empezarRenombrado(nodo.id);
@@ -277,8 +281,8 @@ export class PanelProyectos implements IContentRenderer {
     if (nodo.tipo === "lienzo") {
       const duplicar = document.createElement("button");
       duplicar.className = "icono";
-      duplicar.textContent = "⧉";
-      duplicar.title = "Duplicar (para probar otra versión del diseño)";
+      duplicar.textContent = t("⧉");
+      duplicar.title = t("Duplicar (para probar otra versión del diseño)");
       duplicar.addEventListener("click", (e) => {
         e.stopPropagation();
         void duplicarLienzo(nodo.id);
@@ -287,12 +291,15 @@ export class PanelProyectos implements IContentRenderer {
     }
     const borrar = document.createElement("button");
     borrar.className = "icono";
-    borrar.textContent = "×";
-    borrar.title = "Eliminar";
+    borrar.textContent = t("×");
+    borrar.title = t("Eliminar");
     borrar.addEventListener("click", async (e) => {
       e.stopPropagation();
-      const que = nodo.tipo === "carpeta" ? `la carpeta «${nodo.nombre}» y todo lo que contiene` : `el lienzo «${nodo.nombre}»`;
-      if (await confirmar(`¿Eliminar ${que}? No se puede deshacer.`)) await eliminarNodo(nodo.id);
+      const pregunta =
+        nodo.tipo === "carpeta"
+          ? t("¿Eliminar la carpeta «{nombre}» y todo lo que contiene? No se puede deshacer.", { nombre: nodo.nombre })
+          : t("¿Eliminar el lienzo «{nombre}»? No se puede deshacer.", { nombre: nodo.nombre });
+      if (await confirmar(pregunta)) await eliminarNodo(nodo.id);
     });
     extra.append(borrar);
 
@@ -354,12 +361,12 @@ export class PanelProyectos implements IContentRenderer {
 
   private async exportar(): Promise<void> {
     if (!this.proyecto) return;
-    this.pie.textContent = "Preparando el archivo .dermap…";
+    this.pie.textContent = t("Preparando el archivo .dermap…");
     try {
       const ruta = await exportarProyecto();
-      this.pie.textContent = ruta ? `Proyecto exportado: ${ruta}` : "Exportación cancelada.";
+      this.pie.textContent = ruta ? t("Proyecto exportado: {ruta}", { ruta }) : t("Exportación cancelada.");
     } catch (error) {
-      this.pie.textContent = `No se pudo exportar: ${error instanceof Error ? error.message : String(error)}`;
+      this.pie.textContent = t("No se pudo exportar: {error}", { error: error instanceof Error ? error.message : String(error) });
       this.pie.classList.add("error");
     }
   }
@@ -368,7 +375,7 @@ export class PanelProyectos implements IContentRenderer {
     try {
       if (await importarProyecto((t) => (this.pie.textContent = t))) await this.rellenarSelector();
     } catch (error) {
-      this.pie.textContent = `No se pudo importar: ${error instanceof Error ? error.message : String(error)}`;
+      this.pie.textContent = t("No se pudo importar: {error}", { error: error instanceof Error ? error.message : String(error) });
       this.pie.classList.add("error");
     }
   }
@@ -381,8 +388,8 @@ export class PanelProyectos implements IContentRenderer {
         if (n.tipo === "carpeta") recorrer(n.hijos);
       });
     recorrer(this.proyecto?.datos.arbol ?? []);
-    let nombre = "Carpeta nueva";
-    for (let n = 2; nombres.has(nombre); n++) nombre = `Carpeta nueva ${n}`;
+    let nombre = t("Carpeta nueva");
+    for (let n = 2; nombres.has(nombre); n++) nombre = t("Carpeta nueva {n}", { n });
     return nombre;
   }
 }

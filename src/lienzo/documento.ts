@@ -1,3 +1,4 @@
+import { t } from "../i18n";
 import { Capa, nuevoId, operacionCanvas, type ModoFusion } from "./capa";
 import type { Paso } from "./historial";
 import { Trazo, type AjustesPincel } from "./pincel";
@@ -33,7 +34,7 @@ export class DocumentoLienzo extends EventTarget {
   ) {
     super();
     if (crearCapaInicial) {
-      const capa = new Capa(nuevoId(), "Líneas");
+      const capa = new Capa(nuevoId(), t("Líneas"));
       this.capas.push(capa);
       this.activa = capa;
     }
@@ -94,8 +95,8 @@ export class DocumentoLienzo extends EventTarget {
 
   private nombreLibre(): string {
     let n = this.capas.length + 1;
-    while (this.capas.some((c) => c.nombre === `Capa ${n}`)) n++;
-    return `Capa ${n}`;
+    while (this.capas.some((c) => c.nombre === t("Capa {n}", { n }))) n++;
+    return t("Capa {n}", { n });
   }
 
   // ── Trazos ────────────────────────────────────────────────────────────────────

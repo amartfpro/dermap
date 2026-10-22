@@ -1,3 +1,4 @@
+import { t } from "./i18n";
 import { enTauri } from "./proyectos/sistema-archivos";
 
 /**
@@ -7,7 +8,7 @@ import { enTauri } from "./proyectos/sistema-archivos";
 export async function confirmar(mensaje: string, titulo = "Dermap"): Promise<boolean> {
   if (enTauri()) {
     const { confirm } = await import("@tauri-apps/plugin-dialog");
-    return confirm(mensaje, { title: titulo, kind: "warning", okLabel: "Sí", cancelLabel: "Cancelar" });
+    return confirm(mensaje, { title: titulo, kind: "warning", okLabel: t("Sí"), cancelLabel: t("Cancelar") });
   }
   return window.confirm(mensaje);
 }

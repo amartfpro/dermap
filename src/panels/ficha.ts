@@ -1,3 +1,4 @@
+import { idiomaActual, plural, t } from "../i18n";
 import { app } from "../estado";
 import { asegurarProyecto } from "../proyectos/gestor";
 
@@ -16,7 +17,7 @@ export async function abrirFicha(): Promise<void> {
   fondo.append(caja);
 
   const titulo = document.createElement("h2");
-  titulo.textContent = "Ficha del cliente";
+  titulo.textContent = t("Ficha del cliente");
 
   const nombreProyecto = entrada("text", proyecto.datos.nombre);
   const cliente = entrada("text", ficha.cliente);
@@ -26,39 +27,40 @@ export async function abrirFicha(): Promise<void> {
   const notas = document.createElement("textarea");
   notas.rows = 7;
   notas.value = ficha.notas;
-  notas.placeholder = "Zona, idea del diseño, referencias, alergias, presupuesto, sesiones…";
+  notas.placeholder = t("Zona, idea del diseño, referencias, alergias, presupuesto, sesiones…");
 
   const fecha = (iso: string) => {
     const d = new Date(iso);
-    return isNaN(d.getTime()) ? "—" : d.toLocaleString("es-ES", { dateStyle: "medium", timeStyle: "short" });
+    return isNaN(d.getTime()) ? "—" : d.toLocaleString(idiomaActual() === "en" ? "en-GB" : "es-ES", { dateStyle: "medium", timeStyle: "short" });
   };
   const info = document.createElement("p");
   info.className = "nota";
   const lienzos = proyecto.nodosLienzo().length;
   info.textContent =
-    `Creado ${fecha(ficha.creado)} · modificado ${fecha(ficha.modificado)} · ` +
-    `${lienzos} ${lienzos === 1 ? "lienzo" : "lienzos"}`;
+    t("Creado {creado} · modificado {modificado}", { creado: fecha(ficha.creado), modificado: fecha(ficha.modificado) }) +
+    " · " +
+    plural(lienzos, "{n} lienzo", "{n} lienzos");
 
   const rejilla = document.createElement("div");
   rejilla.className = "rejilla-ficha";
   rejilla.append(
-    campo("Proyecto", nombreProyecto),
-    campo("Cliente", cliente),
-    campo("Teléfono", telefono),
-    campo("Correo", correo),
-    campo("Cita", cita),
+    campo(t("Proyecto"), nombreProyecto),
+    campo(t("Cliente"), cliente),
+    campo(t("Teléfono"), telefono),
+    campo(t("Correo"), correo),
+    campo(t("Cita"), cita),
   );
-  const campoNotas = campo("Notas", notas);
+  const campoNotas = campo(t("Notas"), notas);
   campoNotas.classList.add("ancho");
 
   const guardar = document.createElement("button");
   guardar.type = "submit";
   guardar.className = "boton-texto primario";
-  guardar.textContent = "Guardar";
+  guardar.textContent = t("Guardar");
   const cancelar = document.createElement("button");
   cancelar.type = "button";
   cancelar.className = "boton-texto";
-  cancelar.textContent = "Cancelar";
+  cancelar.textContent = t("Cancelar");
   const pie = document.createElement("div");
   pie.className = "modal-pie";
   pie.append(info, cancelar, guardar);

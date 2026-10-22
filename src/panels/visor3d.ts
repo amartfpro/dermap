@@ -1,3 +1,4 @@
+import { plural, t, traducible } from "../i18n";
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import type { IContentRenderer } from "dockview-core";
@@ -157,47 +158,47 @@ export class Visor3D implements IContentRenderer {
 
     const barra = document.createElement("div");
     barra.className = "herramientas flotante";
-    this.botonSeleccionar = boton("Seleccionar", () => this.alternarSeleccion());
-    this.botonSeleccionar.title = "Pinta la zona sobre el cuerpo. Mayús + arrastrar para quitar.";
+    this.botonSeleccionar = boton(t("Seleccionar"), () => this.alternarSeleccion());
+    this.botonSeleccionar.title = t("Pinta la zona sobre el cuerpo. Mayús + arrastrar para quitar.");
     const radio = document.createElement("input");
     radio.type = "range";
     radio.min = "1";
     radio.max = "6";
     radio.step = "0.5";
     radio.value = String(this.radioPincel);
-    radio.title = "Radio del pincel de selección";
+    radio.title = t("Radio del pincel de selección");
     radio.className = "deslizador";
     radio.addEventListener("input", () => (this.radioPincel = Number(radio.value)));
     this.estadoTexto = document.createElement("div");
     this.estadoTexto.className = "etiqueta-flotante";
-    this.estadoTexto.textContent = "Cargando cuerpo…";
+    this.estadoTexto.textContent = t("Cargando cuerpo…");
     barra.append(
-      desplegable("Vista", VISTAS.map((v) => v.nombre), (i) => this.verVista(i)),
-      desplegable("Zona rápida", ZONAS_RAPIDAS.map((z) => z.nombre), (i) => this.zonaRapida(i)),
+      desplegable(t("Vista"), VISTAS.map((v) => t(v.nombre)), (i) => this.verVista(i)),
+      desplegable(t("Zona rápida"), ZONAS_RAPIDAS.map((z) => t(z.nombre)), (i) => this.zonaRapida(i)),
       this.botonSeleccionar,
       radio,
       (this.botonLazo = titulo(
-        boton("Lazo", () => this.alternarLazo()),
-        "Rodea la zona con el ratón: se añade lo que se ve dentro. Mayús + arrastrar para quitar.",
+        boton(t("Lazo"), () => this.alternarLazo()),
+        t("Rodea la zona con el ratón: se añade lo que se ve dentro. Mayús + arrastrar para quitar."),
       )),
-      boton("Limpiar", () => this.fijarSeleccion([])),
+      boton(t("Limpiar"), () => this.fijarSeleccion([])),
       (this.botonCorteManual = titulo(
-        boton("Corte manual", () => this.alternarCorteManual()),
-        "Marca con clics por dónde debe ir el corte de la manga; se une a los dos bordes por el camino más corto",
+        boton(t("Corte manual"), () => this.alternarCorteManual()),
+        t("Marca con clics por dónde debe ir el corte de la manga; se une a los dos bordes por el camino más corto"),
       )),
       (this.botonCorte = titulo(
-        boton("Corte extra", () => this.alternarModoCorte()),
-        "Haz clic en la zona para abrir un corte desde el borde hasta ese punto (como una pinza): reduce la deformación en zonas muy curvas",
+        boton(t("Corte extra"), () => this.alternarModoCorte()),
+        t("Haz clic en la zona para abrir un corte desde el borde hasta ese punto (como una pinza): reduce la deformación en zonas muy curvas"),
       )),
-      titulo(boton("Quitar cortes", () => this.quitarCortesExtra()), "Quitar los cortes extra"),
-      boton("Aplanar zona", () => void this.aplanar()),
-      titulo(boton("Imagen 3D…", () => void this.exportarImagen()), "Guardar la vista actual en PNG para enseñarla al cliente"),
+      titulo(boton(t("Quitar cortes"), () => this.quitarCortesExtra()), t("Quitar los cortes extra")),
+      boton(t("Aplanar zona"), () => void this.aplanar()),
+      titulo(boton(t("Imagen 3D…"), () => void this.exportarImagen()), t("Guardar la vista actual en PNG para enseñarla al cliente")),
       (this.botonPintar = titulo(
-        boton("Pintar en 3D", () => this.alternarPintar()),
-        "Dibuja sobre el modelo con el pincel actual, en el lienzo activo (gira con el botón derecho)",
+        boton(t("Pintar en 3D"), () => this.alternarPintar()),
+        t("Dibuja sobre el modelo con el pincel actual, en el lienzo activo (gira con el botón derecho)"),
       )),
-      titulo(boton("Ver zona", () => app.activo && this.encuadrarZona(app.activo)), "Centrar la cámara en la zona del lienzo activo"),
-      titulo(boton("Cuerpo…", () => this.panelCuerpo.alternar()), "Altura, complexión y tono de piel del cliente"),
+      titulo(boton(t("Ver zona"), () => app.activo && this.encuadrarZona(app.activo)), t("Centrar la cámara en la zona del lienzo activo")),
+      titulo(boton(t("Cuerpo…"), () => this.panelCuerpo.alternar()), t("Altura, complexión y tono de piel del cliente")),
     );
     this.capaLazo = document.createElement("canvas");
     this.capaLazo.className = "capa-lazo";
@@ -276,18 +277,18 @@ export class Visor3D implements IContentRenderer {
         this.alternarGiro(false);
         this.encuadrar([0, this.cuerpo.altura / 2, 0], this.cuerpo.altura / 2, direccion);
       });
-    this.botonGirar = boton("Girar", () => this.alternarGiro(!this.controles.autoRotate));
+    this.botonGirar = boton(t("Girar"), () => this.alternarGiro(!this.controles.autoRotate));
     this.versiones = document.createElement("div");
     this.versiones.className = "versiones";
     barra.append(
       this.versiones,
-      vista("Frente", [0, 0.1, 1]),
-      vista("Espalda", [0, 0.1, -1]),
-      vista("Izquierda", [1, 0.1, 0.05]),
-      vista("Derecha", [-1, 0.1, 0.05]),
+      vista(t("Frente"), [0, 0.1, 1]),
+      vista(t("Espalda"), [0, 0.1, -1]),
+      vista(t("Izquierda"), [1, 0.1, 0.05]),
+      vista(t("Derecha"), [-1, 0.1, 0.05]),
       this.botonGirar,
-      titulo(boton("Imagen…", () => void this.exportarImagen()), "Guardar esta vista en PNG"),
-      titulo(boton("Salir", () => this.presentar(false)), "Salir de la presentación (Esc)"),
+      titulo(boton(t("Imagen…"), () => void this.exportarImagen()), t("Guardar esta vista en PNG")),
+      titulo(boton(t("Salir"), () => this.presentar(false)), t("Salir de la presentación (Esc)")),
     );
     return barra;
   }
@@ -305,7 +306,7 @@ export class Visor3D implements IContentRenderer {
     for (const nodo of nodos) {
       const b = boton(nodo.nombre, () => p.alternarVisible(nodo.id));
       b.classList.toggle("activo", nodo.visible !== false);
-      b.title = "Mostrar u ocultar este lienzo";
+      b.title = t("Mostrar u ocultar este lienzo");
       this.versiones.append(b);
     }
   }
@@ -434,7 +435,7 @@ export class Visor3D implements IContentRenderer {
     try {
       this.base = await cargarCuerpo();
     } catch (error) {
-      this.estadoTexto.textContent = `No se pudo cargar el cuerpo: ${String(error)}`;
+      this.estadoTexto.textContent = t("No se pudo cargar el cuerpo: {error}", { error: String(error) });
       return;
     }
     try {
@@ -460,7 +461,7 @@ export class Visor3D implements IContentRenderer {
     this.suscribirProyecto();
     this.reconstruirLienzos();
     this.estadoTexto.textContent =
-      "Elige una zona rápida o pinta una con «Seleccionar» · arrastra para girar, rueda para acercar";
+      t("Elige una zona rápida o pinta una con «Seleccionar» · arrastra para girar, rueda para acercar");
   }
 
   /** Complexión guardada en el proyecto abierto (o la inicial si no hay proyecto). */
@@ -483,7 +484,7 @@ export class Visor3D implements IContentRenderer {
   /** Con el cuerpo doblado no se seleccionan ni se aplanan zonas: el lienzo se hace en postura recta. */
   private bloqueadoPorPose(): boolean {
     if (esRecta(this.pose)) return false;
-    this.estadoTexto.textContent = "Endereza la postura (Cuerpo… → Postura recta) para seleccionar o aplanar zonas.";
+    this.estadoTexto.textContent = t("Endereza la postura (Cuerpo… → Postura recta) para seleccionar o aplanar zonas.");
     return true;
   }
 
@@ -564,7 +565,7 @@ export class Visor3D implements IContentRenderer {
     this.fijarSeleccion(seleccion.triangulos);
     this.verVista(VISTAS.findIndex((v) => v.nombre === zona.vista));
     this.estadoTexto.textContent =
-      `${zona.nombre}: ${seleccion.triangulos.length} triángulos. La línea roja es el corte: gira la vista para moverlo. Pulsa «Aplanar zona».`;
+      t("{zona}: {n} triángulos. La línea roja es el corte: gira la vista para moverlo. Pulsa «Aplanar zona».", { zona: t(zona.nombre), n: seleccion.triangulos.length });
   }
 
   // ── Selección a pincel ────────────────────────────────────────────────────────
@@ -578,31 +579,31 @@ export class Visor3D implements IContentRenderer {
     this.botonCorteManual.classList.toggle("activo", this.modoCorteManual);
     this.renderer.domElement.style.cursor = this.modoCorteManual ? "crosshair" : "";
     if (this.modoCorteManual)
-      this.estadoTexto.textContent = "Haz clic en la manga por donde quieras que pase el corte (puedes marcar varios puntos).";
+      this.estadoTexto.textContent = t("Haz clic en la manga por donde quieras que pase el corte (puedes marcar varios puntos).");
   }
 
   private añadirPuntoCorte(e: PointerEvent): void {
     const seleccion = this.seleccionActual();
     const golpe = this.lanzarRayo(e);
     if (!seleccion) {
-      this.estadoTexto.textContent = "Selecciona primero una manga.";
+      this.estadoTexto.textContent = t("Selecciona primero una manga.");
       return;
     }
     if (!golpe || !this.seleccionados.has(golpe.cara)) {
-      this.estadoTexto.textContent = "Haz clic sobre la zona seleccionada.";
+      this.estadoTexto.textContent = t("Haz clic sobre la zona seleccionada.");
       return;
     }
     const punto = verticeMasCercano(seleccion.malla, golpe.point.toArray() as P3);
     const puntos = [...this.puntosCorte, punto];
     if (!corteManual(seleccion.malla, puntos)) {
       this.estadoTexto.textContent = corteSugerido(seleccion.malla, [0, 0, 1])
-        ? "Ese punto está en el borde: elige uno dentro de la manga."
-        : "El corte manual solo es para mangas (zonas con dos bordes).";
+        ? t("Ese punto está en el borde: elige uno dentro de la manga.")
+        : t("El corte manual solo es para mangas (zonas con dos bordes).");
       return;
     }
     this.puntosCorte = puntos;
     this.actualizarCorte();
-    this.estadoTexto.textContent = `Corte manual con ${puntos.length} ${puntos.length === 1 ? "punto" : "puntos"}. Añade más o pulsa «Aplanar zona».`;
+    this.estadoTexto.textContent = plural(puntos.length, "Corte manual con {n} punto. Añade más o pulsa «Aplanar zona».", "Corte manual con {n} puntos. Añade más o pulsa «Aplanar zona».");
   }
 
   /** Corte principal que se usará: el manual si hay puntos, si no el automático según la vista. */
@@ -622,7 +623,7 @@ export class Visor3D implements IContentRenderer {
     if (this.modoCorte && this.modoSeleccion) this.alternarSeleccion();
     this.botonCorte.classList.toggle("activo", this.modoCorte);
     this.renderer.domElement.style.cursor = this.modoCorte ? "crosshair" : "";
-    if (this.modoCorte) this.estadoTexto.textContent = "Haz clic en la zona seleccionada donde debe terminar el corte extra.";
+    if (this.modoCorte) this.estadoTexto.textContent = t("Haz clic en la zona seleccionada donde debe terminar el corte extra.");
   }
 
   private añadirCorteExtra(e: PointerEvent): void {
@@ -632,12 +633,12 @@ export class Visor3D implements IContentRenderer {
     const objetivo = verticeMasCercano(seleccion.malla, golpe.point.toArray() as P3);
     const camino = corteExtraHasta(seleccion.malla, objetivo);
     if (camino.length < 2) {
-      this.estadoTexto.textContent = "Ese punto está en el borde: elige uno dentro de la zona.";
+      this.estadoTexto.textContent = t("Ese punto está en el borde: elige uno dentro de la zona.");
       return;
     }
     this.cortesExtra.push(camino);
     this.pintarCortesExtra();
-    this.estadoTexto.textContent = `${this.cortesExtra.length} ${this.cortesExtra.length === 1 ? "corte extra" : "cortes extra"}. Pulsa «Aplanar zona» o añade más.`;
+    this.estadoTexto.textContent = plural(this.cortesExtra.length, "{n} corte extra. Pulsa «Aplanar zona» o añade más.", "{n} cortes extra. Pulsa «Aplanar zona» o añade más.");
   }
 
   private quitarCortesExtra(): void {
@@ -692,8 +693,8 @@ export class Visor3D implements IContentRenderer {
     this.botonesCamara(this.modoPintar);
     if (this.modoPintar)
       this.estadoTexto.textContent = app.activo
-        ? `Pintando en «${app.activo.nombre}» con el pincel del panel Lienzo. Gira con el botón derecho.`
-        : "Abre o crea un lienzo para pintar sobre el modelo.";
+        ? t("Pintando en «{lienzo}» con el pincel del panel Lienzo. Gira con el botón derecho.", { lienzo: app.activo.nombre })
+        : t("Abre o crea un lienzo para pintar sobre el modelo.");
   }
 
   /** Punto del lienzo activo bajo el puntero, en píxeles del documento. */
@@ -734,7 +735,7 @@ export class Visor3D implements IContentRenderer {
       this.terminarTrazo3d();
       const herramienta = app.ajustes.herramienta === "goma" ? "goma" : "pincel";
       if (!punto.lienzo.empezarTrazo({ ...app.ajustes, herramienta }, punto.doc.x, punto.doc.y, presion)) {
-        this.estadoTexto.textContent = `La capa «${punto.lienzo.doc.activa.nombre}» está bloqueada u oculta.`;
+        this.estadoTexto.textContent = t("La capa «{capa}» está bloqueada u oculta.", { capa: punto.lienzo.doc.activa.nombre });
         return;
       }
     } else {
@@ -756,7 +757,7 @@ export class Visor3D implements IContentRenderer {
     this.modoLazo = !this.modoLazo;
     this.botonLazo.classList.toggle("activo", this.modoLazo);
     this.botonesCamara(this.modoLazo);
-    if (this.modoLazo) this.estadoTexto.textContent = "Rodea la zona con el ratón (Mayús para quitar). Gira la vista con el botón derecho.";
+    if (this.modoLazo) this.estadoTexto.textContent = t("Rodea la zona con el ratón (Mayús para quitar). Gira la vista con el botón derecho.");
   }
 
   /** En los modos de selección el botón izquierdo selecciona; la cámara gira con el derecho. */
@@ -909,7 +910,7 @@ export class Visor3D implements IContentRenderer {
       const seleccion = new Set(this.seleccionados);
       for (const t of dentro) quitar ? seleccion.delete(t) : seleccion.add(t);
       this.fijarSeleccion(suavizarSeleccion(this.cuerpo, seleccion));
-      this.estadoTexto.textContent = `${this.seleccionados.size} triángulos seleccionados. Gira la vista y rodea más zona, o pulsa «Aplanar zona».`;
+      this.estadoTexto.textContent = t("{n} triángulos seleccionados. Gira la vista y rodea más zona, o pulsa «Aplanar zona».", { n: this.seleccionados.size });
       return;
     }
     if (!this.pintando || !this.cuerpo) return;
@@ -1041,11 +1042,11 @@ export class Visor3D implements IContentRenderer {
   private async aplanar(): Promise<void> {
     if (!this.cuerpo || this.bloqueadoPorPose()) return;
     if (this.seleccionados.size < 8) {
-      this.estadoTexto.textContent = "Selecciona primero una zona.";
+      this.estadoTexto.textContent = t("Selecciona primero una zona.");
       return;
     }
     const seleccion = this.seleccionActual()!;
-    this.estadoTexto.textContent = "Aplanando…";
+    this.estadoTexto.textContent = t("Aplanando…");
     // El corte por defecto queda en la cara que no se ve (opuesta a la cámara), y el
     // lienzo se orienta como la vista actual: la derecha de la pantalla es la del lienzo.
     const haciaCamara = this.camara.position.clone().sub(this.controles.target).normalize();
@@ -1077,11 +1078,16 @@ export class Visor3D implements IContentRenderer {
       if (this.modoCorteManual) this.alternarCorteManual();
       if (this.modoCorte) this.alternarModoCorte();
       await añadirLienzo(lienzo);
-      const tipo = aplanado.tipo === "manga" ? "Manga aplanada (con corte)" : "Parche aplanado";
+      const tipo = aplanado.tipo === "manga" ? t("Manga aplanada (con corte)") : t("Parche aplanado");
       const [w, h] = lienzo.geo.tamanoCm;
       this.estadoTexto.textContent =
-        `${tipo} en ${(milisegundos / 1000).toFixed(2)} s · ${w.toFixed(1)} × ${h.toFixed(1)} cm · ` +
-        `${deformacion.areaDentroDel2.toFixed(0)} % del área con deformación ≤ 2 %`;
+        t("{tipo} en {s} s · {ancho} × {alto} cm · {pct} % del área con deformación ≤ 2 %", {
+          tipo,
+          s: (milisegundos / 1000).toFixed(2),
+          ancho: w.toFixed(1),
+          alto: h.toFixed(1),
+          pct: deformacion.areaDentroDel2.toFixed(0),
+        });
     } catch (error) {
       this.estadoTexto.textContent = error instanceof Error ? error.message : String(error);
     }
@@ -1281,9 +1287,9 @@ export class Visor3D implements IContentRenderer {
     [...this.mallas.values()].forEach((m, i) => (m.resalte.visible = resaltes[i]));
     this.resaltado.visible = resaltado;
     const bytes = Uint8Array.from(atob(url.split(",")[1]), (c) => c.charCodeAt(0));
-    const nombre = `${app.proyecto?.nombre ?? "Dermap"} - vista 3D`;
-    const ruta = await guardarExportacion(bytes, nombre, { descripcion: "Imagen PNG", extension: "png", mime: "image/png" });
-    if (ruta) this.estadoTexto.textContent = `Imagen guardada: ${ruta}`;
+    const nombre = t("{proyecto} - vista 3D", { proyecto: app.proyecto?.nombre ?? "Dermap" });
+    const ruta = await guardarExportacion(bytes, nombre, { descripcion: t("Imagen PNG"), extension: "png", mime: "image/png" });
+    if (ruta) this.estadoTexto.textContent = t("Imagen guardada: {ruta}", { ruta });
   }
 
   // ── Cámara ────────────────────────────────────────────────────────────────────
@@ -1342,8 +1348,8 @@ interface MallaLienzo {
 
 function nombreLibre(): string {
   let n = app.lienzos.length + 1;
-  while (app.lienzos.some((l) => l.nombre === `Lienzo ${n}`)) n++;
-  return `Lienzo ${n}`;
+  while (app.lienzos.some((l) => l.nombre === t("Lienzo {n}", { n }))) n++;
+  return t("Lienzo {n}", { n });
 }
 
 // ── Vistas predefinidas (RF-11) y zonas rápidas ──────────────────────────────────
@@ -1359,15 +1365,15 @@ const medio = (eje: P3[]): P3 => {
 };
 
 const VISTAS: Vista[] = [
-  { nombre: "Cuerpo", encuadre: (c) => ({ centro: [0, c.altura / 2, 0], radio: c.altura / 2, direccion: [0, 0.1, 1] }) },
-  { nombre: "Brazo izquierdo", encuadre: (c) => ({ centro: medio(ejeDelBrazo(c, "l")), radio: 28, direccion: [0.6, 0.5, 0.65] }) },
-  { nombre: "Brazo derecho", encuadre: (c) => ({ centro: medio(ejeDelBrazo(c, "r")), radio: 28, direccion: [-0.6, 0.5, 0.65] }) },
-  { nombre: "Brazo izquierdo · cara interna", encuadre: (c) => ({ centro: medio(ejeDelBrazo(c, "l")), radio: 26, direccion: [0.3, -0.9, 0.3] }) },
-  { nombre: "Brazo derecho · cara interna", encuadre: (c) => ({ centro: medio(ejeDelBrazo(c, "r")), radio: 26, direccion: [-0.3, -0.9, 0.3] }) },
-  { nombre: "Pierna izquierda", encuadre: (c) => ({ centro: medio(ejeDeLaPierna(c, "l")), radio: 48, direccion: [0.55, 0.1, 0.85] }) },
-  { nombre: "Pierna derecha", encuadre: (c) => ({ centro: medio(ejeDeLaPierna(c, "r")), radio: 48, direccion: [-0.55, 0.1, 0.85] }) },
-  { nombre: "Torso", encuadre: (c) => ({ centro: [0, c.altura * 0.7, 0], radio: 38, direccion: [0, 0.05, 1] }) },
-  { nombre: "Espalda", encuadre: (c) => ({ centro: [0, c.altura * 0.7, 0], radio: 38, direccion: [0, 0.05, -1] }) },
+  { nombre: traducible("Cuerpo"), encuadre: (c) => ({ centro: [0, c.altura / 2, 0], radio: c.altura / 2, direccion: [0, 0.1, 1] }) },
+  { nombre: traducible("Brazo izquierdo"), encuadre: (c) => ({ centro: medio(ejeDelBrazo(c, "l")), radio: 28, direccion: [0.6, 0.5, 0.65] }) },
+  { nombre: traducible("Brazo derecho"), encuadre: (c) => ({ centro: medio(ejeDelBrazo(c, "r")), radio: 28, direccion: [-0.6, 0.5, 0.65] }) },
+  { nombre: traducible("Brazo izquierdo · cara interna"), encuadre: (c) => ({ centro: medio(ejeDelBrazo(c, "l")), radio: 26, direccion: [0.3, -0.9, 0.3] }) },
+  { nombre: traducible("Brazo derecho · cara interna"), encuadre: (c) => ({ centro: medio(ejeDelBrazo(c, "r")), radio: 26, direccion: [-0.3, -0.9, 0.3] }) },
+  { nombre: traducible("Pierna izquierda"), encuadre: (c) => ({ centro: medio(ejeDeLaPierna(c, "l")), radio: 48, direccion: [0.55, 0.1, 0.85] }) },
+  { nombre: traducible("Pierna derecha"), encuadre: (c) => ({ centro: medio(ejeDeLaPierna(c, "r")), radio: 48, direccion: [-0.55, 0.1, 0.85] }) },
+  { nombre: traducible("Torso"), encuadre: (c) => ({ centro: [0, c.altura * 0.7, 0], radio: 38, direccion: [0, 0.05, 1] }) },
+  { nombre: traducible("Espalda"), encuadre: (c) => ({ centro: [0, c.altura * 0.7, 0], radio: 38, direccion: [0, 0.05, -1] }) },
 ];
 
 interface ZonaRapida {
@@ -1395,12 +1401,12 @@ const pierna = (lado: "l" | "r") => (c: Cuerpo) => {
 };
 
 const ZONAS_RAPIDAS: ZonaRapida[] = [
-  { nombre: "Manga brazo izquierdo", vista: "Brazo izquierdo", seleccionar: manga("l") },
-  { nombre: "Manga brazo derecho", vista: "Brazo derecho", seleccionar: manga("r") },
-  { nombre: "Antebrazo izquierdo", vista: "Brazo izquierdo", seleccionar: antebrazo("l") },
-  { nombre: "Antebrazo derecho", vista: "Brazo derecho", seleccionar: antebrazo("r") },
-  { nombre: "Pierna izquierda", vista: "Pierna izquierda", seleccionar: pierna("l") },
-  { nombre: "Pierna derecha", vista: "Pierna derecha", seleccionar: pierna("r") },
+  { nombre: traducible("Manga brazo izquierdo"), vista: "Brazo izquierdo", seleccionar: manga("l") },
+  { nombre: traducible("Manga brazo derecho"), vista: "Brazo derecho", seleccionar: manga("r") },
+  { nombre: traducible("Antebrazo izquierdo"), vista: "Brazo izquierdo", seleccionar: antebrazo("l") },
+  { nombre: traducible("Antebrazo derecho"), vista: "Brazo derecho", seleccionar: antebrazo("r") },
+  { nombre: traducible("Pierna izquierda"), vista: "Pierna izquierda", seleccionar: pierna("l") },
+  { nombre: traducible("Pierna derecha"), vista: "Pierna derecha", seleccionar: pierna("r") },
 ];
 
 // ── Utilidades de interfaz ───────────────────────────────────────────────────────

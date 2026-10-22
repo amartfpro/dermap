@@ -1,3 +1,4 @@
+import { t } from "../i18n";
 import { PDFDocument, rgb, StandardFonts, type PDFFont, type PDFPage } from "pdf-lib";
 import { aBlob } from "../lienzo/documento";
 import { PPP } from "../lienzo/geometria-zona";
@@ -165,7 +166,7 @@ export async function exportarStencil(
 ): Promise<ResultadoExportacion> {
   const rect = rectContenido(lienzo, opciones.capas);
   if (opciones.formato === "png") {
-    progreso?.("Generando la imagen…");
+    progreso?.(t("Generando la imagen…"));
     const png = new Uint8Array(await (await aBlob(renderizar(lienzo, rect, opciones))).arrayBuffer());
     return { bytes: conResolucion(png, PPP), extension: "png", hojas: 1 };
   }
@@ -177,7 +178,7 @@ export async function exportarStencil(
   const fuente = await pdf.embedFont(StandardFonts.Helvetica);
   const total = plan.piezas.length;
   for (const [i, pieza] of plan.piezas.entries()) {
-    progreso?.(`Generando hoja ${i + 1} de ${total}…`);
+    progreso?.(t("Generando hoja {i} de {total}…", { i: i + 1, total }));
     const [w, h] = plan.apaisado ? [A4[1], A4[0]] : A4;
     const pagina = pdf.addPage([w * PT_POR_MM, h * PT_POR_MM]);
     const imagen = await pdf.embedPng(await (await aBlob(renderizar(lienzo, pieza.rect, opciones))).arrayBuffer());
@@ -195,8 +196,14 @@ export async function exportarStencil(
     marcarSolapes(pagina, plan, pieza, x, yArriba, anchoMm, altoMm);
     const titulo =
       total > 1
-        ? `${lienzo.nombre} · hoja ${i + 1} de ${total} (fila ${pieza.fila + 1}, columna ${pieza.columna + 1}) · escala 1:1`
-        : `${lienzo.nombre} · escala 1:1`;
+        ? t("{lienzo} · hoja {i} de {total} (fila {fila}, columna {columna}) · escala 1:1", {
+            lienzo: lienzo.nombre,
+            i: i + 1,
+            total,
+            fila: pieza.fila + 1,
+            columna: pieza.columna + 1,
+          })
+        : t("{lienzo} · escala 1:1", { lienzo: lienzo.nombre });
     texto(pagina, fuente, `Dermap · ${titulo}`, MARGEN.lado, h - 8, 8);
     regla(pagina, fuente, MARGEN.lado, 9);
   }
@@ -235,8 +242,8 @@ function regla(pagina: PDFPage, fuente: PDFFont, xMm: number, yMm: number): void
     pagina.drawLine({ start: { x: pt(xMm + mm), y: pt(yMm) }, end: { x: pt(xMm + mm), y: pt(yMm + largo) }, thickness: 0.3, color: negro });
     if (mm % 10 === 0) texto(pagina, fuente, String(mm / 10), xMm + mm - 0.6, yMm + 3.6, 6);
   }
-  texto(pagina, fuente, "Imprime al 100 % (sin ajustar a la página)", xMm + 104, yMm + 2.6, 7);
-  texto(pagina, fuente, "y comprueba que esta regla mide 10 cm.", xMm + 104, yMm - 0.4, 7);
+  texto(pagina, fuente, t("Imprime al 100 % (sin ajustar a la página)"), xMm + 104, yMm + 2.6, 7);
+  texto(pagina, fuente, t("y comprueba que esta regla mide 10 cm."), xMm + 104, yMm - 0.4, 7);
 }
 
 function texto(pagina: PDFPage, fuente: PDFFont, t: string, xMm: number, yMm: number, tamano: number): void {

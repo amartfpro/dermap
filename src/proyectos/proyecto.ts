@@ -1,3 +1,4 @@
+import { t } from "../i18n";
 import { Capa, nuevoId, type ModoFusion } from "../lienzo/capa";
 import { aBlob, DocumentoLienzo } from "../lienzo/documento";
 import { PPP, PX_POR_MM } from "../lienzo/geometria-zona";
@@ -98,7 +99,7 @@ export class ProyectoAbierto extends EventTarget {
     const p = new ProyectoAbierto(fs, carpeta, datos);
     const nodos = p.nodosLienzo();
     for (const [i, nodo] of nodos.entries()) {
-      progreso?.(`Abriendo «${nodo.nombre}» (${i + 1} de ${nodos.length})…`);
+      progreso?.(t("Abriendo «{nombre}» ({i} de {total})…", { nombre: nodo.nombre, i: i + 1, total: nodos.length }));
       try {
         p.registrar(await p.cargarLienzo(nodo));
       } catch (error) {
@@ -175,7 +176,7 @@ export class ProyectoAbierto extends EventTarget {
     const doc = new DocumentoLienzo(origen.doc.ancho, origen.doc.alto, PX_POR_MM, false);
     for (const capa of origen.doc.capas) doc.capas.push(capa.duplicar(nuevoId(), capa.nombre));
     doc.activa = doc.capas[origen.doc.capas.indexOf(origen.doc.activa)] ?? doc.capas[0];
-    const copia = new Lienzo(nuevoId(), this.nombreLibre(`${origen.nombre} copia`), origen.zona, doc);
+    const copia = new Lienzo(nuevoId(), this.nombreLibre(t("{nombre} copia", { nombre: origen.nombre })), origen.zona, doc);
     copia.cuadricula = origen.cuadricula;
     copia.tonoPiel = origen.tonoPiel;
     copia.actualizarFantasma();
@@ -491,7 +492,7 @@ export class ProyectoAbierto extends EventTarget {
       );
       doc.capas.push(capa);
     }
-    if (doc.capas.length === 0) doc.capas.push(new Capa(nuevoId(), "Líneas"));
+    if (doc.capas.length === 0) doc.capas.push(new Capa(nuevoId(), t("Líneas")));
     doc.activa = doc.capas.find((c) => c.id === datos.capaActiva) ?? doc.capas[doc.capas.length - 1];
     const lienzo = new Lienzo(datos.id, nodo.nombre, zona, doc);
     if (datos.cuadricula === false || (datos.tonoPiel && datos.tonoPiel !== lienzo.tonoPiel)) {
@@ -540,7 +541,7 @@ function migrar(datos: Proyecto): Proyecto {
     datos = { ...datos, version: 2, arbol: recorrer(datos.arbol ?? []) };
   }
   if (datos.version > VERSION_FORMATO)
-    throw new Error("Este proyecto se guardó con una versión más reciente de Dermap. Actualiza la aplicación.");
+    throw new Error(t("Este proyecto se guardó con una versión más reciente de Dermap. Actualiza la aplicación."));
   return datos;
 }
 

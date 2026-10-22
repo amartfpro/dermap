@@ -1,3 +1,4 @@
+import { t } from "../i18n";
 import { strFromU8, strToU8, unzipSync, zipSync, type Zippable } from "fflate";
 import { nuevoId } from "../lienzo/capa";
 import { nombreSeguro } from "./formato";
@@ -31,7 +32,7 @@ export async function empaquetarProyecto(fs: SistemaArchivos, carpeta: string): 
     }
   };
   await recorrer(carpeta, "");
-  if (!archivos[ARCHIVO_PROYECTO]) throw new Error("La carpeta no contiene un proyecto de Dermap.");
+  if (!archivos[ARCHIVO_PROYECTO]) throw new Error(t("La carpeta no contiene un proyecto de Dermap."));
   archivos[MANIFIESTO] = strToU8(JSON.stringify({ formato: "dermap", version: VERSION_FORMATO, creado: new Date().toISOString() }));
   return zipSync(archivos);
 }
@@ -45,22 +46,22 @@ export async function importarPaquete(fs: SistemaArchivos, bytes: Uint8Array): P
   try {
     entradas = unzipSync(bytes);
   } catch {
-    throw new Error("El archivo no es un proyecto de Dermap válido (no se puede leer).");
+    throw new Error(t("El archivo no es un proyecto de Dermap válido (no se puede leer)."));
   }
   // Admite también un ZIP hecho a mano con la carpeta del proyecto dentro.
   let prefijo = "";
   if (!entradas[ARCHIVO_PROYECTO]) {
     const anidado = Object.keys(entradas).find((r) => /^[^/]+\/proyecto\.json$/.test(r));
-    if (!anidado) throw new Error("El archivo no contiene un proyecto de Dermap.");
+    if (!anidado) throw new Error(t("El archivo no contiene un proyecto de Dermap."));
     prefijo = anidado.slice(0, anidado.indexOf("/") + 1);
   }
   const datos = JSON.parse(strFromU8(entradas[`${prefijo}${ARCHIVO_PROYECTO}`])) as Proyecto;
   if (typeof datos.version !== "number" || !Array.isArray(datos.arbol))
-    throw new Error("El proyecto.json del archivo está dañado.");
+    throw new Error(t("El proyecto.json del archivo está dañado."));
   if (datos.version > VERSION_FORMATO)
-    throw new Error("Este proyecto se creó con una versión más reciente de Dermap. Actualiza la aplicación.");
+    throw new Error(t("Este proyecto se creó con una versión más reciente de Dermap. Actualiza la aplicación."));
 
-  const base = nombreSeguro(datos.nombre || "Proyecto importado");
+  const base = nombreSeguro(datos.nombre || t("Proyecto importado"));
   let carpeta = base;
   for (let n = 2; await fs.existe(carpeta); n++) carpeta = `${base} (${n})`;
   if (carpeta !== base) datos.nombre = `${datos.nombre} (${carpeta.slice(base.length + 2, -1)})`;

@@ -1,3 +1,4 @@
+import { cambiarIdioma, IDIOMAS, idiomaActual, t, traducible } from "./i18n";
 import { createDockview, themeVisualStudio, type DockviewApi, type IContentRenderer } from "dockview-core";
 import "./vendor/dockview-8.6.1.css"; // hoja de estilos de dockview (MIT), copiada del paquete «dockview»
 import { PanelProyectos } from "./panels/proyectos";
@@ -29,26 +30,33 @@ const dock = createDockview(contenedor, {
   },
 });
 
+const TITULOS: Record<string, string> = {
+  visor3d: traducible("Visor 3D"),
+  lienzo: traducible("Lienzo"),
+  proyectos: traducible("Proyectos"),
+  capas: traducible("Capas"),
+};
+
 function layoutInicial(api: DockviewApi): void {
   api.clear();
-  api.addPanel({ id: "visor3d", component: "visor3d", title: "Visor 3D" });
+  api.addPanel({ id: "visor3d", component: "visor3d", title: t(TITULOS.visor3d) });
   api.addPanel({
     id: "lienzo",
     component: "lienzo",
-    title: "Lienzo",
+    title: t(TITULOS.lienzo),
     position: { referencePanel: "visor3d", direction: "right" },
   });
   api.addPanel({
     id: "proyectos",
     component: "proyectos",
-    title: "Proyectos",
+    title: t(TITULOS.proyectos),
     position: { referencePanel: "visor3d", direction: "left" },
     initialWidth: 250,
   });
   api.addPanel({
     id: "capas",
     component: "capas",
-    title: "Capas",
+    title: t(TITULOS.capas),
     position: { referencePanel: "proyectos", direction: "below" },
   });
 }
@@ -68,6 +76,30 @@ function restaurar(): void {
 }
 
 restaurar();
+// Los títulos guardados en la distribución pueden estar en otro idioma.
+for (const panel of dock.panels) if (TITULOS[panel.id]) panel.api.setTitle(t(TITULOS[panel.id]));
+
+// Textos de la barra superior y selector de idioma (RNF-14).
+const textosBarra: [string, string, string][] = [
+  ["ficha", traducible("Ficha del cliente"), traducible("Datos del cliente y notas del proyecto")],
+  ["presentar", traducible("Presentar"), traducible("Enseñar el diseño al cliente a pantalla completa (F5)")],
+  ["ayuda", "?", traducible("Flujo de trabajo y atajos de teclado (F1)")],
+  ["restablecer", traducible("Restablecer paneles"), traducible("Volver a la distribución inicial de paneles")],
+];
+for (const [id, texto, titulo] of textosBarra) {
+  const b = document.getElementById(id)!;
+  b.textContent = texto === "?" ? "?" : t(texto);
+  b.title = t(titulo);
+}
+const selectorIdioma = document.createElement("select");
+selectorIdioma.className = "desplegable idioma";
+selectorIdioma.title = t("Idioma");
+for (const [codigo, { nombre }] of Object.entries(IDIOMAS)) selectorIdioma.append(new Option(nombre, codigo, false, codigo === idiomaActual()));
+selectorIdioma.addEventListener("change", async () => {
+  await app.proyecto?.guardar();
+  cambiarIdioma(selectorIdioma.value);
+});
+document.getElementById("ayuda")!.before(selectorIdioma);
 
 dock.onDidLayoutChange(() => {
   try {

@@ -1,3 +1,4 @@
+import { t } from "../i18n";
 /**
  * Acceso a los archivos de los proyectos. Rutas relativas a la carpeta raíz de Dermap, con «/».
  *
@@ -121,7 +122,7 @@ class ArchivosNavegador implements SistemaArchivos {
   }
 
   async descripcion(): Promise<string> {
-    return "el almacenamiento del navegador";
+    return t("el almacenamiento del navegador");
   }
 
   async existe(ruta: string): Promise<boolean> {

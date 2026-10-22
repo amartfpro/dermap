@@ -1,3 +1,4 @@
+import { t } from "../i18n";
 import type { IContentRenderer } from "dockview-core";
 import { app } from "../estado";
 import { MODOS_FUSION, nuevoId, type Capa, type ModoFusion } from "../lienzo/capa";
@@ -35,14 +36,14 @@ export class PanelCapas implements IContentRenderer {
       if (f) void this.importar(f);
     });
     barra.append(
-      titulado(boton("+", () => this.nueva()), "Nueva capa"),
-      titulado(boton("Duplicar", () => this.duplicar()), "Duplicar la capa activa"),
-      titulado(boton("Eliminar", () => this.eliminar()), "Eliminar la capa activa"),
-      titulado(boton("↑", () => this.mover(1)), "Subir la capa"),
-      titulado(boton("↓", () => this.mover(-1)), "Bajar la capa"),
-      titulado(boton("Importar imagen…", () => archivo.click()), "Importar un PNG o JPG como capa nueva"),
-      titulado(boton("Copiar", () => void panelLienzoActual()?.copiar()), "Copiar la capa activa (Ctrl+C)"),
-      titulado(boton("Pegar", () => panelLienzoActual()?.pegar()), "Pegar la capa copiada, en este u otro lienzo (Ctrl+V)"),
+      titulado(boton(t("+"), () => this.nueva()), t("Nueva capa")),
+      titulado(boton(t("Duplicar"), () => this.duplicar()), t("Duplicar la capa activa")),
+      titulado(boton(t("Eliminar"), () => this.eliminar()), t("Eliminar la capa activa")),
+      titulado(boton(t("↑"), () => this.mover(1)), t("Subir la capa")),
+      titulado(boton(t("↓"), () => this.mover(-1)), t("Bajar la capa")),
+      titulado(boton(t("Importar imagen…"), () => archivo.click()), t("Importar un PNG o JPG como capa nueva")),
+      titulado(boton(t("Copiar"), () => void panelLienzoActual()?.copiar()), t("Copiar la capa activa (Ctrl+C)")),
+      titulado(boton(t("Pegar"), () => panelLienzoActual()?.pegar()), t("Pegar la capa copiada, en este u otro lienzo (Ctrl+V)")),
       this.selectorTraer(),
       archivo,
     );
@@ -88,7 +89,7 @@ export class PanelCapas implements IContentRenderer {
   private duplicar(): void {
     this.conPaso("Duplicar capa", (l) => {
       const origen = l.doc.activa;
-      const copia = origen.duplicar(nuevoId(), `${origen.nombre} copia`);
+      const copia = origen.duplicar(nuevoId(), t("{nombre} copia", { nombre: origen.nombre }));
       l.doc.insertarCapa(copia, l.doc.capas.indexOf(origen) + 1);
     });
   }
@@ -117,7 +118,7 @@ export class PanelCapas implements IContentRenderer {
       const imagen = await createImageBitmap(archivo);
       panelLienzoActual()?.colocarImagen(imagen, archivo.name);
     } catch {
-      window.alert(`No se pudo abrir «${archivo.name}». Usa una imagen PNG o JPG.`);
+      window.alert(t("No se pudo abrir «{archivo}». Usa una imagen PNG o JPG.", { archivo: archivo.name }));
     }
   }
 
@@ -128,22 +129,22 @@ export class PanelCapas implements IContentRenderer {
   private selectorTraer(): HTMLSelectElement {
     const s = document.createElement("select");
     s.className = "desplegable";
-    s.title = "Copiar el dibujo de otro lienzo que cubra la misma piel (por ejemplo, al rehacer una zona con otro corte)";
+    s.title = t("Copiar el dibujo de otro lienzo que cubra la misma piel (por ejemplo, al rehacer una zona con otro corte)");
     const rellenar = () => {
-      s.replaceChildren(new Option("Traer dibujo de…", ""));
+      s.replaceChildren(new Option(t("Traer dibujo de…"), ""));
       const actual = this.lienzo;
       if (!actual) return;
       const propios = new Set(actual.zona.triangulos);
       for (const otro of app.lienzos) {
         if (otro === actual) continue;
         let comunes = 0;
-        for (const t of otro.zona.triangulos) if (propios.has(t)) comunes++;
+        for (const tri of otro.zona.triangulos) if (propios.has(tri)) comunes++;
         const pct = Math.round((100 * comunes) / propios.size);
-        const o = new Option(comunes ? `${otro.nombre} (${pct} % común)` : `${otro.nombre} (no coincide)`, otro.id);
+        const o = new Option(comunes ? t("{lienzo} ({pct} % común)", { lienzo: otro.nombre, pct }) : t("{lienzo} (no coincide)", { lienzo: otro.nombre }), otro.id);
         o.disabled = comunes === 0;
         s.append(o);
       }
-      if (s.options.length === 1) s.append(Object.assign(new Option("No hay otros lienzos", ""), { disabled: true }));
+      if (s.options.length === 1) s.append(Object.assign(new Option(t("No hay otros lienzos"), ""), { disabled: true }));
     };
     rellenar();
     s.addEventListener("pointerdown", rellenar);
@@ -155,8 +156,8 @@ export class PanelCapas implements IContentRenderer {
       const { comunes, total } = transferirDibujo(origen, this.lienzo);
       if (comunes < total) {
         const fuera = Math.round((100 * (total - comunes)) / total);
-        this.aviso(`Dibujo traído de «${origen.nombre}». El ${fuera} % de esta zona no estaba en el original y queda vacío.`);
-      } else this.aviso(`Dibujo traído de «${origen.nombre}».`);
+        this.aviso(t("Dibujo traído de «{lienzo}». El {pct} % de esta zona no estaba en el original y queda vacío.", { lienzo: origen.nombre, pct: fuera }));
+      } else this.aviso(t("Dibujo traído de «{lienzo}».", { lienzo: origen.nombre }));
     });
     return s;
   }
@@ -180,7 +181,7 @@ export class PanelCapas implements IContentRenderer {
     if (!l) {
       const aviso = document.createElement("li");
       aviso.className = "aviso";
-      aviso.textContent = "Sin lienzo abierto.";
+      aviso.textContent = t("Sin lienzo abierto.");
       this.lista.appendChild(aviso);
       return;
     }
@@ -206,11 +207,11 @@ export class PanelCapas implements IContentRenderer {
     });
     const modo = document.createElement("select");
     modo.className = "desplegable";
-    for (const m of MODOS_FUSION) modo.append(new Option(m.nombre, m.modo, false, m.modo === activa.modo));
+    for (const m of MODOS_FUSION) modo.append(new Option(t(m.nombre), m.modo, false, m.modo === activa.modo));
     modo.addEventListener("change", () => this.cambiar(activa, { modo: modo.value as ModoFusion }, "Modo de fusión"));
     const stencil = document.createElement("label");
     stencil.className = "interruptor";
-    stencil.title = "Incluir esta capa al exportar el stencil";
+    stencil.title = t("Incluir esta capa al exportar el stencil");
     const casilla = document.createElement("input");
     casilla.type = "checkbox";
     casilla.checked = activa.enStencil;
@@ -218,7 +219,7 @@ export class PanelCapas implements IContentRenderer {
     stencil.append(casilla, " Stencil");
     const filaOpacidad = document.createElement("label");
     filaOpacidad.className = "control-etiquetado";
-    filaOpacidad.append("Opacidad", opacidad, valor);
+    filaOpacidad.append(t("Opacidad"), opacidad, valor);
     this.propiedades.append(filaOpacidad, modo, stencil);
 
     // Lista, de la capa superior a la inferior.
@@ -227,17 +228,17 @@ export class PanelCapas implements IContentRenderer {
       li.className = "fila-capa" + (capa === activa ? " activa" : "");
       li.draggable = true;
 
-      const ojo = iconoBoton(capa.visible ? "◉" : "○", capa.visible ? "Ocultar" : "Mostrar", () =>
+      const ojo = iconoBoton(capa.visible ? "◉" : "○", capa.visible ? t("Ocultar") : t("Mostrar"), () =>
         this.cambiar(capa, { visible: !capa.visible }, capa.visible ? "Ocultar capa" : "Mostrar capa"),
       );
-      const candado = iconoBoton(capa.bloqueada ? "🔒" : "🔓", capa.bloqueada ? "Desbloquear" : "Bloquear", () =>
+      const candado = iconoBoton(capa.bloqueada ? "🔒" : "🔓", capa.bloqueada ? t("Desbloquear") : t("Bloquear"), () =>
         this.cambiar(capa, { bloqueada: !capa.bloqueada }, capa.bloqueada ? "Desbloquear capa" : "Bloquear capa"),
       );
       candado.classList.toggle("tenue", !capa.bloqueada);
       const nombre = document.createElement("span");
       nombre.className = "nombre";
       nombre.textContent = capa.nombre;
-      nombre.title = "Doble clic para renombrar";
+      nombre.title = t("Doble clic para renombrar");
       nombre.addEventListener("dblclick", (e) => {
         e.stopPropagation();
         this.renombrar(capa, nombre);
@@ -247,7 +248,7 @@ export class PanelCapas implements IContentRenderer {
       const partes = [];
       if (capa.opacidad < 1) partes.push(`${Math.round(capa.opacidad * 100)} %`);
       if (capa.modo !== "normal") partes.push(MODOS_FUSION.find((m) => m.modo === capa.modo)!.nombre);
-      if (!capa.enStencil) partes.push("sin stencil");
+      if (!capa.enStencil) partes.push(t("sin stencil"));
       detalle.textContent = partes.join(" · ");
 
       li.append(ojo, candado, nombre, detalle);

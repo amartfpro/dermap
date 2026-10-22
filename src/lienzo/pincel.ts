@@ -1,3 +1,4 @@
+import { traducible } from "../i18n";
 import type { Capa } from "./capa";
 import {
   claveTesela,
@@ -52,12 +53,12 @@ export const AJUSTES_INICIALES: AjustesPincel = {
 
 /** Pinceles predefinidos para tatuaje (RF-34). Solo cambian los ajustes del pincel. */
 export const PRESETS: { nombre: string; ajustes: Partial<AjustesPincel> }[] = [
-  { nombre: "Línea fina", ajustes: { herramienta: "pincel", tamano: 0.6, opacidad: 1, dureza: 0.95, presionTamano: true, presionOpacidad: false, forma: "redonda" } },
-  { nombre: "Línea", ajustes: { herramienta: "pincel", tamano: 1.5, opacidad: 1, dureza: 0.9, presionTamano: true, presionOpacidad: false, forma: "redonda" } },
-  { nombre: "Línea gruesa", ajustes: { herramienta: "pincel", tamano: 3, opacidad: 1, dureza: 0.9, presionTamano: true, presionOpacidad: false, forma: "redonda" } },
-  { nombre: "Relleno", ajustes: { herramienta: "pincel", tamano: 8, opacidad: 1, dureza: 0.8, presionTamano: false, presionOpacidad: false, forma: "redonda" } },
-  { nombre: "Sombreado suave", ajustes: { herramienta: "pincel", tamano: 10, opacidad: 0.5, dureza: 0.05, presionTamano: false, presionOpacidad: true, forma: "redonda" } },
-  { nombre: "Puntillismo", ajustes: { herramienta: "pincel", tamano: 6, opacidad: 1, dureza: 1, presionTamano: false, presionOpacidad: true, forma: "puntos" } },
+  { nombre: traducible("Línea fina"), ajustes: { herramienta: "pincel", tamano: 0.6, opacidad: 1, dureza: 0.95, presionTamano: true, presionOpacidad: false, forma: "redonda" } },
+  { nombre: traducible("Línea"), ajustes: { herramienta: "pincel", tamano: 1.5, opacidad: 1, dureza: 0.9, presionTamano: true, presionOpacidad: false, forma: "redonda" } },
+  { nombre: traducible("Línea gruesa"), ajustes: { herramienta: "pincel", tamano: 3, opacidad: 1, dureza: 0.9, presionTamano: true, presionOpacidad: false, forma: "redonda" } },
+  { nombre: traducible("Relleno"), ajustes: { herramienta: "pincel", tamano: 8, opacidad: 1, dureza: 0.8, presionTamano: false, presionOpacidad: false, forma: "redonda" } },
+  { nombre: traducible("Sombreado suave"), ajustes: { herramienta: "pincel", tamano: 10, opacidad: 0.5, dureza: 0.05, presionTamano: false, presionOpacidad: true, forma: "redonda" } },
+  { nombre: traducible("Puntillismo"), ajustes: { herramienta: "pincel", tamano: 6, opacidad: 1, dureza: 1, presionTamano: false, presionOpacidad: true, forma: "puntos" } },
 ];
 
 /** Diámetro de cada punto del puntillismo, en mm (una aguja de liner). */

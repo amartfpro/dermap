@@ -1,3 +1,4 @@
+import { plural, t } from "../i18n";
 import { exportarStencil, planificar, rectContenido, type OpcionesStencil } from "../exportar/stencil";
 import { guardarExportacion } from "../exportar/guardar";
 import { PX_POR_MM } from "../lienzo/geometria-zona";
@@ -23,7 +24,7 @@ export function abrirDialogoExportar(lienzo: Lienzo): void {
   };
 
   const titulo = document.createElement("h2");
-  titulo.textContent = `Exportar stencil · ${lienzo.nombre}`;
+  titulo.textContent = t("Exportar stencil · {lienzo}", { lienzo: lienzo.nombre });
 
   const columnas = document.createElement("div");
   columnas.className = "modal-columnas";
@@ -34,7 +35,7 @@ export function abrirDialogoExportar(lienzo: Lienzo): void {
   columnas.append(izquierda, derecha);
 
   // Capas (de arriba abajo, como en el panel).
-  const capas = seccion("Capas");
+  const capas = seccion(t("Capas"));
   for (const capa of [...lienzo.doc.capas].reverse()) {
     capas.append(
       casilla(capa.nombre, opciones.capas.has(capa.id), (v) => {
@@ -44,24 +45,24 @@ export function abrirDialogoExportar(lienzo: Lienzo): void {
       }),
     );
   }
-  const modo = seccion("Impresión");
+  const modo = seccion(t("Impresión"));
   modo.append(
-    casilla("Solo líneas en negro (impresora térmica)", opciones.soloLineas, (v) => {
+    casilla(t("Solo líneas en negro (impresora térmica)"), opciones.soloLineas, (v) => {
       opciones.soloLineas = v;
       actualizar();
     }),
-    casilla("Marcar contorno y corte (para unir piezas)", opciones.contorno, (v) => {
+    casilla(t("Marcar contorno y corte (para unir piezas)"), opciones.contorno, (v) => {
       opciones.contorno = v;
       actualizar();
     }),
   );
-  const formato = seccion("Formato");
+  const formato = seccion(t("Formato"));
   formato.append(
-    radio("formato", "PDF A4 a escala real (en piezas si no cabe)", true, () => {
+    radio("formato", t("PDF A4 a escala real (en piezas si no cabe)"), true, () => {
       opciones.formato = "pdf";
       actualizar();
     }),
-    radio("formato", "PNG a 300 ppp (una sola imagen)", false, () => {
+    radio("formato", t("PNG a 300 ppp (una sola imagen)"), false, () => {
       opciones.formato = "png";
       actualizar();
     }),
@@ -77,10 +78,10 @@ export function abrirDialogoExportar(lienzo: Lienzo): void {
   estado.className = "estado-modal";
   const exportar = document.createElement("button");
   exportar.className = "boton-texto primario";
-  exportar.textContent = "Exportar…";
+  exportar.textContent = t("Exportar…");
   const cancelar = document.createElement("button");
   cancelar.className = "boton-texto";
-  cancelar.textContent = "Cerrar";
+  cancelar.textContent = t("Cerrar");
   const pie = document.createElement("div");
   pie.className = "modal-pie";
   pie.append(estado, cancelar, exportar);
@@ -103,20 +104,20 @@ export function abrirDialogoExportar(lienzo: Lienzo): void {
 
   exportar.addEventListener("click", async () => {
     if (opciones.capas.size === 0) {
-      estado.textContent = "Elige al menos una capa.";
+      estado.textContent = t("Elige al menos una capa.");
       return;
     }
     exportar.disabled = true;
     try {
       const r = await exportarStencil(lienzo, opciones, (t) => (estado.textContent = t));
       const ruta = await guardarExportacion(r.bytes, `${lienzo.nombre} - stencil`, {
-        descripcion: r.extension === "pdf" ? "PDF" : "Imagen PNG",
+        descripcion: r.extension === "pdf" ? "PDF" : t("Imagen PNG"),
         extension: r.extension,
         mime: r.extension === "pdf" ? "application/pdf" : "image/png",
       });
-      estado.textContent = ruta ? `Guardado: ${ruta}` : "Exportación cancelada.";
+      estado.textContent = ruta ? t("Guardado: {ruta}", { ruta }) : t("Exportación cancelada.");
     } catch (error) {
-      estado.textContent = `No se pudo exportar: ${error instanceof Error ? error.message : String(error)}`;
+      estado.textContent = t("No se pudo exportar: {error}", { error: error instanceof Error ? error.message : String(error) });
     } finally {
       exportar.disabled = false;
     }
@@ -130,9 +131,10 @@ export function abrirDialogoExportar(lienzo: Lienzo): void {
     resumen.textContent =
       `${anchoCm.toFixed(1)} × ${altoCm.toFixed(1)} cm` +
       (opciones.formato === "pdf"
-        ? ` · ${plan.piezas.length === 1 ? "1 hoja A4" : `${plan.piezas.length} hojas A4`} ` +
-          `${plan.apaisado ? "apaisada" : "vertical"}${plan.piezas.length === 1 ? "" : "s"}` +
-          (plan.piezas.length > 1 ? ", con 1 cm de solape" : "")
+        ? " · " +
+          (plan.apaisado
+            ? plural(plan.piezas.length, "1 hoja A4 apaisada", "{n} hojas A4 apaisadas, con 1 cm de solape")
+            : plural(plan.piezas.length, "1 hoja A4 vertical", "{n} hojas A4 verticales, con 1 cm de solape"))
         : " · 300 ppp");
 
     // Vista previa a baja resolución, con el reparto en hojas encima.

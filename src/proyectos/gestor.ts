@@ -1,3 +1,4 @@
+import { t } from "../i18n";
 import { app } from "../estado";
 import type { Lienzo } from "../lienzo/lienzo";
 import { listarProyectos, ProyectoAbierto } from "./proyecto";
@@ -65,8 +66,8 @@ export async function eliminarProyectoActual(): Promise<string | null> {
 export async function asegurarProyecto(): Promise<ProyectoAbierto> {
   if (app.proyecto) return app.proyecto;
   const existentes = new Set((await proyectos()).map((p) => p.nombre));
-  let nombre = "Sin título";
-  for (let n = 2; existentes.has(nombre); n++) nombre = `Sin título ${n}`;
+  let nombre = t("Sin título");
+  for (let n = 2; existentes.has(nombre); n++) nombre = t("Sin título {n}", { n });
   return crearProyecto(nombre);
 }
 
@@ -132,7 +133,7 @@ export async function exportarProyecto(): Promise<string | null> {
   await p.guardar();
   const bytes = await empaquetarProyecto(await sistemaArchivos(), p.carpeta);
   return guardarExportacion(bytes, p.datos.nombre, {
-    descripcion: "Proyecto de Dermap",
+    descripcion: t("Proyecto de Dermap"),
     extension: EXTENSION,
     mime: "application/zip",
   });
@@ -145,7 +146,7 @@ export async function exportarProyecto(): Promise<string | null> {
 export async function importarProyecto(progreso?: (t: string) => void): Promise<boolean> {
   const bytes = await elegirArchivoDermap();
   if (!bytes) return false;
-  progreso?.("Importando proyecto…");
+  progreso?.(t("Importando proyecto…"));
   const carpeta = await importarPaquete(await sistemaArchivos(), bytes);
   await abrirProyecto(carpeta, progreso);
   return true;
@@ -155,7 +156,7 @@ async function elegirArchivoDermap(): Promise<Uint8Array | null> {
   if (enTauri()) {
     const { open } = await import("@tauri-apps/plugin-dialog");
     const { readFile } = await import("@tauri-apps/plugin-fs");
-    const ruta = await open({ multiple: false, directory: false, filters: [{ name: "Proyecto de Dermap", extensions: [EXTENSION] }] });
+    const ruta = await open({ multiple: false, directory: false, filters: [{ name: t("Proyecto de Dermap"), extensions: [EXTENSION] }] });
     // El plugin de diálogos añade el archivo elegido a los permisos de lectura.
     return typeof ruta === "string" ? readFile(ruta) : null;
   }
