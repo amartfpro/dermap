@@ -18,6 +18,8 @@ import {
 import { escribirTextoSeguro, type SistemaArchivos } from "./sistema-archivos";
 
 const ARCHIVO_PROYECTO = "proyecto.json";
+/** Vista 3D del proyecto guardada al cerrarlo, para la pantalla de inicio. */
+export const ARCHIVO_PORTADA = "portada.png";
 /** Guardado automático: tras unos segundos sin cambios, y como mucho cada 2 minutos (RNF-11). */
 const ESPERA_GUARDADO_MS = 10_000;
 const MAXIMO_SIN_GUARDAR_MS = 120_000;
@@ -27,6 +29,12 @@ export type EstadoGuardado = "guardado" | "pendiente" | "guardando" | "error";
 export interface ResumenProyecto {
   carpeta: string;
   nombre: string;
+  cliente: string;
+  /** Fecha ISO de la última modificación. */
+  modificado: string;
+  lienzos: number;
+  /** Imagen de portada (vista 3D al cerrar) o, si no hay, miniatura del primer lienzo. */
+  portada: string | null;
 }
 
 /** Proyectos (carpetas con proyecto.json) de la raíz, ordenados por nombre. */
@@ -36,12 +44,25 @@ export async function listarProyectos(fs: SistemaArchivos): Promise<ResumenProye
     if (!e.carpeta) continue;
     try {
       const datos = JSON.parse(await fs.leerTexto(`${e.nombre}/${ARCHIVO_PROYECTO}`)) as Proyecto;
-      resultado.push({ carpeta: e.nombre, nombre: datos.nombre ?? e.nombre });
+      const lienzos: NodoLienzo[] = [];
+      const recorrer = (l: NodoArbol[]) => l.forEach((n) => (n.tipo === "lienzo" ? lienzos.push(n) : recorrer(n.hijos)));
+      recorrer(datos.arbol ?? []);
+      let portada: string | null = `${e.nombre}/${ARCHIVO_PORTADA}`;
+      if (!(await fs.existe(portada))) portada = lienzos.length ? `${e.nombre}/${lienzos[0].carpeta}/miniatura.png` : null;
+      resultado.push({
+        carpeta: e.nombre,
+        nombre: datos.nombre ?? e.nombre,
+        cliente: datos.ficha?.cliente ?? "",
+        modificado: datos.ficha?.modificado ?? "",
+        lienzos: lienzos.length,
+        portada,
+      });
     } catch {
       // Carpeta sin proyecto.json o con el archivo dañado: no es un proyecto.
     }
   }
-  return resultado.sort((a, b) => a.nombre.localeCompare(b.nombre, "es"));
+  // Lo último que se ha tocado, primero.
+  return resultado.sort((a, b) => b.modificado.localeCompare(a.modificado) || a.nombre.localeCompare(b.nombre, "es"));
 }
 
 interface EstadoEnDisco {

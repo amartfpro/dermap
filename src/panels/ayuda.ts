@@ -10,7 +10,7 @@ const SECCIONES: { titulo: string; filas: [string, string][] }[] = [
       [traducible("1 · Proyecto"), traducible("Uno por cliente. «Ficha del cliente» guarda contacto, cita y notas.")],
       [traducible("2 · Cuerpo"), traducible("«Cuerpo…» en el visor 3D: altura, complexión y tono de piel.")],
       [traducible("3 · Zona"), traducible("Zona rápida, «Seleccionar» (pincel) o «Lazo» sobre el cuerpo.")],
-      [traducible("4 · Corte"), traducible("En mangas, la línea roja es el corte: gira la vista para moverlo o usa «Corte manual».")],
+      [traducible("4 · Corte"), traducible("En mangas, la línea azul es el corte: gira la vista para moverlo o usa «Corte manual».")],
       [traducible("5 · Aplanar"), traducible("Crea un lienzo nuevo con la forma de la zona, a escala real.")],
       [traducible("6 · Dibujar"), traducible("Lo que dibujas se ve al momento en el 3D. Las capas se eligen al exportar.")],
       [traducible("7 · Exportar"), traducible("«Exportar stencil…»: PDF A4 en piezas con regla, o PNG a 300 ppp.")],

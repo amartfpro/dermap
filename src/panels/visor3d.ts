@@ -99,7 +99,7 @@ export class Visor3D implements IContentRenderer {
   /** Submalla de la selección actual (se invalida al cambiar la selección). */
   private seleccionCacheada: Seleccion | null = null;
   /** Corte que se usará al aplanar una manga, visible antes de aplanar (RF-23). */
-  /** Tubo rojo visible y, encima, el mismo semitransparente que se ve a través del cuerpo. */
+  /** Tubo azul visible y, encima, el mismo semitransparente que se ve a través del cuerpo. */
   private previaCorte = new THREE.Group();
   private corteProgramado = false;
   /** Cortes extra (RF-25) sobre la selección actual, en vértices de su submalla. */
@@ -616,7 +616,7 @@ export class Visor3D implements IContentRenderer {
     this.fijarSeleccion(seleccion.triangulos);
     this.verVista(VISTAS.findIndex((v) => v.nombre === zona.vista));
     this.estadoTexto.textContent =
-      t("{zona}: {n} triángulos. La línea roja es el corte: gira la vista para moverlo. Pulsa «Aplanar zona».", { zona: t(zona.nombre), n: seleccion.triangulos.length });
+      t("{zona}: {n} triángulos. La línea azul es el corte: gira la vista para moverlo. Pulsa «Aplanar zona».", { zona: t(zona.nombre), n: seleccion.triangulos.length });
   }
 
   // ── Selección a pincel ────────────────────────────────────────────────────────
@@ -1210,7 +1210,7 @@ export class Visor3D implements IContentRenderer {
     this.construirResalte(lienzo, m.resalte);
   }
 
-  /** Borde de la zona (naranja) y cortes (rojo), visibles solo en el lienzo activo. */
+  /** Borde de la zona (naranja) y cortes (azul), visibles solo en el lienzo activo. */
   private construirResalte(lienzo: Lienzo, resalte: THREE.Group): void {
     const { aplanado, verticeBase } = lienzo.zona;
     const cuerpo = this.cuerpo!.vertices;
@@ -1321,6 +1321,30 @@ export class Visor3D implements IContentRenderer {
   // ── Imagen para el cliente (RF-52) ──────────────────────────────────────────
 
   /** Guarda la vista actual a doble resolución, sin selección ni bordes de edición. */
+  /**
+   * Imagen pequeña de la vista actual (sin marcas de edición) para la portada del proyecto en
+   * la pantalla de inicio. Encuadra todo el cuerpo de frente si no hay lienzos.
+   */
+  capturaPortada(): Uint8Array | null {
+    if (!this.cuerpo || this.element.clientWidth === 0) return null;
+    const resaltes = [...this.mallas.values()].map((m) => m.resalte.visible);
+    const resaltado = this.resaltado.visible;
+    for (const m of this.mallas.values()) m.resalte.visible = false;
+    this.resaltado.visible = false;
+    this.renderer.render(this.escena, this.camara);
+    const fuente = this.renderer.domElement;
+    const escala = Math.min(1, 640 / fuente.width);
+    const lienzo = document.createElement("canvas");
+    lienzo.width = Math.round(fuente.width * escala);
+    lienzo.height = Math.round(fuente.height * escala);
+    lienzo.getContext("2d")!.drawImage(fuente, 0, 0, lienzo.width, lienzo.height);
+    [...this.mallas.values()].forEach((m, i) => (m.resalte.visible = resaltes[i]));
+    this.resaltado.visible = resaltado;
+    this.redibujar();
+    const url = lienzo.toDataURL("image/png");
+    return Uint8Array.from(atob(url.split(",")[1]), (c) => c.charCodeAt(0));
+  }
+
   private async exportarImagen(): Promise<void> {
     const resaltes = [...this.mallas.values()].map((m) => m.resalte.visible);
     const resaltado = this.resaltado.visible;

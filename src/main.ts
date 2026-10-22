@@ -3,20 +3,20 @@ import { createDockview, type DockviewApi, type DockviewTheme, type IContentRend
 import "./vendor/dockview-8.6.1.css"; // hoja de estilos de dockview (MIT), copiada del paquete «dockview»
 import "./estilos/dock.css";
 import "@fontsource-variable/inter";
-import { PanelProyectos } from "./panels/proyectos";
 import { Visor3D, visorActual } from "./panels/visor3d";
 import { abrirFicha } from "./panels/ficha";
 import { abrirAyuda } from "./panels/ayuda";
 import { PanelLienzo } from "./panels/lienzo";
 import { PanelCapas } from "./panels/capas";
 import { app } from "./estado";
-import { abrirArchivoInicial, abrirUltimo } from "./proyectos/gestor";
+import { abrirArchivoInicial, exportarProyecto } from "./proyectos/gestor";
+import { inicioVisible, mostrarInicio, ocultarInicio, volverAlInicio } from "./inicio/inicio";
+import { icono } from "./ui/iconos";
 import { enTauri, sistemaArchivos } from "./proyectos/sistema-archivos";
 
-const CLAVE_LAYOUT = "dermap.layout.v2";
+const CLAVE_LAYOUT = "dermap.layout.v3";
 
 const componentes: Record<string, () => IContentRenderer> = {
-  proyectos: () => new PanelProyectos(),
   visor3d: () => new Visor3D(),
   lienzo: () => new PanelLienzo(),
   capas: () => new PanelCapas(),
@@ -45,7 +45,6 @@ const dock = createDockview(contenedor, {
 const TITULOS: Record<string, string> = {
   visor3d: traducible("Visor 3D"),
   lienzo: traducible("Lienzo"),
-  proyectos: traducible("Proyectos"),
   capas: traducible("Capas"),
 };
 
@@ -59,17 +58,11 @@ function layoutInicial(api: DockviewApi): void {
     position: { referencePanel: "visor3d", direction: "right" },
   });
   api.addPanel({
-    id: "proyectos",
-    component: "proyectos",
-    title: t(TITULOS.proyectos),
-    position: { referencePanel: "visor3d", direction: "left" },
-    initialWidth: 250,
-  });
-  api.addPanel({
     id: "capas",
     component: "capas",
     title: t(TITULOS.capas),
-    position: { referencePanel: "proyectos", direction: "below" },
+    position: { referencePanel: "visor3d", direction: "left" },
+    initialWidth: 290,
   });
 }
 
@@ -94,15 +87,25 @@ for (const panel of dock.panels) if (TITULOS[panel.id]) panel.api.setTitle(t(TIT
 // Textos de la barra superior y selector de idioma (RNF-14).
 const textosBarra: [string, string, string][] = [
   ["ficha", traducible("Ficha del cliente"), traducible("Datos del cliente y notas del proyecto")],
+  ["exportar-proyecto", traducible("Exportar .dermap"), traducible("Guardar todo el proyecto en un solo archivo .dermap (copia de seguridad o para otro ordenador)")],
   ["presentar", traducible("Presentar"), traducible("Enseñar el diseño al cliente a pantalla completa (F5)")],
   ["ayuda", "?", traducible("Flujo de trabajo y atajos de teclado (F1)")],
-  ["restablecer", traducible("Restablecer paneles"), traducible("Volver a la distribución inicial de paneles")],
+  ["restablecer", "", traducible("Volver a la distribución inicial de paneles")],
+  ["inicio", "", traducible("Inicio: proyectos recientes y nuevo proyecto")],
 ];
 for (const [id, texto, titulo] of textosBarra) {
   const b = document.getElementById(id)!;
-  b.textContent = texto === "?" ? "?" : t(texto);
+  if (texto) b.textContent = texto === "?" ? "?" : t(texto);
   b.title = t(titulo);
 }
+document.getElementById("inicio")!.append(icono("inicio"));
+document.getElementById("restablecer")!.append(icono("encajar"));
+document.getElementById("presentar")!.prepend(icono("camara"));
+document.getElementById("presentar")!.classList.add("con-icono");
+document.getElementById("ficha")!.prepend(icono("cuerpo"));
+document.getElementById("ficha")!.classList.add("con-icono");
+document.getElementById("exportar-proyecto")!.prepend(icono("exportar"));
+document.getElementById("exportar-proyecto")!.classList.add("con-icono");
 const selectorIdioma = document.createElement("select");
 selectorIdioma.className = "desplegable idioma";
 selectorIdioma.title = t("Idioma");
@@ -125,20 +128,52 @@ document.getElementById("restablecer")!.addEventListener("click", () => layoutIn
 document.getElementById("ayuda")!.addEventListener("click", abrirAyuda);
 document.getElementById("ficha")!.addEventListener("click", () => void abrirFicha());
 document.getElementById("presentar")!.addEventListener("click", () => visorActual()?.presentar(true));
+document.getElementById("inicio")!.addEventListener("click", () => void volverAlInicio());
+document.getElementById("exportar-proyecto")!.addEventListener("click", () => void exportarProyecto().catch((e) => window.alert(String(e))));
 
 // Nombre del cliente en la barra superior.
 const etiquetaCliente = document.getElementById("cliente")!;
+const estadoGuardado = document.getElementById("estado-guardado")!;
+let proyectoVigilado: typeof app.proyecto = null;
+const mostrarEstado = () => {
+  const p = app.proyecto;
+  if (!p) {
+    estadoGuardado.textContent = "";
+    return;
+  }
+  estadoGuardado.textContent = {
+    guardado: t("Guardado"),
+    pendiente: t("Cambios sin guardar"),
+    guardando: t("Guardando…"),
+    error: t("Error al guardar: {error}", { error: p.ultimoError }),
+  }[p.estadoGuardado];
+  estadoGuardado.dataset.estado = p.estadoGuardado;
+};
 const mostrarCliente = () => {
   const p = app.proyecto;
-  etiquetaCliente.textContent = p ? `· ${p.datos.ficha.cliente || p.datos.nombre}` : "";
+  etiquetaCliente.textContent = p ? p.datos.nombre + (p.datos.ficha.cliente && p.datos.ficha.cliente !== p.datos.nombre ? ` · ${p.datos.ficha.cliente}` : "") : "";
+  if (proyectoVigilado !== p) {
+    proyectoVigilado?.removeEventListener("guardado", mostrarEstado);
+    p?.addEventListener("guardado", mostrarEstado);
+    proyectoVigilado = p;
+  }
+  mostrarEstado();
 };
 app.addEventListener("proyecto", mostrarCliente);
+// Un proyecto abierto por otra vía (doble clic en un .dermap con la app abierta) sale del inicio.
+app.addEventListener("proyecto", () => {
+  if (app.proyecto && inicioVisible()) ocultarInicio();
+});
 
 // ── Proyectos: reabrir el último, guardar con Ctrl+S y antes de cerrar ───────────
 
-void abrirUltimo((texto) => app.dispatchEvent(new CustomEvent("progreso", { detail: texto })))
-  .catch((error) => console.error("No se pudo abrir el último proyecto", error))
-  .then(() => abrirArchivoInicial((texto) => app.dispatchEvent(new CustomEvent("progreso", { detail: texto }))));
+// Al arrancar: si la app se abrió con un archivo .dermap, ese proyecto; si no, la pantalla de inicio.
+mostrarInicio();
+void abrirArchivoInicial((texto) => app.dispatchEvent(new CustomEvent("progreso", { detail: texto })))
+  .then(() => {
+    if (app.proyecto) ocultarInicio();
+  })
+  .catch((error) => console.error("No se pudo abrir el archivo inicial", error));
 
 window.addEventListener("keydown", (e) => {
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s") {

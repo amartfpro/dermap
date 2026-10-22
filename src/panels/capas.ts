@@ -1,9 +1,13 @@
-import { t } from "../i18n";
+import { plural, t } from "../i18n";
 import type { IContentRenderer } from "dockview-core";
 import { app } from "../estado";
 import { MODOS_FUSION, nuevoId, type Capa, type ModoFusion } from "../lienzo/capa";
 import type { Lienzo } from "../lienzo/lienzo";
 import { simetriaActual } from "../geometria/simetria";
+import { confirmar } from "../dialogos";
+import { duplicarLienzo, eliminarNodo } from "../proyectos/gestor";
+import type { NodoLienzo } from "../proyectos/modelo";
+import type { ProyectoAbierto } from "../proyectos/proyecto";
 import { transferirDibujo } from "../lienzo/transferir";
 import { abrirDialogoTexto } from "./texto";
 import { abrirDialogoFiltro } from "./filtro";
@@ -21,6 +25,16 @@ export class PanelCapas implements IContentRenderer {
   private propiedades: HTMLElement;
   private lienzo: Lienzo | null = null;
   private arrastrada: Capa | null = null;
+  private lienzoArrastrado: string | null = null;
+  /** Lienzos no activos que el usuario ha desplegado para ver sus capas. */
+  private desplegados = new Set<string>();
+  private proyecto: ProyectoAbierto | null = null;
+  private alCambiarProyecto = () => {
+    this.proyecto?.removeEventListener("arbol", this.alCambiarCapas);
+    this.proyecto = app.proyecto;
+    this.proyecto?.addEventListener("arbol", this.alCambiarCapas);
+    this.pintar();
+  };
   private alCambiarActivo = () => this.mostrar(app.activo);
   private alCambiarCapas = () => this.pintar();
 
@@ -83,6 +97,9 @@ export class PanelCapas implements IContentRenderer {
 
     this.element.append(barra, this.lista, this.propiedades);
     app.addEventListener("activo", this.alCambiarActivo);
+    app.addEventListener("proyecto", this.alCambiarProyecto);
+    app.addEventListener("lienzos", this.alCambiarCapas);
+    this.alCambiarProyecto();
     this.mostrar(app.activo);
   }
 
@@ -90,6 +107,9 @@ export class PanelCapas implements IContentRenderer {
 
   dispose(): void {
     app.removeEventListener("activo", this.alCambiarActivo);
+    app.removeEventListener("proyecto", this.alCambiarProyecto);
+    app.removeEventListener("lienzos", this.alCambiarCapas);
+    this.proyecto?.removeEventListener("arbol", this.alCambiarCapas);
     this.lienzo?.removeEventListener("capas", this.alCambiarCapas);
   }
 
@@ -102,8 +122,8 @@ export class PanelCapas implements IContentRenderer {
 
   // ── Acciones (todas registran un paso de historial antes de cambiar) ─────────
 
-  private conPaso(descripcion: string, accion: (l: Lienzo) => void): void {
-    const l = this.lienzo;
+  private conPaso(descripcion: string, accion: (l: Lienzo) => void, lienzo: Lienzo | null = this.lienzo): void {
+    const l = lienzo;
     if (!l) return;
     l.historial.registrar(l.doc.instantaneaCapas(descripcion));
     accion(l);
@@ -135,8 +155,13 @@ export class PanelCapas implements IContentRenderer {
     this.conPaso("Mover capa", (lz) => lz.doc.moverCapa(lz.doc.activa, destino));
   }
 
-  private cambiar(capa: Capa, cambios: Partial<Pick<Capa, "nombre" | "visible" | "bloqueada" | "opacidad" | "modo" | "enStencil">>, descripcion: string): void {
-    this.conPaso(descripcion, (l) => l.doc.cambiarCapa(capa, cambios));
+  private cambiar(
+    capa: Capa,
+    cambios: Partial<Pick<Capa, "nombre" | "visible" | "bloqueada" | "opacidad" | "modo" | "enStencil">>,
+    descripcion: string,
+    lienzo: Lienzo | null = this.lienzo,
+  ): void {
+    this.conPaso(descripcion, (l) => l.doc.cambiarCapa(capa, cambios), lienzo);
   }
 
   private async importar(archivo: File): Promise<void> {
@@ -226,14 +251,9 @@ export class PanelCapas implements IContentRenderer {
   private pintar(): void {
     this.lista.replaceChildren();
     this.propiedades.replaceChildren();
+    this.pintarGrupos();
     const l = this.lienzo;
-    if (!l) {
-      const aviso = document.createElement("li");
-      aviso.className = "aviso";
-      aviso.textContent = t("Sin lienzo abierto.");
-      this.lista.appendChild(aviso);
-      return;
-    }
+    if (!l) return;
     const activa = l.doc.activa;
 
     // Propiedades de la capa activa: opacidad, modo de fusión y si va al stencil.
@@ -271,54 +291,182 @@ export class PanelCapas implements IContentRenderer {
     filaOpacidad.append(t("Opacidad"), opacidad, valor);
     this.propiedades.append(filaOpacidad, modo, stencil);
 
-    // Lista, de la capa superior a la inferior.
-    for (const capa of [...l.doc.capas].reverse()) {
-      const li = document.createElement("li");
-      li.className = "fila-capa" + (capa === activa ? " activa" : "");
-      li.draggable = true;
+  }
 
-      const ojo = iconoBoton(capa.visible ? "ojo" : "ojoCerrado", capa.visible ? t("Ocultar") : t("Mostrar"), () =>
-        this.cambiar(capa, { visible: !capa.visible }, capa.visible ? "Ocultar capa" : "Mostrar capa"),
-      );
-      const candado = iconoBoton(capa.bloqueada ? "candado" : "candadoAbierto", capa.bloqueada ? t("Desbloquear") : t("Bloquear"), () =>
-        this.cambiar(capa, { bloqueada: !capa.bloqueada }, capa.bloqueada ? "Desbloquear capa" : "Bloquear capa"),
-      );
-      candado.classList.toggle("tenue", !capa.bloqueada);
-      ojo.classList.toggle("tenue", !capa.visible);
-      const nombre = document.createElement("span");
-      nombre.className = "nombre";
-      nombre.textContent = capa.nombre;
-      nombre.title = t("Doble clic para renombrar");
-      nombre.addEventListener("dblclick", (e) => {
-        e.stopPropagation();
-        this.renombrar(capa, nombre);
-      });
-      const detalle = document.createElement("span");
-      detalle.className = "detalle";
-      const partes = [];
-      if (capa.opacidad < 1) partes.push(`${Math.round(capa.opacidad * 100)} %`);
-      if (capa.modo !== "normal") partes.push(MODOS_FUSION.find((m) => m.modo === capa.modo)!.nombre);
-      if (!capa.enStencil) partes.push(t("sin stencil"));
-      detalle.textContent = partes.join(" · ");
-
-      li.append(ojo, candado, nombre, detalle);
-      li.addEventListener("click", () => l.doc.seleccionarCapa(capa));
-      // Reordenar arrastrando.
-      li.addEventListener("dragstart", () => (this.arrastrada = capa));
-      li.addEventListener("dragover", (e) => {
-        e.preventDefault();
-        li.classList.add("destino");
-      });
-      li.addEventListener("dragleave", () => li.classList.remove("destino"));
-      li.addEventListener("drop", (e) => {
-        e.preventDefault();
-        const origen = this.arrastrada;
-        this.arrastrada = null;
-        if (!origen || origen === capa) return;
-        this.conPaso("Mover capa", (lz) => lz.doc.moverCapa(origen, lz.doc.capas.indexOf(capa)));
-      });
-      this.lista.appendChild(li);
+  /**
+   * Lienzos del proyecto como grupos plegables (el de arriba se dibuja encima en el 3D), con
+   * sus capas dentro. Clic en un grupo: abrirlo para dibujar; el ojo lo oculta en el 3D.
+   */
+  private pintarGrupos(): void {
+    const p = app.proyecto;
+    if (!p) return;
+    const nodos = p.nodosLienzo();
+    if (!nodos.length) {
+      const aviso = document.createElement("li");
+      aviso.className = "aviso";
+      aviso.textContent = t("Proyecto vacío. Selecciona una zona en el visor 3D y pulsa «Aplanar zona» para crear el primer lienzo: un tatuaje nuevo, uno existente o una cicatriz.");
+      this.lista.append(aviso);
+      return;
     }
+    for (const nodo of [...nodos].reverse()) {
+      const lienzo = p.lienzos.get(nodo.id);
+      const abierto = lienzo ? lienzo === this.lienzo || this.desplegados.has(nodo.id) : false;
+      this.lista.append(this.filaGrupo(nodo, lienzo, abierto));
+      if (lienzo && abierto) for (const capa of [...lienzo.doc.capas].reverse()) this.lista.append(this.filaCapa(lienzo, capa));
+    }
+  }
+
+  private filaGrupo(nodo: NodoLienzo, lienzo: Lienzo | undefined, abierto: boolean): HTMLElement {
+    const p = app.proyecto!;
+    const li = document.createElement("li");
+    li.className = "fila-grupo" + (lienzo && lienzo === this.lienzo ? " activa" : "") + (nodo.visible ? "" : " oculta");
+    li.dataset.id = nodo.id;
+    li.draggable = true;
+    const fallo = p.noAbiertos.get(nodo.id);
+    if (fallo) {
+      li.classList.add("dañada");
+      li.title = t("No se pudo abrir: {error}", { error: fallo });
+    }
+    const flecha = iconoBoton(abierto ? "plegar" : "desplegar", abierto ? t("Plegar") : t("Desplegar"), () => {
+      if (lienzo === this.lienzo) return;
+      if (this.desplegados.has(nodo.id)) this.desplegados.delete(nodo.id);
+      else this.desplegados.add(nodo.id);
+      this.pintar();
+    });
+    flecha.classList.add("flecha");
+    const ojo = iconoBoton(nodo.visible ? "ojo" : "ojoCerrado", nodo.visible ? t("Ocultar en el 3D") : t("Mostrar en el 3D"), () => p.alternarVisible(nodo.id));
+    ojo.classList.toggle("tenue", !nodo.visible);
+    const tipo = document.createElement("span");
+    tipo.className = "tipo";
+    const manga = lienzo?.zona.aplanado.tipo === "manga";
+    tipo.append(icono(manga ? "recta" : "zona", 14));
+    tipo.title = manga ? t("Manga (con corte)") : t("Parche");
+    const nombre = document.createElement("span");
+    nombre.className = "nombre";
+    nombre.textContent = fallo ? t("{nombre} (no se pudo abrir)", { nombre: nodo.nombre }) : nodo.nombre;
+    nombre.title = t("Doble clic para renombrar");
+    nombre.addEventListener("dblclick", (e) => {
+      e.stopPropagation();
+      this.renombrarLienzo(nodo, nombre);
+    });
+    const detalle = document.createElement("span");
+    detalle.className = "detalle";
+    if (lienzo) detalle.textContent = String(lienzo.doc.capas.length);
+    detalle.title = lienzo ? plural(lienzo.doc.capas.length, "{n} capa", "{n} capas") : "";
+    const acciones = document.createElement("span");
+    acciones.className = "acciones-fila";
+    acciones.append(
+      iconoBoton("duplicar", t("Duplicar el lienzo (para probar otra versión del diseño)"), () => void duplicarLienzo(nodo.id)),
+      iconoBoton("borrar", t("Eliminar el lienzo"), async () => {
+        if (await confirmar(t("¿Eliminar el lienzo «{nombre}»? No se puede deshacer.", { nombre: nodo.nombre }))) await eliminarNodo(nodo.id);
+      }),
+    );
+    li.append(flecha, ojo, tipo, nombre, detalle, acciones);
+    li.addEventListener("click", () => {
+      if (lienzo) app.abrir(lienzo);
+    });
+    // Reordenar lienzos arrastrando: se suelta encima del grupo destino.
+    li.addEventListener("dragstart", (e) => {
+      this.lienzoArrastrado = nodo.id;
+      this.arrastrada = null;
+      e.dataTransfer?.setData("text/plain", nodo.id);
+    });
+    li.addEventListener("dragover", (e) => {
+      if (!this.lienzoArrastrado || this.lienzoArrastrado === nodo.id) return;
+      e.preventDefault();
+      li.classList.add("destino");
+    });
+    li.addEventListener("dragleave", () => li.classList.remove("destino"));
+    li.addEventListener("drop", (e) => {
+      e.preventDefault();
+      const id = this.lienzoArrastrado;
+      this.lienzoArrastrado = null;
+      if (!id || id === nodo.id) return;
+      // Encima en la lista = después en el orden de dibujo.
+      const orden = p.nodosLienzo().map((n) => n.id).filter((x) => x !== id);
+      const siguiente = orden[orden.indexOf(nodo.id) + 1] ?? null;
+      p.mover(id, null, siguiente);
+    });
+    return li;
+  }
+
+  private filaCapa(l: Lienzo, capa: Capa): HTMLElement {
+    const activa = l === this.lienzo && capa === l.doc.activa;
+    const li = document.createElement("li");
+    li.className = "fila-capa" + (activa ? " activa" : "");
+    li.draggable = true;
+    const ojo = iconoBoton(capa.visible ? "ojo" : "ojoCerrado", capa.visible ? t("Ocultar") : t("Mostrar"), () =>
+      this.cambiar(capa, { visible: !capa.visible }, capa.visible ? "Ocultar capa" : "Mostrar capa", l),
+    );
+    const candado = iconoBoton(capa.bloqueada ? "candado" : "candadoAbierto", capa.bloqueada ? t("Desbloquear") : t("Bloquear"), () =>
+      this.cambiar(capa, { bloqueada: !capa.bloqueada }, capa.bloqueada ? "Desbloquear capa" : "Bloquear capa", l),
+    );
+    candado.classList.toggle("tenue", !capa.bloqueada);
+    ojo.classList.toggle("tenue", !capa.visible);
+    const nombre = document.createElement("span");
+    nombre.className = "nombre";
+    nombre.textContent = capa.nombre;
+    nombre.title = t("Doble clic para renombrar");
+    nombre.addEventListener("dblclick", (e) => {
+      e.stopPropagation();
+      if (l === this.lienzo) this.renombrar(capa, nombre);
+    });
+    const detalle = document.createElement("span");
+    detalle.className = "detalle";
+    const partes = [];
+    if (capa.opacidad < 1) partes.push(`${Math.round(capa.opacidad * 100)} %`);
+    if (capa.modo !== "normal") partes.push(t(MODOS_FUSION.find((m) => m.modo === capa.modo)!.nombre));
+    if (!capa.enStencil) partes.push(t("sin stencil"));
+    detalle.textContent = partes.join(" · ");
+    li.append(ojo, candado, nombre, detalle);
+    li.addEventListener("click", () => {
+      if (l !== this.lienzo) app.abrir(l);
+      l.doc.seleccionarCapa(capa);
+    });
+    // Reordenar capas arrastrando, dentro del mismo lienzo.
+    li.addEventListener("dragstart", (e) => {
+      e.stopPropagation();
+      this.arrastrada = l === this.lienzo ? capa : null;
+      this.lienzoArrastrado = null;
+    });
+    li.addEventListener("dragover", (e) => {
+      if (!this.arrastrada || l !== this.lienzo) return;
+      e.preventDefault();
+      li.classList.add("destino");
+    });
+    li.addEventListener("dragleave", () => li.classList.remove("destino"));
+    li.addEventListener("drop", (e) => {
+      e.preventDefault();
+      const origen = this.arrastrada;
+      this.arrastrada = null;
+      if (!origen || origen === capa || l !== this.lienzo) return;
+      this.conPaso("Mover capa", (lz) => lz.doc.moverCapa(origen, lz.doc.capas.indexOf(capa)));
+    });
+    return li;
+  }
+
+  private renombrarLienzo(nodo: NodoLienzo, span: HTMLElement): void {
+    const campo = document.createElement("input");
+    campo.className = "campo-nombre";
+    campo.value = nodo.nombre;
+    span.replaceWith(campo);
+    campo.focus();
+    campo.select();
+    let hecho = false;
+    const terminar = (guardar: boolean) => {
+      if (hecho) return;
+      hecho = true;
+      const nuevo = campo.value.trim();
+      if (guardar && nuevo && nuevo !== nodo.nombre) app.proyecto?.renombrar(nodo.id, nuevo);
+      else this.pintar();
+    };
+    campo.addEventListener("keydown", (e) => {
+      e.stopPropagation();
+      if (e.key === "Enter") terminar(true);
+      if (e.key === "Escape") terminar(false);
+    });
+    campo.addEventListener("click", (e) => e.stopPropagation());
+    campo.addEventListener("blur", () => terminar(true));
   }
 
   private renombrar(capa: Capa, span: HTMLElement): void {

@@ -1,6 +1,8 @@
 import {
   ArrowDown,
   ArrowUp,
+  ChevronDown,
+  ChevronRight,
   Box,
   Brush,
   Camera,
@@ -89,6 +91,8 @@ export const ICONOS = {
   deshacer: Undo2,
   stencil: WandSparkles,
   cerrar: X,
+  plegar: ChevronDown,
+  desplegar: ChevronRight,
 } satisfies Record<string, IconNode>;
 
 export type NombreIcono = keyof typeof ICONOS;

@@ -43,18 +43,21 @@ el almacenamiento del navegador, no en disco).
 
 ## Cómo se usa
 
-1. **Proyecto** (panel izquierdo): uno por cliente, en `Documentos/Dermap/`. **Ficha del
-   cliente** (arriba) guarda nombre, contacto, fecha de la cita y notas. **Exportar…** guarda
-   el proyecto entero en un archivo `.dermap` (copia de seguridad o para otro ordenador) e
-   **Importar…** lo abre como proyecto nuevo (con la aplicación instalada, también basta con
-   hacer doble clic en el archivo `.dermap`).
+1. **Inicio**: al abrir la app aparecen los proyectos (uno por cliente, en
+   `Documentos/Dermap/`) con su portada. **Nuevo proyecto** pide la ficha del cliente y su
+   cuerpo (sexo, altura, complexión, musculatura, tono de piel y, si las tienes, sus medidas)
+   antes de entrar. El botón de la casa (arriba a la izquierda) guarda y vuelve al inicio.
+   **Ficha del cliente** (arriba) guarda nombre, contacto, fecha de la cita y notas.
+   **Exportar .dermap** guarda el proyecto entero en un archivo (copia de seguridad o para otro
+   ordenador) y **Abrir archivo .dermap…** lo abre como proyecto nuevo (con la aplicación
+   instalada, también basta con hacer doble clic en el archivo).
 2. **Cuerpo** (visor 3D → **Cuerpo…**): altura real, sexo, complexión, musculatura y tono de
    piel. Los lienzos siguen al cuerpo al cambiarlo. Con las **medidas del cliente** (contornos
    de brazo, antebrazo, muñeca, muslo, gemelo y tobillo tomados con cinta) los lienzos nuevos
    salen a su escala real. **Postura** dobla codos y rodillas solo para
    ver cómo se deforma el diseño.
 3. **Zona** (visor 3D): una «Zona rápida», **Seleccionar** (pincel) o **Lazo** (rodear lo que
-   se ve); Mayús quita. En mangas, la línea roja es el corte: va por la cara que no estás
+   se ve); Mayús quita. En mangas, la línea azul es el corte: va por la cara que no estás
    mirando, o márcalo tú con **Corte manual**. **Corte extra** abre pinzas en zonas muy curvas.
    **Aplanar zona** crea un lienzo nuevo a escala real.
 4. **Dibujo** (panel Lienzo): pinceles para tatuaje (línea fina, línea, relleno, sombreado,
@@ -63,7 +66,8 @@ el almacenamiento del navegador, no en disco).
    aparece en el 3D al momento y los trazos continúan al otro lado de la costura. En mangas,
    **Vista recta** muestra la piel desenrollada en un rectángulo (una línea horizontal es un
    anillo alrededor del brazo), y **Pintar en 3D** dibuja directamente sobre el modelo.
-5. **Capas**: crear, duplicar, reordenar, ocultar, bloquear, opacidad, modo de fusión,
+5. **Capas**: cada lienzo es un grupo plegable con sus capas dentro (el ojo del grupo lo oculta
+   en el 3D; se reordenan arrastrando). Crear, duplicar, reordenar, ocultar, bloquear, opacidad, modo de fusión,
    **Importar imagen…** (PNG/JPG), **A stencil…** (convierte una foto o boceto importado en
    líneas o en blanco y negro, en una capa nueva), **Texto…** (lettering con las tipografías
    instaladas y la altura de las mayúsculas en mm reales), **Copiar/Pegar** entre lienzos y
@@ -77,8 +81,8 @@ el almacenamiento del navegador, no en disco).
 7. **Presentar** (o F5): el 3D a pantalla completa para el cliente, girando, con botones para
    mostrar u ocultar cada lienzo y comparar versiones (duplica un lienzo con ⧉ para hacer otra).
 
-Para tatuajes ya hechos o cicatrices, crea lienzos aparte (por ejemplo en una carpeta
-«Previos»): todos los lienzos visibles se ven a la vez en el 3D.
+Para tatuajes ya hechos o cicatrices, crea lienzos aparte (por ejemplo «Previo – hombro»):
+todos los lienzos visibles se ven a la vez en el 3D.
 
 La interfaz está en español y en inglés (selector de idioma en la barra superior). Para
 añadir otro idioma basta con copiar `src/i18n/en.json`, traducirlo y registrarlo en `src/i18n.ts`;

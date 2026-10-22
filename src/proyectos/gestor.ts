@@ -1,7 +1,8 @@
 import { t } from "../i18n";
 import { app } from "../estado";
 import type { Lienzo } from "../lienzo/lienzo";
-import { listarProyectos, ProyectoAbierto } from "./proyecto";
+import { ARCHIVO_PORTADA, listarProyectos, ProyectoAbierto } from "./proyecto";
+import type { FichaCliente, ModeloCuerpo } from "./modelo";
 import { enTauri, sistemaArchivos } from "./sistema-archivos";
 import { empaquetarProyecto, EXTENSION, importarPaquete } from "./paquete";
 import { guardarExportacion } from "../exportar/guardar";
@@ -30,6 +31,60 @@ export async function crearProyecto(nombre: string): Promise<ProyectoAbierto> {
   const p = await ProyectoAbierto.crear(await sistemaArchivos(), nombre);
   activar(p);
   return p;
+}
+
+/** Proyecto nuevo con la ficha del cliente y el cuerpo ya definidos (pantalla de inicio). */
+export async function crearProyectoCompleto(
+  nombre: string,
+  ficha: Partial<Omit<FichaCliente, "creado" | "modificado">>,
+  modelo: Partial<ModeloCuerpo>,
+): Promise<ProyectoAbierto> {
+  await cerrarProyecto();
+  const p = await ProyectoAbierto.crear(await sistemaArchivos(), nombre);
+  p.cambiarFicha(ficha);
+  p.cambiarModelo(modelo);
+  await p.guardar();
+  activar(p);
+  return p;
+}
+
+/** Guarda la imagen de portada (vista 3D) del proyecto abierto. */
+export async function guardarPortada(bytes: Uint8Array): Promise<void> {
+  const p = app.proyecto;
+  if (!p) return;
+  await p.fs.escribirBinario(`${p.carpeta}/${ARCHIVO_PORTADA}`, bytes);
+}
+
+/** Lee una imagen del almacén de proyectos como URL para un <img> (o null si no existe). */
+export async function urlImagen(ruta: string): Promise<string | null> {
+  try {
+    const bytes = await (await sistemaArchivos()).leerBinario(ruta);
+    return URL.createObjectURL(new Blob([bytes as BlobPart], { type: "image/png" }));
+  } catch {
+    return null;
+  }
+}
+
+/** Elimina del disco un proyecto que no está abierto (desde la pantalla de inicio). */
+export async function eliminarProyecto(carpeta: string): Promise<void> {
+  if (app.proyecto?.carpeta === carpeta) {
+    await eliminarProyectoActual();
+    return;
+  }
+  await (await sistemaArchivos()).borrar(carpeta);
+  try {
+    if (localStorage.getItem(CLAVE_ULTIMO) === carpeta) localStorage.removeItem(CLAVE_ULTIMO);
+  } catch {
+    // Sin almacenamiento local.
+  }
+}
+
+/** Exporta a .dermap un proyecto de la lista (lo abre si no es el actual). */
+export async function exportarProyectoDe(carpeta: string): Promise<string | null> {
+  if (app.proyecto?.carpeta === carpeta) await app.proyecto.guardar();
+  const bytes = await empaquetarProyecto(await sistemaArchivos(), carpeta);
+  const nombre = (await proyectos()).find((p) => p.carpeta === carpeta)?.nombre ?? carpeta;
+  return guardarExportacion(bytes, nombre, { descripcion: t("Proyecto de Dermap"), extension: EXTENSION, mime: "application/zip" });
 }
 
 /** Guarda y cierra el proyecto abierto. */
