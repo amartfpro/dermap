@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { bordesDe, corteExtraHasta, corteSugerido, verticeMasCercano } from "../src/geometria/corte";
+import { bordesDe, corteExtraHasta, corteManual, corteSugerido, verticeMasCercano } from "../src/geometria/corte";
 import { medirDeformacion } from "../src/geometria/metricas";
 import { longitud, seleccionarPorEje, submalla, suavizarSeleccion } from "../src/geometria/seleccion";
 import { ejeDelBrazo } from "../src/modelos/cuerpo";
@@ -57,6 +57,31 @@ describe("corte", () => {
     const camino = corteExtraHasta(m, objetivo);
     expect(bordes.has(camino[0])).toBe(true);
     expect(camino[camino.length - 1]).toBe(objetivo);
+  });
+});
+
+describe("corte manual (RF-22, RF-24)", () => {
+  it("pasa por los puntos marcados y une los dos bordes", () => {
+    const m = manga().malla;
+    const [b0, b1] = bordesDe(m).map((b) => new Set(b));
+    const punto = verticeMasCercano(m, [eje[1][0], eje[1][1] + 6, eje[1][2]]); // encima del codo
+    const camino = corteManual(m, [punto])!;
+    expect(camino).not.toBeNull();
+    expect(camino).toContain(punto);
+    const [a, b] = [camino[0], camino[camino.length - 1]];
+    expect((b0.has(a) && b1.has(b)) || (b1.has(a) && b0.has(b))).toBe(true);
+  });
+
+  it("se aplana con el corte del usuario", async () => {
+    const m = manga().malla;
+    const punto = verticeMasCercano(m, [eje[1][0], eje[1][1] + 6, eje[1][2]]);
+    const camino = corteManual(m, [punto])!;
+    const a = (await aplanadorReal()).aplanar(m, { corteManual: camino });
+    expect(a.tipo).toBe("manga");
+    expect(a.volteados).toBe(0);
+    expect(Array.from(a.corte)).toEqual(camino);
+    // Un camino que no llega al otro borde se rechaza (RF-24).
+    expect(() => instancia!.aplanar(m, { corteManual: camino.slice(0, 3) })).toThrow();
   });
 });
 

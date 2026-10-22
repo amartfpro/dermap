@@ -37,6 +37,43 @@ export function corteExtraHasta(malla: Malla, objetivo: number): number[] {
   return caminoMinimo(malla, objetivo, enBorde, enBorde).reverse();
 }
 
+/**
+ * Corte manual de una manga (RF-22): pasa por los vértices que marca el usuario, unidos por
+ * el camino más corto, y se prolonga desde el primero hasta el borde más cercano y desde el
+ * último hasta el otro borde, así siempre conecta los dos (RF-24). Devuelve null si la zona
+ * no es una manga o algún punto está en un borde.
+ */
+export function corteManual(malla: Malla, puntos: number[]): number[] | null {
+  const bordes = bordesDe(malla);
+  if (bordes.length !== 2 || !puntos.length) return null;
+  const n = malla.vertices.length / 3;
+  const enBorde = new Uint8Array(n);
+  for (const b of bordes) for (const i of b) enBorde[i] = 1;
+  if (puntos.some((p) => enBorde[p])) return null;
+  const v = malla.vertices;
+  const distancia = (a: number, b: number) => Math.hypot(v[3 * a] - v[3 * b], v[3 * a + 1] - v[3 * b + 1], v[3 * a + 2] - v[3 * b + 2]);
+  const cercania = (borde: number[], p: number) => Math.min(...borde.map((i) => distancia(i, p)));
+  // El borde de salida es el más cercano al primer punto; el de llegada, el otro.
+  const primero = cercania(bordes[0], puntos[0]) <= cercania(bordes[1], puntos[0]) ? 0 : 1;
+  const conjunto = (borde: number[]) => {
+    const c = new Uint8Array(n);
+    for (const i of borde) c[i] = 1;
+    return c;
+  };
+  const inicio = caminoMinimo(malla, puntos[0], conjunto(bordes[primero]), enBorde).reverse();
+  const camino = [...inicio];
+  for (let k = 1; k < puntos.length; k++) {
+    const uno = new Uint8Array(n);
+    uno[puntos[k]] = 1;
+    const tramo = caminoMinimo(malla, puntos[k - 1], uno, enBorde);
+    if (tramo.length < 2) continue;
+    camino.push(...tramo.slice(1));
+  }
+  const fin = caminoMinimo(malla, puntos[puntos.length - 1], conjunto(bordes[1 - primero]), enBorde);
+  camino.push(...fin.slice(1));
+  return camino.length >= 2 && enBorde[camino[0]] && enBorde[camino[camino.length - 1]] ? camino : null;
+}
+
 /** Vértice de la malla más cercano a un punto. */
 export function verticeMasCercano(malla: Malla, p: P3): number {
   const v = malla.vertices;

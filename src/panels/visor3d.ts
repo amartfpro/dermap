@@ -2,7 +2,7 @@ import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import type { IContentRenderer } from "dockview-core";
 import { aplanarEnSegundoPlano } from "../geometria/cliente";
-import { corteExtraHasta, corteSugerido, verticeMasCercano } from "../geometria/corte";
+import { corteExtraHasta, corteManual, corteSugerido, verticeMasCercano } from "../geometria/corte";
 import { medirDeformacion } from "../geometria/metricas";
 import { longitud, seleccionarPorEje, submalla, suavizarSeleccion, type Seleccion } from "../geometria/seleccion";
 import { cargarCuerpo, ejeDeLaPierna, ejeDelBrazo, type Cuerpo } from "../modelos/cuerpo";
@@ -87,6 +87,10 @@ export class Visor3D implements IContentRenderer {
   private corteProgramado = false;
   /** Cortes extra (RF-25) sobre la selección actual, en vértices de su submalla. */
   private cortesExtra: number[][] = [];
+  /** Puntos del corte manual (RF-22), en vértices de la submalla de la selección. */
+  private puntosCorte: number[] = [];
+  private modoCorteManual = false;
+  private botonCorteManual!: HTMLButtonElement;
   private modoCorte = false;
   private botonCorte!: HTMLButtonElement;
   private grupoCortesExtra = new THREE.Group();
@@ -133,6 +137,10 @@ export class Visor3D implements IContentRenderer {
         "Rodea la zona con el ratón: se añade lo que se ve dentro. Mayús + arrastrar para quitar.",
       )),
       boton("Limpiar", () => this.fijarSeleccion([])),
+      (this.botonCorteManual = titulo(
+        boton("Corte manual", () => this.alternarCorteManual()),
+        "Marca con clics por dónde debe ir el corte de la manga; se une a los dos bordes por el camino más corto",
+      )),
       (this.botonCorte = titulo(
         boton("Corte extra", () => this.alternarModoCorte()),
         "Haz clic en la zona para abrir un corte desde el borde hasta ese punto (como una pinza): reduce la deformación en zonas muy curvas",
@@ -239,6 +247,7 @@ export class Visor3D implements IContentRenderer {
       if (this.modoSeleccion) this.alternarSeleccion();
       if (this.modoCorte) this.alternarModoCorte();
       if (this.modoLazo) this.alternarLazo();
+      if (this.modoCorteManual) this.alternarCorteManual();
       this.activo = true;
       if (this.cuerpo) this.encuadrar([0, this.cuerpo.altura / 2, 0], this.cuerpo.altura / 2, [0, 0.1, 1]);
       this.alternarGiro(true);
@@ -429,7 +438,53 @@ export class Visor3D implements IContentRenderer {
 
   // ── Selección a pincel ────────────────────────────────────────────────────────
 
+  private alternarCorteManual(): void {
+    this.modoCorteManual = !this.modoCorteManual;
+    if (this.modoCorteManual && this.modoCorte) this.alternarModoCorte();
+    if (this.modoCorteManual && this.modoSeleccion) this.alternarSeleccion();
+    if (this.modoCorteManual && this.modoLazo) this.alternarLazo();
+    this.botonCorteManual.classList.toggle("activo", this.modoCorteManual);
+    this.renderer.domElement.style.cursor = this.modoCorteManual ? "crosshair" : "";
+    if (this.modoCorteManual)
+      this.estadoTexto.textContent = "Haz clic en la manga por donde quieras que pase el corte (puedes marcar varios puntos).";
+  }
+
+  private añadirPuntoCorte(e: PointerEvent): void {
+    const seleccion = this.seleccionActual();
+    const golpe = this.lanzarRayo(e);
+    if (!seleccion) {
+      this.estadoTexto.textContent = "Selecciona primero una manga.";
+      return;
+    }
+    if (!golpe || !this.seleccionados.has(golpe.cara)) {
+      this.estadoTexto.textContent = "Haz clic sobre la zona seleccionada.";
+      return;
+    }
+    const punto = verticeMasCercano(seleccion.malla, golpe.point.toArray() as P3);
+    const puntos = [...this.puntosCorte, punto];
+    if (!corteManual(seleccion.malla, puntos)) {
+      this.estadoTexto.textContent = corteSugerido(seleccion.malla, [0, 0, 1])
+        ? "Ese punto está en el borde: elige uno dentro de la manga."
+        : "El corte manual solo es para mangas (zonas con dos bordes).";
+      return;
+    }
+    this.puntosCorte = puntos;
+    this.actualizarCorte();
+    this.estadoTexto.textContent = `Corte manual con ${puntos.length} ${puntos.length === 1 ? "punto" : "puntos"}. Añade más o pulsa «Aplanar zona».`;
+  }
+
+  /** Corte principal que se usará: el manual si hay puntos, si no el automático según la vista. */
+  private corteActual(seleccion: Seleccion): { camino: number[]; extremos: [number, number]; manual: boolean } | null {
+    if (this.puntosCorte.length) {
+      const camino = corteManual(seleccion.malla, this.puntosCorte);
+      if (camino) return { camino, extremos: [camino[0], camino[camino.length - 1]], manual: true };
+    }
+    const auto = corteSugerido(seleccion.malla, this.haciaCamara());
+    return auto && { ...auto, manual: false };
+  }
+
   private alternarModoCorte(): void {
+    if (!this.modoCorte && this.modoCorteManual) this.alternarCorteManual();
     this.modoCorte = !this.modoCorte;
     if (this.modoCorte && this.modoSeleccion) this.alternarSeleccion();
     this.botonCorte.classList.toggle("activo", this.modoCorte);
@@ -455,6 +510,10 @@ export class Visor3D implements IContentRenderer {
   private quitarCortesExtra(): void {
     this.cortesExtra = [];
     this.pintarCortesExtra();
+    if (this.puntosCorte.length) {
+      this.puntosCorte = [];
+      this.actualizarCorte();
+    }
   }
 
   private pintarCortesExtra(): void {
@@ -607,6 +666,10 @@ export class Visor3D implements IContentRenderer {
       this.añadirCorteExtra(e);
       return;
     }
+    if (this.modoCorteManual && e.button === 0) {
+      this.añadirPuntoCorte(e);
+      return;
+    }
     if (this.modoLazo && e.button === 0) {
       this.lazo = { puntos: [this.posicionEnVisor(e)], quitar: e.shiftKey };
       this.renderer.domElement.setPointerCapture(e.pointerId);
@@ -680,7 +743,7 @@ export class Visor3D implements IContentRenderer {
     if (cambio) this.actualizarResaltado();
   }
 
-  private lanzarRayo(e: PointerEvent): { point: THREE.Vector3; normal: THREE.Vector3 } | null {
+  private lanzarRayo(e: PointerEvent): { point: THREE.Vector3; normal: THREE.Vector3; cara: number } | null {
     if (!this.mallaCuerpo) return null;
     const r = this.renderer.domElement.getBoundingClientRect();
     const ndc = new THREE.Vector2(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
@@ -689,7 +752,7 @@ export class Visor3D implements IContentRenderer {
     if (!golpe || golpe.faceIndex == null) return null;
     const t = golpe.faceIndex;
     const normal = new THREE.Vector3().fromArray(this.normalesCaras, 3 * t);
-    return { point: golpe.point, normal };
+    return { point: golpe.point, normal, cara: t };
   }
 
   private fijarSeleccion(triangulos: Iterable<number>): void {
@@ -719,7 +782,7 @@ export class Visor3D implements IContentRenderer {
 
   private actualizarCorte(): void {
     const seleccion = this.pintando ? null : this.seleccionActual();
-    const corte = seleccion && corteSugerido(seleccion.malla, this.haciaCamara());
+    const corte = seleccion && this.corteActual(seleccion);
     this.previaCorte.visible = !!corte;
     if (!seleccion || !corte || !this.normalesCuerpo) return;
     const n = this.normalesCuerpo;
@@ -739,7 +802,7 @@ export class Visor3D implements IContentRenderer {
   private actualizarResaltado(): void {
     if (!this.cuerpo) return;
     this.seleccionCacheada = null;
-    if (this.cortesExtra.length) this.quitarCortesExtra();
+    if (this.cortesExtra.length || this.puntosCorte.length) this.quitarCortesExtra();
     this.programarCorte();
     const indices = new Uint32Array(this.seleccionados.size * 3);
     let k = 0;
@@ -768,10 +831,15 @@ export class Visor3D implements IContentRenderer {
     const derecha = new THREE.Vector3().setFromMatrixColumn(this.camara.matrixWorld, 0).normalize();
     try {
       // Se aplana con el mismo corte que se está mostrando.
-      const corte = corteSugerido(seleccion.malla, haciaCamara.toArray() as P3);
+      const corte = this.corteActual(seleccion);
       const { aplanado, milisegundos } = await aplanarEnSegundoPlano(
         seleccion.malla,
-        { direccionExterna: haciaCamara.toArray() as P3, extremos: corte?.extremos, cortesExtra: this.cortesExtra },
+        {
+          direccionExterna: haciaCamara.toArray() as P3,
+          extremos: corte?.extremos,
+          corteManual: corte?.manual ? corte.camino : undefined,
+          cortesExtra: this.cortesExtra,
+        },
         derecha.toArray() as P3,
         haciaCamara.toArray() as P3,
       );
@@ -785,6 +853,8 @@ export class Visor3D implements IContentRenderer {
       });
       if (app.proyecto) lienzo.tonoPiel = app.proyecto.datos.modelo.tonoPiel;
       this.fijarSeleccion([]);
+      if (this.modoCorteManual) this.alternarCorteManual();
+      if (this.modoCorte) this.alternarModoCorte();
       await añadirLienzo(lienzo);
       const tipo = aplanado.tipo === "manga" ? "Manga aplanada (con corte)" : "Parche aplanado";
       const [w, h] = lienzo.geo.tamanoCm;

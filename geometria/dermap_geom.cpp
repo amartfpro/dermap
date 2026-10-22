@@ -194,8 +194,31 @@ int dm_aplanar(const double* vertices, int nV, const int* caras, int nF, double 
   Eigen::VectorXi I = Eigen::VectorXi::LinSpaced(nV, 0, nV - 1);
   std::vector<int> cortes;  // todos los caminos a cortar, separados por -1
 
+  // Corte manual (RF-22): con extremo_a == -2, el primer camino de `extra` (hasta el primer -1)
+  // es el corte principal trazado por el usuario; el resto son cortes adicionales.
+  std::vector<int> manual;
+  if (extremo_a == -2) {
+    int k = 0;
+    while (k < nExtra && extra[k] >= 0) manual.push_back(extra[k++]);
+    if (k < nExtra) k++;  // salta el -1
+    extra = nExtra > k ? extra + k : nullptr;
+    nExtra = nExtra > k ? nExtra - k : 0;
+    if (bordes.size() != 2 || manual.size() < 2) return resultado.codigo = CORTE_NO_VALIDO;
+  }
+
   // 2. Corte de borde a borde (solo mangas).
-  if (bordes.size() == 2) {
+  if (bordes.size() == 2 && !manual.empty()) {
+    std::vector<char> en_a(nV, 0), en_b(nV, 0);
+    for (int v : bordes[0]) en_a[v] = 1;
+    for (int v : bordes[1]) en_b[v] = 1;
+    for (int v : manual)
+      if (v < 0 || v >= nV) return resultado.codigo = CORTE_NO_VALIDO;
+    const int ini = manual.front(), fin = manual.back();
+    // RF-24: debe ir de un borde al otro.
+    if (!((en_a[ini] && en_b[fin]) || (en_b[ini] && en_a[fin]))) return resultado.codigo = CORTE_NO_VALIDO;
+    resultado.corte = manual;
+    cortes = manual;
+  } else if (bordes.size() == 2) {
     std::vector<char> en_borde(nV, 0), en_a(nV, 0), en_b(nV, 0);
     for (int v : bordes[0]) en_borde[v] = en_a[v] = 1;
     for (int v : bordes[1]) en_borde[v] = en_b[v] = 1;

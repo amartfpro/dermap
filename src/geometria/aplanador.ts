@@ -22,6 +22,8 @@ export interface OpcionesAplanado {
    * Reducen la deformación en zonas muy curvas, como las pinzas de un patrón de costura.
    */
   cortesExtra?: number[][];
+  /** Corte principal trazado por el usuario (RF-22), de borde a borde; sustituye al automático. */
+  corteManual?: number[];
 }
 
 export interface Aplanado {
@@ -97,11 +99,12 @@ export class Aplanador {
   aplanar(malla: Malla, opciones: OpcionesAplanado = {}): Aplanado {
     const w = this.wasm;
     const [dx, dy, dz] = opciones.direccionExterna ?? [0, 0, 1];
-    const [a, b] = opciones.extremos ?? [-1, -1];
+    const [a, b] = opciones.corteManual ? [-2, -1] : (opciones.extremos ?? [-1, -1]);
     const nV = malla.vertices.length / 3;
     const nF = malla.caras.length / 3;
 
-    const extra = Int32Array.from((opciones.cortesExtra ?? []).flatMap((c, i) => (i ? [-1, ...c] : c)));
+    const caminos = [...(opciones.corteManual ? [opciones.corteManual] : []), ...(opciones.cortesExtra ?? [])];
+    const extra = Int32Array.from(caminos.flatMap((c, i) => (i ? [-1, ...c] : c)));
     const pV = w.dm_reservar(malla.vertices.byteLength);
     const pF = w.dm_reservar(malla.caras.byteLength);
     const pE = w.dm_reservar(Math.max(4, extra.byteLength));
