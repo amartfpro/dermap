@@ -7,6 +7,7 @@ import { corteExtraHasta, corteManual, corteSugerido, verticeMasCercano } from "
 import { medirDeformacion } from "../geometria/metricas";
 import { longitud, seleccionarPorEje, submalla, suavizarSeleccion, type Seleccion } from "../geometria/seleccion";
 import { prepararSimetria } from "../geometria/simetria";
+import { botonIcono, seccion, segmentado } from "../ui/iconos";
 import { cargarCuerpo, ejeDeLaPierna, ejeDelBrazo, type Cuerpo } from "../modelos/cuerpo";
 import { aplicarComplexion, cargarFormas, COMPLEXION_INICIAL, type Complexion, type Formas } from "../modelos/formas";
 import type { ProyectoAbierto } from "../proyectos/proyecto";
@@ -41,7 +42,7 @@ export class Visor3D implements IContentRenderer {
   private controles: OrbitControls;
   private observador: ResizeObserver;
   private estadoTexto: HTMLElement;
-  private botonSeleccionar: HTMLButtonElement;
+  private botonSeleccionar!: HTMLButtonElement;
   private radioPincel = 2.5;
   private activo = true;
 
@@ -174,34 +175,64 @@ export class Visor3D implements IContentRenderer {
     this.estadoTexto = document.createElement("div");
     this.estadoTexto.className = "etiqueta-flotante";
     this.estadoTexto.textContent = t("Cargando cuerpo…");
-    barra.append(
-      desplegable(t("Vista"), VISTAS.map((v) => t(v.nombre)), (i) => this.verVista(i)),
-      desplegable(t("Zona rápida"), ZONAS_RAPIDAS.map((z) => t(z.nombre)), (i) => this.zonaRapida(i)),
-      this.botonSeleccionar,
-      radio,
-      (this.botonLazo = titulo(
-        boton(t("Lazo"), () => this.alternarLazo()),
-        t("Rodea la zona con el ratón: se añade lo que se ve dentro. Mayús + arrastrar para quitar."),
-      )),
-      boton(t("Limpiar"), () => this.fijarSeleccion([])),
-      (this.botonCorteManual = titulo(
-        boton(t("Corte manual"), () => this.alternarCorteManual()),
-        t("Marca con clics por dónde debe ir el corte de la manga; se une a los dos bordes por el camino más corto"),
-      )),
-      (this.botonCorte = titulo(
-        boton(t("Corte extra"), () => this.alternarModoCorte()),
-        t("Haz clic en la zona para abrir un corte desde el borde hasta ese punto (como una pinza): reduce la deformación en zonas muy curvas"),
-      )),
-      titulo(boton(t("Quitar cortes"), () => this.quitarCortesExtra()), t("Quitar los cortes extra")),
-      boton(t("Aplanar zona"), () => void this.aplanar()),
-      titulo(boton(t("Imagen 3D…"), () => void this.exportarImagen()), t("Guardar la vista actual en PNG para enseñarla al cliente")),
-      (this.botonPintar = titulo(
-        boton(t("Pintar en 3D"), () => this.alternarPintar()),
-        t("Dibuja sobre el modelo con el pincel actual, en el lienzo activo (gira con el botón derecho)"),
-      )),
-      titulo(boton(t("Ver zona"), () => app.activo && this.encuadrarZona(app.activo)), t("Centrar la cámara en la zona del lienzo activo")),
-      titulo(boton(t("Cuerpo…"), () => this.panelCuerpo.alternar()), t("Altura, complexión y tono de piel del cliente")),
+    const zonaRapida = desplegable(t("Zona rápida…"), ZONAS_RAPIDAS.map((z) => t(z.nombre)), (i) => this.zonaRapida(i));
+    zonaRapida.title = t("Seleccionar de una vez una manga, un antebrazo o una pierna");
+    this.botonSeleccionar = botonIcono("seleccionar", t("Pinta la zona sobre el cuerpo (S). Mayús + arrastrar para quitar."), () => this.alternarSeleccion(), {
+      texto: t("Pincel"),
+    });
+    this.botonLazo = botonIcono("lazo", t("Rodea la zona con el ratón (L): se añade lo que se ve dentro. Mayús + arrastrar para quitar."), () => this.alternarLazo(), {
+      texto: t("Lazo"),
+    });
+    this.botonCorteManual = botonIcono(
+      "corte",
+      t("Marca con clics por dónde debe ir el corte de la manga; se une a los dos bordes por el camino más corto"),
+      () => this.alternarCorteManual(),
+      { texto: t("Manual") },
     );
+    this.botonCorte = botonIcono(
+      "curva",
+      t("Haz clic en la zona para abrir un corte desde el borde hasta ese punto (como una pinza): reduce la deformación en zonas muy curvas"),
+      () => this.alternarModoCorte(),
+      { texto: t("Extra") },
+    );
+    const aplanar = botonIcono("zona", t("Aplanar la zona seleccionada en un lienzo (Intro)"), () => void this.aplanar(), {
+      texto: t("Aplanar zona"),
+      clase: "primario",
+    });
+    barra.append(
+      seccion(
+        t("1 · Zona"),
+        zonaRapida,
+        segmentado(this.botonSeleccionar, this.botonLazo),
+        radio,
+        botonIcono("borrar", t("Vaciar la selección"), () => this.fijarSeleccion([])),
+      ),
+      seccion(
+        t("2 · Corte"),
+        segmentado(this.botonCorteManual, this.botonCorte),
+        botonIcono("cerrar", t("Quitar los cortes extra"), () => this.quitarCortesExtra()),
+      ),
+      seccion(t("3 · Lienzo"), aplanar),
+    );
+
+    // Barra de vista (abajo): cámara, cuerpo y pintar en 3D.
+    const barraVista = document.createElement("div");
+    barraVista.className = "barra-vista barra-vista-3d";
+    const vista = desplegable(t("Vista"), VISTAS.map((v) => t(v.nombre)), (i) => this.verVista(i));
+    vista.title = t("Vistas de cámara (teclas 1 a 9)");
+    this.botonPintar = botonIcono("pintar3d", t("Dibuja sobre el modelo con el pincel actual, en el lienzo activo (gira con el botón derecho)"), () => this.alternarPintar(), {
+      texto: t("Pintar en 3D"),
+    });
+    barraVista.append(
+      vista,
+      segmentado(
+        botonIcono("encajar", t("Centrar la cámara en la zona del lienzo activo (F)"), () => app.activo && this.encuadrarZona(app.activo)),
+        botonIcono("camara", t("Guardar la vista actual en PNG para enseñarla al cliente"), () => void this.exportarImagen()),
+      ),
+      this.botonPintar,
+      botonIcono("cuerpo", t("Cuerpo del cliente: complexión, medidas, postura y tono de piel"), () => this.panelCuerpo.alternar(), { texto: t("Cuerpo") }),
+    );
+    this.element.append(barraVista);
     this.capaLazo = document.createElement("canvas");
     this.capaLazo.className = "capa-lazo";
     this.element.append(this.capaLazo);

@@ -12,6 +12,9 @@ import { VistaRecta } from "../lienzo/vista-recta";
 import type { Lienzo } from "../lienzo/lienzo";
 import type { Rect } from "../lienzo/teselas";
 import { abrirDialogoExportar } from "./exportar";
+import { abrirDialogoTexto } from "./texto";
+import { botonIcono, seccion, segmentado, type NombreIcono } from "../ui/iconos";
+import { abrirSelectorColor, MAX_PALETA } from "../ui/selector-color";
 
 type P = { x: number; y: number };
 type Arrastre =
@@ -106,6 +109,11 @@ export class PanelLienzo implements IContentRenderer {
   /** Trazo en curso en la vista rectangular: último punto del rectángulo y del lienzo. */
   private trazoRecta: { ultimo: P; enLienzo: P | null; activo: boolean; ajustes: AjustesPincel } | null = null;
   private botonRecta!: HTMLButtonElement;
+  private botonAngulo!: HTMLButtonElement;
+  private riel!: HTMLElement;
+  private accionesPestanas!: HTMLElement;
+  private barraVista!: HTMLElement;
+  private valores!: Record<"tamano" | "opacidad" | "dureza", HTMLElement>;
   private filaPaleta!: HTMLElement;
   private verDeformacion = false;
   private flotante: ImagenFlotante | null = null;
@@ -136,7 +144,11 @@ export class PanelLienzo implements IContentRenderer {
     this.pestanas.className = "pestanas";
 
     this.barra = document.createElement("div");
-    this.barra.className = "herramientas envolver";
+    this.barra.className = "herramientas envolver barra-opciones";
+    this.riel = document.createElement("div");
+    this.riel.className = "riel";
+    this.barraVista = document.createElement("div");
+    this.barraVista.className = "barra-vista";
     this.montarHerramientas();
 
     this.barraImagen = document.createElement("div");
@@ -146,8 +158,8 @@ export class PanelLienzo implements IContentRenderer {
     textoImagen.textContent = t("Coloca la imagen: arrastra para mover, esquinas para escalar, punto superior para girar (Mayús: de 15 en 15°).");
     this.barraImagen.append(
       textoImagen,
-      boton(t("Voltear ↔"), () => this.voltearImagen(true)),
-      boton(t("Voltear ↕"), () => this.voltearImagen(false)),
+      botonIcono("voltearH", t("Voltear en horizontal (Mayús+H)"), () => this.voltearImagen(true), { texto: t("Voltear ↔") }),
+      botonIcono("voltearV", t("Voltear en vertical (Mayús+V)"), () => this.voltearImagen(false), { texto: t("Voltear ↕") }),
       boton(t("Aplicar (Intro)"), () => this.fijarImagen(), "primario"),
       boton(t("Cancelar (Esc)"), () => this.cancelarImagen()),
     );
@@ -163,7 +175,13 @@ export class PanelLienzo implements IContentRenderer {
     this.info = document.createElement("div");
     this.info.className = "etiqueta-flotante";
 
-    this.element.append(this.pestanas, this.barra, this.barraImagen, this.canvas, this.aviso, this.info);
+    const zona = document.createElement("div");
+    zona.className = "zona-lienzo";
+    zona.append(this.canvas, this.aviso, this.info, this.barraVista);
+    const cuerpo = document.createElement("div");
+    cuerpo.className = "cuerpo-lienzo";
+    cuerpo.append(this.riel, zona);
+    this.element.append(this.pestanas, this.barra, this.barraImagen, cuerpo);
 
     this.canvas.addEventListener("pointerdown", (e) => this.punteroAbajo(e));
     this.canvas.addEventListener("pointermove", (e) => this.punteroMovido(e));
@@ -183,7 +201,7 @@ export class PanelLienzo implements IContentRenderer {
     window.addEventListener("keyup", this.alTeclaArriba);
 
     this.observador = new ResizeObserver(() => this.redimensionar());
-    this.observador.observe(this.element);
+    this.observador.observe(this.canvas);
     instancias.push(this);
     this.mostrar(app.activo);
     this.pintarPestanas();
@@ -214,6 +232,9 @@ export class PanelLienzo implements IContentRenderer {
       });
       this.pestanas.append(p);
     }
+    const hueco = document.createElement("span");
+    hueco.className = "hueco";
+    this.pestanas.append(hueco, this.accionesPestanas);
   }
 
   init(): void {}
@@ -265,47 +286,59 @@ export class PanelLienzo implements IContentRenderer {
 
   private montarHerramientas(): void {
     const a = app.ajustes;
-    const pincel = boton(t("Pincel"), () => app.cambiarAjustes({ herramienta: "pincel" }));
-    pincel.title = t("Pincel (B)");
-    const goma = boton(t("Goma"), () => app.cambiarAjustes({ herramienta: "goma" }));
-    goma.title = t("Goma (E)");
+    // ── Riel de herramientas (vertical, a la izquierda) ──
+    const herramienta = (nombre: NombreIcono, h: Herramienta, titulo: string) => {
+      const b = botonIcono(nombre, titulo, () => {
+        this.cuentagotas = false;
+        app.cambiarAjustes({ herramienta: h });
+        this.sincronizarControles();
+      });
+      b.dataset.herramienta = h;
+      return b;
+    };
+    const pincel = herramienta("pincel", "pincel", t("Pincel (B)"));
+    const goma = herramienta("goma", "goma", t("Goma (E)"));
+    const gotero = botonIcono("gotero", t("Tomar un color del dibujo (I, o Alt + clic)"), () => {
+      this.cuentagotas = !this.cuentagotas;
+      this.sincronizarControles();
+    });
+    const relleno = herramienta("relleno", "relleno", t("Cubo de relleno: rellena la zona cerrada bajo el clic (G)"));
+    const lazo = herramienta("lazo", "lazo", t("Selección con lazo: rodea una parte para moverla, copiarla o borrarla (L)"));
+    const linea = herramienta("linea", "linea", t("Línea (U). Mayús: ángulos de 15°"));
+    const rectangulo = herramienta("rectangulo", "rectangulo", t("Rectángulo (U). Mayús: cuadrado"));
+    const elipse = herramienta("elipse", "elipse", t("Elipse (U). Mayús: círculo"));
+    const texto = botonIcono("texto", t("Texto a tamaño real (T)"), () => abrirDialogoTexto());
 
+    // Color actual: abre el selector propio con la paleta.
+    const color = document.createElement("button");
+    color.type = "button";
+    color.className = "muestra-actual";
+    color.title = t("Color del pincel");
+    color.addEventListener("click", () =>
+      abrirSelectorColor(color, {
+        color: app.ajustes.color,
+        alCambiar: (c) => app.cambiarAjustes({ color: c, herramienta: app.ajustes.herramienta === "goma" ? "pincel" : app.ajustes.herramienta }),
+        paleta: () => this.paleta,
+        guardarPaleta: (p) => {
+          this.paleta = p.slice(0, MAX_PALETA);
+          guardarPaleta(this.paleta);
+          this.pintarPaleta();
+        },
+      }),
+    );
+
+    const separador = () => Object.assign(document.createElement("span"), { className: "separador-riel" });
+    this.riel.append(pincel, goma, gotero, separador(), relleno, lazo, separador(), linea, rectangulo, elipse, texto, separador(), color);
+
+    // ── Barra de opciones del trazo (arriba) ──
     const preset = document.createElement("select");
     preset.title = t("Pinceles para tatuaje");
     preset.className = "desplegable selector-preset";
-    preset.append(new Option(t("Pincel…"), ""), ...PRESETS.map((p, i) => new Option(t(p.nombre), String(i))));
+    preset.append(new Option(t("Personalizado"), ""), ...PRESETS.map((p, i) => new Option(t(p.nombre), String(i))));
     preset.addEventListener("change", () => {
       const p = PRESETS[Number(preset.value)];
       if (p) app.cambiarAjustes(p.ajustes);
     });
-    const herramienta = (texto: string, h: Herramienta, titulo: string) => {
-      const b = boton(texto, () => app.cambiarAjustes({ herramienta: h }));
-      b.title = titulo;
-      b.dataset.herramienta = h;
-      return b;
-    };
-    const relleno = herramienta(t("Relleno"), "relleno", t("Cubo de relleno: rellena la zona cerrada bajo el clic (G)"));
-    const lazo = herramienta(t("Lazo"), "lazo", t("Selección con lazo: rodea una parte para moverla, copiarla o borrarla (L)"));
-    const linea = herramienta("╱", "linea", t("Línea (U). Mayús: ángulos de 15°"));
-    const rectangulo = herramienta("▭", "rectangulo", t("Rectángulo (U). Mayús: cuadrado"));
-    const elipse = herramienta("◯", "elipse", t("Elipse (U). Mayús: círculo"));
-    this.filaPaleta = document.createElement("div");
-    this.filaPaleta.className = "paleta";
-    this.pintarPaleta();
-
-    const gotero = boton(t("Cuentagotas"), () => {
-      this.cuentagotas = !this.cuentagotas;
-      this.sincronizarControles();
-    });
-    gotero.title = t("Tomar un color del dibujo (I, o Alt + clic)");
-
-    const color = document.createElement("input");
-    color.type = "color";
-    color.value = a.color;
-    color.title = t("Color");
-    color.className = "selector-color";
-    color.addEventListener("input", () => app.cambiarAjustes({ color: color.value }));
-
     // Tamaño en escala logarítmica: de 0,2 a 40 mm.
     const tamano = deslizador(0, 1000, tamanoADeslizador(a.tamano), t("Tamaño ([ y ])"));
     tamano.addEventListener("input", () => app.cambiarAjustes({ tamano: deslizadorATamano(Number(tamano.value)) }));
@@ -313,27 +346,62 @@ export class PanelLienzo implements IContentRenderer {
     opacidad.addEventListener("input", () => app.cambiarAjustes({ opacidad: Number(opacidad.value) / 100 }));
     const dureza = deslizador(0, 100, a.dureza * 100, t("Dureza del borde: alta para líneas, baja para sombreado"));
     dureza.addEventListener("input", () => app.cambiarAjustes({ dureza: Number(dureza.value) / 100 }));
-    const puntos = casilla(t("Puntos"), a.forma === "puntos", (v) => app.cambiarAjustes({ forma: v ? "puntos" : "redonda" }));
+    this.valores = { tamano: valor(), opacidad: valor(), dureza: valor() };
+    const puntos = casilla(t("Puntillismo"), a.forma === "puntos", (v) => app.cambiarAjustes({ forma: v ? "puntos" : "redonda" }));
     puntos.title = t("Puntillismo: la estampa es una nube de puntos de aguja");
     const presion = casilla(t("Presión → intensidad"), a.presionOpacidad, (v) => app.cambiarAjustes({ presionOpacidad: v }));
     presion.title = t("Con el lápiz, la presión también controla la intensidad (útil para sombrear)");
 
-    const deshacer = boton(t("↶"), () => void this.lienzo?.deshacer());
-    deshacer.title = t("Deshacer (Ctrl+Z)");
-    const rehacer = boton(t("↷"), () => void this.lienzo?.rehacer());
-    rehacer.title = t("Rehacer (Ctrl+Mayús+Z)");
+    this.filaPaleta = document.createElement("div");
+    this.filaPaleta.className = "paleta";
+    this.pintarPaleta();
 
-    const cuadricula = casilla(t("Cuadrícula"), true, (v) => this.lienzo?.cambiar({ cuadricula: v }));
-    const deformacion = casilla(t("Deformación"), false, (v) => {
-      this.verDeformacion = v;
-      this.pedirRepintado();
+    const exportar = botonIcono("exportar", t("Stencil a escala real en PDF (A4) o PNG"), () => this.lienzo && abrirDialogoExportar(this.lienzo), {
+      texto: t("Exportar stencil"),
+      clase: "primario",
     });
-    this.botonRecta = boton(t("Vista recta"), () => this.alternarRecta());
-    this.botonRecta.title = t("Mangas: ver y dibujar la piel desenrollada en un rectángulo (una línea horizontal es un anillo alrededor del brazo)");
-    const encajar = boton(t("Encajar"), () => this.encajar());
-    encajar.title = t("Ver el lienzo entero (0)");
-    const exportar = boton(t("Exportar stencil…"), () => this.lienzo && abrirDialogoExportar(this.lienzo));
-    exportar.title = t("Stencil a escala real en PDF (A4) o PNG");
+    this.barra.append(
+      seccion(t("Pincel"), preset),
+      seccion(
+        t("Trazo"),
+        etiqueta(t("Tamaño"), tamano, this.valores.tamano),
+        etiqueta(t("Opacidad"), opacidad, this.valores.opacidad),
+        etiqueta(t("Dureza"), dureza, this.valores.dureza),
+      ),
+      seccion(t("Punta"), puntos, presion),
+    );
+    // Exportar: a la derecha de las pestañas, siempre a mano.
+    this.accionesPestanas = document.createElement("div");
+    this.accionesPestanas.className = "acciones-pestanas";
+    this.accionesPestanas.append(exportar);
+
+    // ── Barra de vista (flotante, abajo a la derecha) ──
+    const deshacer = botonIcono("deshacer", t("Deshacer (Ctrl+Z)"), () => void this.lienzo?.deshacer());
+    const rehacer = botonIcono("rehacer", t("Rehacer (Ctrl+Mayús+Z)"), () => void this.lienzo?.rehacer());
+    const girarI = botonIcono("girarIzquierda", t("Girar el lienzo 15° a la izquierda (también R + arrastrar o Mayús + rueda)"), () => this.girarVista(-15));
+    const girarD = botonIcono("girarDerecha", t("Girar el lienzo 15° a la derecha"), () => this.girarVista(15));
+    this.botonAngulo = document.createElement("button");
+    this.botonAngulo.type = "button";
+    this.botonAngulo.className = "boton-texto angulo";
+    this.botonAngulo.title = t("Ángulo del lienzo: clic para enderezarlo");
+    this.botonAngulo.addEventListener("click", () => this.girarVista(-this.anguloVista()));
+    const encajar = botonIcono("encajar", t("Ver el lienzo entero (0)"), () => this.encajar());
+    const cuadricula = botonIcono("cuadricula", t("Cuadrícula de 1 cm"), () => {
+      if (this.lienzo) this.lienzo.cambiar({ cuadricula: !this.lienzo.cuadricula });
+      this.sincronizarControles();
+    });
+    const deformacion = botonIcono("zona", t("Ver la deformación del aplanado (zonas que estiran o encogen)"), () => {
+      this.verDeformacion = !this.verDeformacion;
+      this.sincronizarControles();
+    });
+    this.botonRecta = botonIcono("recta", t("Mangas: ver y dibujar la piel desenrollada en un rectángulo (una línea horizontal es un anillo alrededor del brazo)"), () =>
+      this.alternarRecta(),
+    );
+    this.barraVista.append(
+      segmentado(deshacer, rehacer),
+      segmentado(girarI, this.botonAngulo, girarD),
+      segmentado(encajar, cuadricula, deformacion, this.botonRecta),
+    );
 
     this.controles = {
       pincel,
@@ -351,47 +419,59 @@ export class PanelLienzo implements IContentRenderer {
       dureza,
       deshacer,
       rehacer,
-      cuadricula: cuadricula.querySelector("input")!,
+      cuadricula,
+      deformacion,
       presion: presion.querySelector("input")!,
       puntos: puntos.querySelector("input")!,
     };
-    this.barra.append(
-      grupo(preset, pincel, goma, gotero, color, this.filaPaleta),
-      grupo(relleno, lazo, linea, rectangulo, elipse),
-      grupo(etiqueta(t("Tamaño"), tamano), etiqueta(t("Opacidad"), opacidad), etiqueta(t("Dureza"), dureza), puntos, presion),
-      grupo(deshacer, rehacer),
-      grupo(cuadricula, deformacion, this.botonRecta, encajar),
-      grupo(exportar),
-    );
+  }
+
+  /** Gira la vista del lienzo alrededor del centro del panel. */
+  private girarVista(grados: number): void {
+    if (!this.lienzo || !grados) return;
+    const c = { x: this.canvas.width / 2, y: this.canvas.height / 2 };
+    this.vista = new DOMMatrix().translate(c.x, c.y).rotate(grados).translate(-c.x, -c.y).multiply(this.vista);
+    this.actualizarInfo();
+    this.pedirRepintado();
+  }
+
+  /** Ángulo actual de la vista, en grados (−180, 180]. */
+  private anguloVista(): number {
+    return (Math.atan2(this.vista.b, this.vista.a) * 180) / Math.PI;
   }
 
   private sincronizarControles(): void {
     const a = app.ajustes;
-    this.controles.pincel.classList.toggle("activo", a.herramienta === "pincel");
-    this.controles.goma.classList.toggle("activo", a.herramienta === "goma");
     this.controles.gotero.classList.toggle("activo", this.cuentagotas);
+    (this.controles.color as HTMLButtonElement).style.background = a.color;
+    this.controles.deformacion.classList.toggle("activo", this.verDeformacion);
+    this.controles.cuadricula.classList.toggle("activo", !!this.lienzo?.cuadricula);
+    this.valores.tamano.textContent = `${a.tamano < 1 ? a.tamano.toFixed(2) : a.tamano.toFixed(1)} mm`;
+    this.valores.opacidad.textContent = `${Math.round(a.opacidad * 100)} %`;
+    this.valores.dureza.textContent = `${Math.round(a.dureza * 100)} %`;
     if (this.botonRecta) {
       this.botonRecta.classList.toggle("activo", !!this.recta);
       this.botonRecta.disabled = this.lienzo?.zona.aplanado.tipo !== "manga";
     }
-    for (const b of this.barra.querySelectorAll<HTMLElement>("[data-herramienta]")) {
-      b.classList.toggle("activo", b.dataset.herramienta === a.herramienta);
+    for (const b of this.riel.querySelectorAll<HTMLElement>("[data-herramienta]")) {
+      b.classList.toggle("activo", !this.cuentagotas && b.dataset.herramienta === a.herramienta);
     }
     this.canvas.classList.toggle("modo-gotero", this.cuentagotas || a.herramienta === "relleno" || a.herramienta === "lazo");
     for (const m of this.filaPaleta.querySelectorAll<HTMLElement>(".muestra")) m.classList.toggle("activo", m.title === a.color);
+    this.riel.classList.toggle("deshabilitado", !this.lienzo);
+    this.barra.classList.toggle("deshabilitado", !this.lienzo);
+    this.barraVista.hidden = !this.lienzo;
     this.canvas.classList.toggle("modo-gotero", this.cuentagotas);
     // El selector muestra el pincel predefinido que coincide con los ajustes actuales, si lo hay.
     const i = PRESETS.findIndex((p) => Object.entries(p.ajustes).every(([k, v]) => a[k as keyof typeof a] === v));
     (this.controles.preset as HTMLSelectElement).value = i >= 0 ? String(i) : "";
     (this.controles.puntos as HTMLInputElement).checked = a.forma === "puntos";
-    (this.controles.color as HTMLInputElement).value = a.color;
     (this.controles.tamano as HTMLInputElement).value = String(tamanoADeslizador(a.tamano));
     (this.controles.opacidad as HTMLInputElement).value = String(Math.round(a.opacidad * 100));
     (this.controles.dureza as HTMLInputElement).value = String(Math.round(a.dureza * 100));
     (this.controles.presion as HTMLInputElement).checked = a.presionOpacidad;
     (this.controles.deshacer as HTMLButtonElement).disabled = !this.lienzo?.historial.puedeDeshacer;
     (this.controles.rehacer as HTMLButtonElement).disabled = !this.lienzo?.historial.puedeRehacer;
-    if (this.lienzo) (this.controles.cuadricula as HTMLInputElement).checked = this.lienzo.cuadricula;
     this.actualizarInfo();
     this.pedirRepintado();
   }
@@ -414,18 +494,23 @@ export class PanelLienzo implements IContentRenderer {
       this.filaPaleta.append(m);
     }
     const mas = boton(t("+"), () => {
-      if (!this.paleta.includes(app.ajustes.color)) {
+      if (this.paleta.length < MAX_PALETA && !this.paleta.includes(app.ajustes.color)) {
         this.paleta.push(app.ajustes.color);
         guardarPaleta(this.paleta);
         this.pintarPaleta();
       }
     });
-    mas.title = t("Añadir el color actual a la paleta (clic derecho en un color para quitarlo)");
+    mas.title =
+      this.paleta.length >= MAX_PALETA
+        ? t("La paleta está llena: quita un color para guardar otro")
+        : t("Añadir el color actual a la paleta (clic derecho en un color para quitarlo)");
+    mas.disabled = this.paleta.length >= MAX_PALETA;
     mas.classList.add("mas-paleta");
     this.filaPaleta.append(mas);
   }
 
   private actualizarInfo(): void {
+    if (this.botonAngulo) this.botonAngulo.textContent = `${Math.round(this.anguloVista())}°`;
     if (!this.lienzo) {
       this.info.textContent = "";
       return;
@@ -1283,18 +1368,17 @@ function casilla(texto: string, inicial: boolean, alCambiar: (v: boolean) => voi
   return etiqueta;
 }
 
-function etiqueta(texto: string, control: HTMLElement): HTMLLabelElement {
+function etiqueta(texto: string, ...controles: HTMLElement[]): HTMLLabelElement {
   const l = document.createElement("label");
   l.className = "control-etiquetado";
-  l.append(texto, control);
+  l.append(texto, ...controles);
   return l;
 }
 
-function grupo(...hijos: HTMLElement[]): HTMLElement {
-  const g = document.createElement("div");
-  g.className = "grupo";
-  g.append(...hijos);
-  return g;
+function valor(): HTMLElement {
+  const v = document.createElement("span");
+  v.className = "valor";
+  return v;
 }
 
 /** Mensaje de por qué no se puede dibujar en una capa. */

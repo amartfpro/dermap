@@ -7,7 +7,8 @@ import { simetriaActual } from "../geometria/simetria";
 import { transferirDibujo } from "../lienzo/transferir";
 import { abrirDialogoTexto } from "./texto";
 import { abrirDialogoFiltro } from "./filtro";
-import { boton, panelLienzoActual } from "./lienzo";
+import { panelLienzoActual } from "./lienzo";
+import { botonIcono, icono, seccion, segmentado, type NombreIcono } from "../ui/iconos";
 
 /**
  * Capas del lienzo activo (RF-31): crear, duplicar, eliminar, reordenar, ocultar, bloquear,
@@ -38,18 +39,39 @@ export class PanelCapas implements IContentRenderer {
       archivo.value = "";
       if (f) void this.importar(f);
     });
+    const traer = this.selectorTraer();
     barra.append(
-      titulado(boton(t("+"), () => this.nueva()), t("Nueva capa")),
-      titulado(boton(t("Duplicar"), () => this.duplicar()), t("Duplicar la capa activa")),
-      titulado(boton(t("Eliminar"), () => this.eliminar()), t("Eliminar la capa activa")),
-      titulado(boton(t("↑"), () => this.mover(1)), t("Subir la capa")),
-      titulado(boton(t("↓"), () => this.mover(-1)), t("Bajar la capa")),
-      titulado(boton(t("Importar imagen…"), () => archivo.click()), t("Importar un PNG o JPG como capa nueva")),
-      titulado(boton(t("A stencil…"), () => abrirDialogoFiltro()), t("Convertir la capa activa (una foto o un boceto) en líneas o en blanco y negro")),
-      titulado(boton(t("Texto…"), () => abrirDialogoTexto()), t("Escribir un texto (lettering) con tipografía y tamaño real (T)")),
-      titulado(boton(t("Copiar"), () => void panelLienzoActual()?.copiar()), t("Copiar la capa activa (Ctrl+C)")),
-      titulado(boton(t("Pegar"), () => panelLienzoActual()?.pegar()), t("Pegar la capa copiada, en este u otro lienzo (Ctrl+V)")),
-      this.selectorTraer(),
+      seccion(
+        t("Añadir"),
+        segmentado(
+          botonIcono("mas", t("Nueva capa (Ctrl+Mayús+N)"), () => this.nueva()),
+          botonIcono("imagen", t("Importar un PNG o JPG como capa nueva"), () => archivo.click()),
+          botonIcono("texto", t("Escribir un texto (lettering) con tipografía y tamaño real (T)"), () => abrirDialogoTexto()),
+        ),
+      ),
+      seccion(
+        t("Capa"),
+        segmentado(
+          botonIcono("duplicar", t("Duplicar la capa activa (Ctrl+J)"), () => this.duplicar()),
+          botonIcono("arriba", t("Subir la capa (Alt+↑)"), () => this.mover(1)),
+          botonIcono("abajo", t("Bajar la capa (Alt+↓)"), () => this.mover(-1)),
+          botonIcono("borrar", t("Eliminar la capa activa"), () => this.eliminar(), { clase: "peligro" }),
+        ),
+      ),
+      seccion(
+        t("Portapapeles"),
+        segmentado(
+          botonIcono("copiar", t("Copiar la capa activa (Ctrl+C)"), () => void panelLienzoActual()?.copiar()),
+          botonIcono("pegar", t("Pegar la capa copiada, en este u otro lienzo (Ctrl+V)"), () => panelLienzoActual()?.pegar()),
+        ),
+      ),
+      seccion(
+        t("Convertir"),
+        botonIcono("stencil", t("Convertir la capa activa (una foto o un boceto) en líneas o en blanco y negro"), () => abrirDialogoFiltro(), {
+          texto: t("A stencil…"),
+        }),
+        traer,
+      ),
       archivo,
     );
 
@@ -59,7 +81,7 @@ export class PanelCapas implements IContentRenderer {
     this.lista = document.createElement("ul");
     this.lista.className = "lista-capas";
 
-    this.element.append(barra, this.propiedades, this.lista);
+    this.element.append(barra, this.lista, this.propiedades);
     app.addEventListener("activo", this.alCambiarActivo);
     this.mostrar(app.activo);
   }
@@ -243,7 +265,7 @@ export class PanelCapas implements IContentRenderer {
     casilla.type = "checkbox";
     casilla.checked = activa.enStencil;
     casilla.addEventListener("change", () => this.cambiar(activa, { enStencil: casilla.checked }, "Capa en stencil"));
-    stencil.append(casilla, " Stencil");
+    stencil.append(casilla, " " + t("Stencil"));
     const filaOpacidad = document.createElement("label");
     filaOpacidad.className = "control-etiquetado";
     filaOpacidad.append(t("Opacidad"), opacidad, valor);
@@ -255,13 +277,14 @@ export class PanelCapas implements IContentRenderer {
       li.className = "fila-capa" + (capa === activa ? " activa" : "");
       li.draggable = true;
 
-      const ojo = iconoBoton(capa.visible ? "◉" : "○", capa.visible ? t("Ocultar") : t("Mostrar"), () =>
+      const ojo = iconoBoton(capa.visible ? "ojo" : "ojoCerrado", capa.visible ? t("Ocultar") : t("Mostrar"), () =>
         this.cambiar(capa, { visible: !capa.visible }, capa.visible ? "Ocultar capa" : "Mostrar capa"),
       );
-      const candado = iconoBoton(capa.bloqueada ? "🔒" : "🔓", capa.bloqueada ? t("Desbloquear") : t("Bloquear"), () =>
+      const candado = iconoBoton(capa.bloqueada ? "candado" : "candadoAbierto", capa.bloqueada ? t("Desbloquear") : t("Bloquear"), () =>
         this.cambiar(capa, { bloqueada: !capa.bloqueada }, capa.bloqueada ? "Desbloquear capa" : "Bloquear capa"),
       );
       candado.classList.toggle("tenue", !capa.bloqueada);
+      ojo.classList.toggle("tenue", !capa.visible);
       const nombre = document.createElement("span");
       nombre.className = "nombre";
       nombre.textContent = capa.nombre;
@@ -318,19 +341,14 @@ export class PanelCapas implements IContentRenderer {
   }
 }
 
-function iconoBoton(texto: string, titulo: string, alPulsar: () => void): HTMLButtonElement {
+function iconoBoton(nombre: NombreIcono, titulo: string, alPulsar: () => void): HTMLButtonElement {
   const b = document.createElement("button");
   b.className = "icono";
-  b.textContent = texto;
+  b.append(icono(nombre, 15));
   b.title = titulo;
   b.addEventListener("click", (e) => {
     e.stopPropagation();
     alPulsar();
   });
   return b;
-}
-
-function titulado<T extends HTMLElement>(el: T, titulo: string): T {
-  el.title = titulo;
-  return el;
 }
