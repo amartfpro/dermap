@@ -2,6 +2,7 @@ import { app } from "../estado";
 import { ALTURA_MAXIMA, ALTURA_MINIMA, COMPLEXION_INICIAL } from "../modelos/formas";
 import { asegurarProyecto } from "../proyectos/gestor";
 import type { ModeloCuerpo } from "../proyectos/modelo";
+import { POSE_RECTA, type Pose } from "../modelos/pose";
 
 /** Tonos de piel de partida (RF-14); el selector de color permite cualquier otro. */
 const TONOS = ["#f3d6c4", "#e8bfa0", "#d8a98a", "#c08a64", "#8f5f3f", "#5e3d29"];
@@ -20,8 +21,10 @@ export class PanelCuerpo {
   private musculatura: HTMLInputElement;
   private color: HTMLInputElement;
   private muestras: HTMLButtonElement[] = [];
+  private pose: Pose = { ...POSE_RECTA };
+  private deslizadoresPose: Partial<Record<keyof Pose, HTMLInputElement>> = {};
 
-  constructor() {
+  constructor(private readonly alCambiarPose: (pose: Pose) => void = () => {}) {
     this.element = document.createElement("div");
     this.element.className = "ventana-cuerpo";
     this.element.hidden = true;
@@ -101,6 +104,40 @@ export class PanelCuerpo {
     nota.textContent =
       "Es una aproximación para ver el diseño en proporción: la medida real del stencil es la del lienzo, en centímetros.";
 
+    // Postura (RF-13): solo para ver cómo se deforma el diseño; no se guarda ni cambia los lienzos.
+    const postura = document.createElement("div");
+    postura.className = "postura";
+    const articulacion = (clave: keyof Pose, nombre: string) => {
+      const r = rango(0, 140, 1);
+      r.value = "0";
+      r.title = `${nombre}: grados de flexión`;
+      r.addEventListener("input", () => {
+        this.pose = { ...this.pose, [clave]: Number(r.value) };
+        this.alCambiarPose({ ...this.pose });
+      });
+      this.deslizadoresPose[clave] = r;
+      const fila = document.createElement("div");
+      fila.className = "extremos";
+      const t = document.createElement("small");
+      t.textContent = nombre;
+      fila.append(t, r);
+      return fila;
+    };
+    const recta = document.createElement("button");
+    recta.className = "boton-texto";
+    recta.textContent = "Postura recta";
+    recta.addEventListener("click", () => {
+      this.posturaRecta();
+      this.alCambiarPose({ ...this.pose });
+    });
+    postura.append(
+      articulacion("codoL", "Codo izq."),
+      articulacion("codoR", "Codo der."),
+      articulacion("rodillaL", "Rodilla izq."),
+      articulacion("rodillaR", "Rodilla der."),
+      recta,
+    );
+
     this.element.append(
       cabecera,
       campo("Altura", alturaFila),
@@ -110,8 +147,15 @@ export class PanelCuerpo {
       campo("Tono de piel", tonos),
       nota,
       restablecer,
+      campo("Postura (solo para ver)", postura),
     );
     this.sincronizar();
+  }
+
+  /** Vuelve a la postura recta (sin avisar). */
+  posturaRecta(): void {
+    this.pose = { ...POSE_RECTA };
+    for (const r of Object.values(this.deslizadoresPose)) if (r) r.value = "0";
   }
 
   alternar(): void {

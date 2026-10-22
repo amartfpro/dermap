@@ -9,6 +9,7 @@ import { cargarCuerpo, ejeDeLaPierna, ejeDelBrazo, type Cuerpo } from "../modelo
 import { aplicarComplexion, cargarFormas, COMPLEXION_INICIAL, type Complexion, type Formas } from "../modelos/formas";
 import type { ProyectoAbierto } from "../proyectos/proyecto";
 import { PanelCuerpo } from "./cuerpo";
+import { aplicarPose, esRecta, POSE_RECTA, type Pose } from "../modelos/pose";
 import { app } from "../estado";
 import { añadirLienzo } from "../proyectos/gestor";
 import { guardarExportacion } from "../exportar/guardar";
@@ -47,6 +48,8 @@ export class Visor3D implements IContentRenderer {
   private cuerpo: Cuerpo | null = null;
   private proyectoSuscrito: ProyectoAbierto | null = null;
   private cuerpoPendiente = false;
+  /** Postura solo para ver (RF-13); con el cuerpo doblado no se seleccionan zonas. */
+  private pose: Pose = { ...POSE_RECTA };
   private panelCuerpo!: PanelCuerpo;
   private alCambiarProyecto = () => this.suscribirProyecto();
   private barraPresentacion: HTMLElement;
@@ -190,7 +193,10 @@ export class Visor3D implements IContentRenderer {
     this.capaLazo = document.createElement("canvas");
     this.capaLazo.className = "capa-lazo";
     this.element.append(this.capaLazo);
-    this.panelCuerpo = new PanelCuerpo();
+    this.panelCuerpo = new PanelCuerpo((pose) => {
+      this.pose = pose;
+      this.programarCuerpo();
+    });
     this.barraPresentacion = this.montarBarraPresentacion();
     this.element.append(barra, this.estadoTexto, this.panelCuerpo.element, this.barraPresentacion);
 
@@ -447,12 +453,22 @@ export class Visor3D implements IContentRenderer {
   }
 
   private cuerpoDelProyecto(): Cuerpo {
-    return this.formas ? aplicarComplexion(this.base!, this.formas, this.complexionDelProyecto()) : this.base!;
+    const cuerpo = this.formas ? aplicarComplexion(this.base!, this.formas, this.complexionDelProyecto()) : this.base!;
+    return aplicarPose(cuerpo, this.pose);
+  }
+
+  /** Con el cuerpo doblado no se seleccionan ni se aplanan zonas: el lienzo se hace en postura recta. */
+  private bloqueadoPorPose(): boolean {
+    if (esRecta(this.pose)) return false;
+    this.estadoTexto.textContent = "Endereza la postura (Cuerpo… → Postura recta) para seleccionar o aplanar zonas.";
+    return true;
   }
 
   private suscribirProyecto(): void {
     this.panelCuerpo.sincronizar();
     if (this.proyectoSuscrito === app.proyecto) return;
+    this.pose = { ...POSE_RECTA };
+    this.panelCuerpo.posturaRecta();
     this.proyectoSuscrito?.removeEventListener("modelo", this.alCambiarModelo);
     this.proyectoSuscrito = app.proyecto;
     this.proyectoSuscrito?.addEventListener("modelo", this.alCambiarModelo);
@@ -518,7 +534,7 @@ export class Visor3D implements IContentRenderer {
   }
 
   private zonaRapida(indice: number): void {
-    if (!this.cuerpo) return;
+    if (!this.cuerpo || this.bloqueadoPorPose()) return;
     const zona = ZONAS_RAPIDAS[indice];
     const seleccion = zona.seleccionar(this.cuerpo);
     this.fijarSeleccion(seleccion.triangulos);
@@ -530,6 +546,7 @@ export class Visor3D implements IContentRenderer {
   // ── Selección a pincel ────────────────────────────────────────────────────────
 
   private alternarCorteManual(): void {
+    if (!this.modoCorteManual && this.bloqueadoPorPose()) return;
     this.modoCorteManual = !this.modoCorteManual;
     if (this.modoCorteManual && this.modoCorte) this.alternarModoCorte();
     if (this.modoCorteManual && this.modoSeleccion) this.alternarSeleccion();
@@ -575,6 +592,7 @@ export class Visor3D implements IContentRenderer {
   }
 
   private alternarModoCorte(): void {
+    if (!this.modoCorte && this.bloqueadoPorPose()) return;
     if (!this.modoCorte && this.modoCorteManual) this.alternarCorteManual();
     this.modoCorte = !this.modoCorte;
     if (this.modoCorte && this.modoSeleccion) this.alternarSeleccion();
@@ -629,6 +647,7 @@ export class Visor3D implements IContentRenderer {
   }
 
   private alternarSeleccion(): void {
+    if (!this.modoSeleccion && this.bloqueadoPorPose()) return;
     if (!this.modoSeleccion && this.modoCorte) this.alternarModoCorte();
     if (!this.modoSeleccion && this.modoLazo) this.alternarLazo();
     if (!this.modoSeleccion && this.modoPintar) this.alternarPintar();
@@ -706,6 +725,7 @@ export class Visor3D implements IContentRenderer {
   }
 
   private alternarLazo(): void {
+    if (!this.modoLazo && this.bloqueadoPorPose()) return;
     if (!this.modoLazo && this.modoCorte) this.alternarModoCorte();
     if (!this.modoLazo && this.modoSeleccion) this.alternarSeleccion();
     if (!this.modoLazo && this.modoPintar) this.alternarPintar();
@@ -994,7 +1014,7 @@ export class Visor3D implements IContentRenderer {
   // ── Aplanado: cada zona aplanada es un lienzo nuevo (RF-29) ─────────────────
 
   private async aplanar(): Promise<void> {
-    if (!this.cuerpo) return;
+    if (!this.cuerpo || this.bloqueadoPorPose()) return;
     if (this.seleccionados.size < 8) {
       this.estadoTexto.textContent = "Selecciona primero una zona.";
       return;

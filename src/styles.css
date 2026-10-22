@@ -885,3 +885,17 @@ body {
   font-size: 13px;
   font-weight: 600;
 }
+
+.postura {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.postura .extremos small {
+  width: 74px;
+}
+
+.postura .boton-texto {
+  align-self: flex-start;
+}
