@@ -12,7 +12,11 @@ import {
   type Rect,
 } from "./teselas";
 
-export type Herramienta = "pincel" | "goma";
+/**
+ * Herramienta del lienzo. Solo «pincel» y «goma» crean trazos; el resto las gestiona el
+ * panel del lienzo (relleno, selección con lazo y formas, RF-34).
+ */
+export type Herramienta = "pincel" | "goma" | "relleno" | "lazo" | "linea" | "rectangulo" | "elipse";
 
 /** Forma de la estampa: círculo continuo o nube de puntos (puntillismo, RF-34). */
 export type FormaPunta = "redonda" | "puntos";

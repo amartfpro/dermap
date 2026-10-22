@@ -45,3 +45,9 @@ export async function copiarCapa(lienzo: Lienzo): Promise<boolean> {
   copia = { imagen: await createImageBitmap(lamina), nombre: capa.nombre, lienzoId: lienzo.id, rect: { x0, y0, x1, y1 } };
   return true;
 }
+
+/** Guarda una imagen en el portapapeles (selecciones copiadas o cortadas). */
+export async function fijarCopia(imagen: ImageBitmap, nombre: string, lienzoId: string, rect: Rect): Promise<void> {
+  copia?.imagen.close();
+  copia = { imagen, nombre, lienzoId, rect };
+}

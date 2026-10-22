@@ -4,6 +4,8 @@ import { PX_POR_MM } from "../lienzo/geometria-zona";
 import { ImagenFlotante } from "../lienzo/imagen";
 import { PRESETS } from "../lienzo/pincel";
 import { copiarCapa, obtenerCopia } from "../lienzo/portapapeles";
+import { puntosDeForma, rellenar, restringir, Seleccion } from "../lienzo/herramientas";
+import type { Herramienta } from "../lienzo/pincel";
 import type { Lienzo } from "../lienzo/lienzo";
 import type { Rect } from "../lienzo/teselas";
 import { abrirDialogoExportar } from "./exportar";
@@ -15,9 +17,49 @@ type Arrastre =
   | { tipo: "girar"; centro: P; angulo0: number; vista: DOMMatrix }
   | { tipo: "imagen-mover"; ultimo: P }
   | { tipo: "imagen-escalar"; distancia0: number; matriz0: DOMMatrix }
-  | { tipo: "imagen-girar"; angulo0: number; matriz0: DOMMatrix };
+  | { tipo: "imagen-girar"; angulo0: number; matriz0: DOMMatrix }
+  | { tipo: "lazo"; puntos: P[] }
+  | { tipo: "forma"; forma: Forma; a: P; b: P };
+
+type Forma = "linea" | "rectangulo" | "elipse";
+const FORMAS: Forma[] = ["linea", "rectangulo", "elipse"];
+const esForma = (h: Herramienta): h is Forma => (FORMAS as string[]).includes(h);
+
+/** Paleta inicial: negros y grises para líneas y sombras, y los colores de tinta más comunes. */
+const PALETA_INICIAL = ["#1d1b1a", "#4a4642", "#8a847e", "#c9c2ba", "#b3261e", "#e07b24", "#f2c230", "#2f7d3a", "#1f5aa6", "#6a3d9a"];
+const CLAVE_PALETA = "dermap.paleta";
+/** Contexto sin transformación para saber si un punto del documento cae dentro de un camino. */
+const PRUEBA = new OffscreenCanvas(1, 1).getContext("2d")!;
+
+function leerPaleta(): string[] {
+  try {
+    const p = JSON.parse(localStorage.getItem(CLAVE_PALETA) ?? "null");
+    if (Array.isArray(p) && p.every((c) => typeof c === "string")) return p;
+  } catch {
+    // Sin almacenamiento local o dato dañado: paleta inicial.
+  }
+  return [...PALETA_INICIAL];
+}
+
+function guardarPaleta(p: string[]): void {
+  try {
+    localStorage.setItem(CLAVE_PALETA, JSON.stringify(p));
+  } catch {
+    // Sin almacenamiento local: la paleta dura lo que la sesión.
+  }
+}
 
 const COLOR_PAPEL = "#f4efe9";
+
+const NOMBRES_HERRAMIENTA: Record<Herramienta, string> = {
+  pincel: "pincel",
+  goma: "goma",
+  relleno: "relleno",
+  lazo: "lazo",
+  linea: "línea",
+  rectangulo: "rectángulo",
+  elipse: "elipse",
+};
 
 /**
  * Editor del lienzo activo: herramientas, navegación (zoom, desplazamiento y giro, RF-44),
@@ -51,6 +93,10 @@ export class PanelLienzo implements IContentRenderer {
   private mayus = false;
   /** Final del último trazo, para la línea recta con Mayús (RF-35). */
   private ultimoPunto: P | null = null;
+  /** Selección con lazo activa (RF-34). */
+  private seleccion: Seleccion | null = null;
+  private paleta = leerPaleta();
+  private filaPaleta!: HTMLElement;
   private verDeformacion = false;
   private flotante: ImagenFlotante | null = null;
   private repintar = false;
@@ -177,11 +223,13 @@ export class PanelLienzo implements IContentRenderer {
     this.desconectar();
     this.lienzo = lienzo;
     this.ultimoPunto = null;
+    this.seleccion = null;
     if (lienzo) {
       lienzo.addEventListener("previa", this.alCambiarPrevia);
       lienzo.addEventListener("propiedades", this.alCambiarPrevia);
       lienzo.addEventListener("propiedades", this.alCambiarAbiertos);
       lienzo.addEventListener("historial", this.alCambiarHistorial);
+      lienzo.addEventListener("capas", this.alCambiarHistorial);
     }
     this.aviso.hidden = lienzo !== null;
     this.encajar();
@@ -194,6 +242,7 @@ export class PanelLienzo implements IContentRenderer {
     this.lienzo.removeEventListener("propiedades", this.alCambiarPrevia);
     this.lienzo.removeEventListener("propiedades", this.alCambiarAbiertos);
     this.lienzo.removeEventListener("historial", this.alCambiarHistorial);
+    this.lienzo.removeEventListener("capas", this.alCambiarHistorial);
   }
 
   // ── Herramientas ──────────────────────────────────────────────────────────────
@@ -213,6 +262,21 @@ export class PanelLienzo implements IContentRenderer {
       const p = PRESETS[Number(preset.value)];
       if (p) app.cambiarAjustes(p.ajustes);
     });
+    const herramienta = (texto: string, h: Herramienta, titulo: string) => {
+      const b = boton(texto, () => app.cambiarAjustes({ herramienta: h }));
+      b.title = titulo;
+      b.dataset.herramienta = h;
+      return b;
+    };
+    const relleno = herramienta("Relleno", "relleno", "Cubo de relleno: rellena la zona cerrada bajo el clic (G)");
+    const lazo = herramienta("Lazo", "lazo", "Selección con lazo: rodea una parte para moverla, copiarla o borrarla (L)");
+    const linea = herramienta("╱", "linea", "Línea (U). Mayús: ángulos de 15°");
+    const rectangulo = herramienta("▭", "rectangulo", "Rectángulo (U). Mayús: cuadrado");
+    const elipse = herramienta("◯", "elipse", "Elipse (U). Mayús: círculo");
+    this.filaPaleta = document.createElement("div");
+    this.filaPaleta.className = "paleta";
+    this.pintarPaleta();
+
     const gotero = boton("Cuentagotas", () => {
       this.cuentagotas = !this.cuentagotas;
       this.sincronizarControles();
@@ -259,6 +323,11 @@ export class PanelLienzo implements IContentRenderer {
       gotero,
       preset,
       color,
+      relleno,
+      lazo,
+      linea,
+      rectangulo,
+      elipse,
       tamano,
       opacidad,
       dureza,
@@ -269,7 +338,8 @@ export class PanelLienzo implements IContentRenderer {
       puntos: puntos.querySelector("input")!,
     };
     this.barra.append(
-      grupo(preset, pincel, goma, gotero, color),
+      grupo(preset, pincel, goma, gotero, color, this.filaPaleta),
+      grupo(relleno, lazo, linea, rectangulo, elipse),
       grupo(etiqueta("Tamaño", tamano), etiqueta("Opacidad", opacidad), etiqueta("Dureza", dureza), puntos, presion),
       grupo(deshacer, rehacer),
       grupo(cuadricula, deformacion, encajar),
@@ -282,6 +352,11 @@ export class PanelLienzo implements IContentRenderer {
     this.controles.pincel.classList.toggle("activo", a.herramienta === "pincel");
     this.controles.goma.classList.toggle("activo", a.herramienta === "goma");
     this.controles.gotero.classList.toggle("activo", this.cuentagotas);
+    for (const b of this.barra.querySelectorAll<HTMLElement>("[data-herramienta]")) {
+      b.classList.toggle("activo", b.dataset.herramienta === a.herramienta);
+    }
+    this.canvas.classList.toggle("modo-gotero", this.cuentagotas || a.herramienta === "relleno" || a.herramienta === "lazo");
+    for (const m of this.filaPaleta.querySelectorAll<HTMLElement>(".muestra")) m.classList.toggle("activo", m.title === a.color);
     this.canvas.classList.toggle("modo-gotero", this.cuentagotas);
     // El selector muestra el pincel predefinido que coincide con los ajustes actuales, si lo hay.
     const i = PRESETS.findIndex((p) => Object.entries(p.ajustes).every(([k, v]) => a[k as keyof typeof a] === v));
@@ -299,6 +374,35 @@ export class PanelLienzo implements IContentRenderer {
     this.pedirRepintado();
   }
 
+  /** Paleta guardable (RF-30): clic elige, «+» añade el color actual, clic derecho quita. */
+  private pintarPaleta(): void {
+    this.filaPaleta.replaceChildren();
+    for (const color of this.paleta) {
+      const m = document.createElement("button");
+      m.className = "muestra pequena";
+      m.style.background = color;
+      m.title = color;
+      m.addEventListener("click", () => app.cambiarAjustes({ color, herramienta: app.ajustes.herramienta === "goma" ? "pincel" : app.ajustes.herramienta }));
+      m.addEventListener("contextmenu", (e) => {
+        e.preventDefault();
+        this.paleta = this.paleta.filter((c) => c !== color);
+        guardarPaleta(this.paleta);
+        this.pintarPaleta();
+      });
+      this.filaPaleta.append(m);
+    }
+    const mas = boton("+", () => {
+      if (!this.paleta.includes(app.ajustes.color)) {
+        this.paleta.push(app.ajustes.color);
+        guardarPaleta(this.paleta);
+        this.pintarPaleta();
+      }
+    });
+    mas.title = "Añadir el color actual a la paleta (clic derecho en un color para quitarlo)";
+    mas.classList.add("mas-paleta");
+    this.filaPaleta.append(mas);
+  }
+
   private actualizarInfo(): void {
     if (!this.lienzo) {
       this.info.textContent = "";
@@ -310,7 +414,7 @@ export class PanelLienzo implements IContentRenderer {
     const bloqueo = capa.bloqueada ? " (bloqueada)" : !capa.visible ? " (oculta)" : "";
     this.info.textContent =
       `${this.lienzo.nombre} · ${w.toFixed(1)} × ${h.toFixed(1)} cm · capa «${capa.nombre}»${bloqueo} · ` +
-      `${a.herramienta === "goma" ? "goma" : "pincel"} ${a.tamano < 1 ? a.tamano.toFixed(2) : a.tamano.toFixed(1)} mm · ` +
+      `${NOMBRES_HERRAMIENTA[a.herramienta]} ${a.tamano < 1 ? a.tamano.toFixed(2) : a.tamano.toFixed(1)} mm · ` +
       `zoom ${Math.round((this.escalaVista() / window.devicePixelRatio) * 100)} %`;
   }
 
@@ -402,6 +506,28 @@ export class PanelLienzo implements IContentRenderer {
       this.tomarColor(d);
       return;
     }
+    const h = app.ajustes.herramienta;
+    if (h === "relleno") {
+      const a = app.ajustes;
+      if (!rellenar(l, d.x, d.y, a.color, a.opacidad))
+        this.info.textContent = l.doc.activa.bloqueada || !l.doc.activa.visible
+          ? `La capa «${l.doc.activa.nombre}» está ${l.doc.activa.bloqueada ? "bloqueada" : "oculta"}.`
+          : "Haz clic dentro de la zona para rellenar.";
+      return;
+    }
+    if (h === "lazo") {
+      if (this.seleccion && PRUEBA.isPointInPath(this.seleccion.camino, d.x, d.y)) {
+        void this.moverSeleccion(c, d);
+        return;
+      }
+      this.seleccion = null;
+      this.arrastre = { tipo: "lazo", puntos: [d] };
+      return;
+    }
+    if (esForma(h)) {
+      this.arrastre = { tipo: "forma", forma: h, a: d, b: d };
+      return;
+    }
     if (e.shiftKey && this.ultimoPunto) {
       // Línea recta desde el final del trazo anterior (RF-35).
       const o = this.ultimoPunto;
@@ -436,6 +562,17 @@ export class PanelLienzo implements IContentRenderer {
       case "desplazar":
         this.vista = new DOMMatrix().translate(c.x - a.inicio.x, c.y - a.inicio.y).multiply(a.vista);
         break;
+      case "lazo": {
+        const d = this.aDocumento(e);
+        const u = a.puntos[a.puntos.length - 1];
+        if (Math.hypot(d.x - u.x, d.y - u.y) * this.escalaVista() >= 3) a.puntos.push(d);
+        break;
+      }
+      case "forma": {
+        const d = this.aDocumento(e);
+        a.b = e.shiftKey ? restringir(a.forma, a.a, d) : d;
+        break;
+      }
       case "girar": {
         const angulo = Math.atan2(c.y - a.centro.y, c.x - a.centro.x);
         const grados = ((angulo - a.angulo0) * 180) / Math.PI;
@@ -475,6 +612,13 @@ export class PanelLienzo implements IContentRenderer {
       this.lienzo?.terminarTrazo();
       this.ultimoPunto = a.ultimo;
     }
+    if (a?.tipo === "lazo") {
+      const r = a.puntos.length >= 3 ? new Seleccion(a.puntos) : null;
+      this.seleccion = r && r.rect.x1 - r.rect.x0 > 4 && r.rect.y1 - r.rect.y0 > 4 ? r : null;
+      if (this.seleccion)
+        this.info.textContent = "Selección: arrástrala para moverla · Supr borra · Ctrl+C copia · Ctrl+X corta · Esc la quita";
+    }
+    if (a?.tipo === "forma") this.trazarForma(a.forma, a.a, a.b);
     if (a?.tipo === "desplazar" || a?.tipo === "girar") this.actualizarInfo();
     this.pedirRepintado();
   }
@@ -496,6 +640,14 @@ export class PanelLienzo implements IContentRenderer {
     } else if (ctrl && tecla === "c") {
       e.preventDefault();
       void this.copiar();
+    } else if (ctrl && tecla === "x" && this.seleccion && this.lienzo) {
+      e.preventDefault();
+      const sel = this.seleccion;
+      void sel.copiar(this.lienzo).then((ok) => ok && this.lienzo && sel.borrar(this.lienzo, "Cortar"));
+    } else if (ctrl && tecla === "d") {
+      e.preventDefault();
+      this.seleccion = null;
+      this.pedirRepintado();
     } else if (ctrl && tecla === "v") {
       e.preventDefault();
       this.pegar();
@@ -511,6 +663,19 @@ export class PanelLienzo implements IContentRenderer {
       app.cambiarAjustes({ herramienta: "pincel" });
     } else if (tecla === "e") {
       app.cambiarAjustes({ herramienta: "goma" });
+    } else if (tecla === "g") {
+      app.cambiarAjustes({ herramienta: "relleno" });
+    } else if (tecla === "l") {
+      app.cambiarAjustes({ herramienta: "lazo" });
+    } else if (tecla === "u") {
+      const h = app.ajustes.herramienta;
+      app.cambiarAjustes({ herramienta: esForma(h) ? FORMAS[(FORMAS.indexOf(h) + 1) % FORMAS.length] : "linea" });
+    } else if ((e.key === "Delete" || e.key === "Backspace") && this.seleccion && this.lienzo) {
+      e.preventDefault();
+      this.seleccion.borrar(this.lienzo);
+    } else if (e.key === "Escape" && this.seleccion && !this.flotante) {
+      this.seleccion = null;
+      this.pedirRepintado();
     } else if (tecla === "i") {
       this.cuentagotas = !this.cuentagotas;
       this.sincronizarControles();
@@ -561,11 +726,49 @@ export class PanelLienzo implements IContentRenderer {
     app.cambiarAjustes({ color: hex, herramienta: "pincel" });
   }
 
+  /** Traza una forma con el pincel actual, como un trazo (cruza costuras y se deshace de una vez). */
+  private trazarForma(forma: Forma, a: P, b: P): void {
+    const l = this.lienzo;
+    if (!l || Math.hypot(b.x - a.x, b.y - a.y) < 2) return;
+    const puntos = puntosDeForma(forma, a, b);
+    const ajustes = { ...app.ajustes, herramienta: "pincel" as const };
+    if (!l.empezarTrazo(ajustes, puntos[0].x, puntos[0].y, 1)) return;
+    for (const p of puntos.slice(1)) l.continuarTrazo(p.x, p.y, 1);
+    l.terminarTrazo();
+    this.ultimoPunto = puntos[puntos.length - 1];
+  }
+
+  /**
+   * Mover una selección: se corta de la capa y queda como imagen flotante para moverla,
+   * girarla o escalarla; al aplicar se fija en una capa nueva.
+   */
+  private async moverSeleccion(c: P, d: P): Promise<void> {
+    const l = this.lienzo;
+    const sel = this.seleccion;
+    if (!l || !sel) return;
+    const lamina = sel.extraer(l);
+    if (!lamina) {
+      this.info.textContent = "No hay dibujo dentro de la selección.";
+      return;
+    }
+    const imagen = await createImageBitmap(lamina);
+    sel.borrar(l, "Mover selección");
+    this.seleccion = null;
+    this.colocarImagen(imagen, `${l.doc.activa.nombre} (movido)`, new DOMMatrix().translate(sel.rect.x0, sel.rect.y0));
+    this.arrastre = { tipo: "imagen-mover", ultimo: d };
+    void c;
+  }
+
   // ── Imagen importada ──────────────────────────────────────────────────────────
 
-  /** Copia la capa activa al portapapeles de Dermap (RF-33). */
+  /** Copia la selección o, si no hay, la capa activa al portapapeles de Dermap (RF-33). */
   async copiar(): Promise<void> {
     if (!this.lienzo) return;
+    if (this.seleccion) {
+      const ok = await this.seleccion.copiar(this.lienzo);
+      this.info.textContent = ok ? "Selección copiada. Pégala con Ctrl+V en este u otro lienzo." : "No hay dibujo dentro de la selección.";
+      return;
+    }
     const ok = await copiarCapa(this.lienzo);
     this.info.textContent = ok
       ? `Capa «${this.lienzo.doc.activa.nombre}» copiada. Pégala con Ctrl+V en este u otro lienzo.`
@@ -700,8 +903,34 @@ export class PanelLienzo implements IContentRenderer {
     ctx.lineWidth = 2.5 / escala;
     ctx.stroke(geo.costura);
 
+    this.pintarSeleccion(ctx, escala);
     if (this.flotante) this.pintarImagen(ctx);
     else this.pintarCursor(ctx, escala);
+  }
+
+  /** Lazo en curso, selección activa y vista previa de las formas. */
+  private pintarSeleccion(ctx: CanvasRenderingContext2D, escala: number): void {
+    const a = this.arrastre;
+    let camino: Path2D | null = null;
+    if (a?.tipo === "lazo" && a.puntos.length > 1) {
+      camino = new Path2D();
+      a.puntos.forEach((p, i) => (i ? camino!.lineTo(p.x, p.y) : camino!.moveTo(p.x, p.y)));
+    } else if (a?.tipo === "forma") {
+      camino = new Path2D();
+      puntosDeForma(a.forma, a.a, a.b).forEach((p, i) => (i ? camino!.lineTo(p.x, p.y) : camino!.moveTo(p.x, p.y)));
+    } else if (this.seleccion) {
+      camino = this.seleccion.camino;
+    }
+    if (!camino) return;
+    ctx.save();
+    ctx.lineWidth = 1.5 / escala;
+    ctx.setLineDash([6 / escala, 4 / escala]);
+    ctx.strokeStyle = "#ffffff";
+    ctx.stroke(camino);
+    ctx.lineDashOffset = 6 / escala;
+    ctx.strokeStyle = "#1d1b1a";
+    ctx.stroke(camino);
+    ctx.restore();
   }
 
   private pintarImagen(ctx: CanvasRenderingContext2D): void {
@@ -737,6 +966,8 @@ export class PanelLienzo implements IContentRenderer {
   /** Círculo del tamaño real del pincel bajo el puntero. */
   private pintarCursor(ctx: CanvasRenderingContext2D, escala: number): void {
     if (!this.puntero || this.espacio || this.cuentagotas || this.arrastre?.tipo === "desplazar") return;
+    const h = app.ajustes.herramienta;
+    if (h === "relleno" || h === "lazo") return;
     if (this.mayus && this.ultimoPunto && !this.arrastre) {
       // Vista previa de la línea recta que se trazará con Mayús + clic.
       const o = this.vista.transformPoint(this.ultimoPunto);

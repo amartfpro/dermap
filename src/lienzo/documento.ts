@@ -131,6 +131,30 @@ export class DocumentoLienzo extends EventTarget {
     return new PasoTeselas(this, capa, antes, trazo.ajustes.herramienta === "goma" ? "Borrar" : "Trazo");
   }
 
+  /**
+   * Edita la capa dentro de `rect` con `pintar`, que dibuja en coordenadas del documento
+   * (se llama una vez por tesela, ya trasladada). Devuelve el paso para deshacerlo. Lo usan
+   * el relleno, las formas y las selecciones.
+   */
+  editar(capa: Capa, rect: Rect, descripcion: string, pintar: (ctx: Contexto2D) => void, crear = true): Paso | null {
+    const antes = new Map<string, Copia>();
+    for (const [tx, ty] of teselasEn(rect, this.ancho, this.alto)) {
+      const clave = claveTesela(tx, ty);
+      const existente = capa.teselas.get(clave);
+      if (!existente && !crear) continue;
+      antes.set(clave, existente ? copiarLamina(existente) : null);
+      const ctx = contexto(capa.obtenerOCrear(tx, ty));
+      ctx.save();
+      ctx.translate(-tx * TESELA, -ty * TESELA);
+      pintar(ctx);
+      ctx.restore();
+      capa.sucias.add(clave);
+    }
+    if (!antes.size) return null;
+    this.avisar(rect);
+    return new PasoTeselas(this, capa, antes, descripcion);
+  }
+
   cancelarTrazo(): void {
     const trazo = this.trazo;
     this.trazo = null;
