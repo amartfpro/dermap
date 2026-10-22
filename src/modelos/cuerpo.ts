@@ -8,6 +8,8 @@ import datos from "./cuerpo-base.json";
  */
 export interface Cuerpo extends Malla {
   altura: number;
+  /** Complexión aplicada (ver formas.ts); sin ella, es la malla base sin deformar. */
+  complexion?: import("./formas").Complexion;
   articulaciones: Record<string, [number, number, number]>;
 }
 

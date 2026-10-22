@@ -6,6 +6,9 @@ import { corteExtraHasta, corteSugerido, verticeMasCercano } from "../geometria/
 import { medirDeformacion } from "../geometria/metricas";
 import { longitud, seleccionarPorEje, submalla, suavizarSeleccion, type Seleccion } from "../geometria/seleccion";
 import { cargarCuerpo, ejeDeLaPierna, ejeDelBrazo, type Cuerpo } from "../modelos/cuerpo";
+import { aplicarComplexion, cargarFormas, COMPLEXION_INICIAL, type Complexion, type Formas } from "../modelos/formas";
+import type { ProyectoAbierto } from "../proyectos/proyecto";
+import { PanelCuerpo } from "./cuerpo";
 import { app } from "../estado";
 import { añadirLienzo } from "../proyectos/gestor";
 import { guardarExportacion } from "../exportar/guardar";
@@ -34,7 +37,16 @@ export class Visor3D implements IContentRenderer {
   private radioPincel = 2.5;
   private activo = true;
 
+  /** Malla base de MakeHuman sin deformar y sus formas (complexión, RF-12). */
+  private base: Cuerpo | null = null;
+  private formas: Formas | null = null;
+  /** Cuerpo con la complexión del proyecto: el que se ve y sobre el que se selecciona. */
   private cuerpo: Cuerpo | null = null;
+  private proyectoSuscrito: ProyectoAbierto | null = null;
+  private cuerpoPendiente = false;
+  private panelCuerpo!: PanelCuerpo;
+  private alCambiarProyecto = () => this.suscribirProyecto();
+  private alCambiarModelo = () => this.programarCuerpo();
   private mallaCuerpo: THREE.Mesh | null = null;
   private normalesCuerpo: THREE.BufferAttribute | null = null;
   private centros = new Float32Array(0);
@@ -112,8 +124,10 @@ export class Visor3D implements IContentRenderer {
       titulo(boton("Quitar cortes", () => this.quitarCortesExtra()), "Quitar los cortes extra"),
       boton("Aplanar zona", () => void this.aplanar()),
       titulo(boton("Imagen 3D…", () => void this.exportarImagen()), "Guardar la vista actual en PNG para enseñarla al cliente"),
+      titulo(boton("Cuerpo…", () => this.panelCuerpo.alternar()), "Altura, complexión y tono de piel del cliente"),
     );
-    this.element.append(barra, this.estadoTexto);
+    this.panelCuerpo = new PanelCuerpo();
+    this.element.append(barra, this.estadoTexto, this.panelCuerpo.element);
 
     this.controles = new OrbitControls(this.camara, this.renderer.domElement);
     this.controles.enableDamping = true;
@@ -123,6 +137,7 @@ export class Visor3D implements IContentRenderer {
     this.montarEscena();
     app.addEventListener("lienzos", this.alCambiarLienzos);
     app.addEventListener("activo", this.alCambiarActivo);
+    app.addEventListener("proyecto", this.alCambiarProyecto);
 
     const lienzo = this.renderer.domElement;
     lienzo.addEventListener("pointerdown", (e) => this.empezarPincel(e));
@@ -160,6 +175,8 @@ export class Visor3D implements IContentRenderer {
     this.renderer.dispose();
     app.removeEventListener("lienzos", this.alCambiarLienzos);
     app.removeEventListener("activo", this.alCambiarActivo);
+    app.removeEventListener("proyecto", this.alCambiarProyecto);
+    this.proyectoSuscrito?.removeEventListener("modelo", this.alCambiarModelo);
   }
 
   // ── Carga y escena ────────────────────────────────────────────────────────────
@@ -191,16 +208,22 @@ export class Visor3D implements IContentRenderer {
 
   private async cargar(): Promise<void> {
     try {
-      this.cuerpo = await cargarCuerpo();
+      this.base = await cargarCuerpo();
     } catch (error) {
       this.estadoTexto.textContent = `No se pudo cargar el cuerpo: ${String(error)}`;
       return;
     }
+    try {
+      this.formas = await cargarFormas();
+    } catch (error) {
+      console.error("No se pudieron cargar las formas del cuerpo", error);
+    }
+    this.cuerpo = this.cuerpoDelProyecto();
     const geometria = geometriaDe(this.cuerpo.vertices, this.cuerpo.caras);
     this.normalesCuerpo = geometria.getAttribute("normal") as THREE.BufferAttribute;
     this.mallaCuerpo = new THREE.Mesh(
       geometria,
-      new THREE.MeshStandardMaterial({ color: 0xd8a98a, roughness: 0.75 }),
+      new THREE.MeshStandardMaterial({ color: app.proyecto?.datos.modelo.tonoPiel ?? 0xd8a98a, roughness: 0.75 }),
     );
     this.escena.add(this.mallaCuerpo);
     this.resaltado.geometry.setAttribute("position", geometria.getAttribute("position"));
@@ -210,9 +233,68 @@ export class Visor3D implements IContentRenderer {
     this.precalcularCaras();
     this.verVista(0);
     app.fijarCuerpo(this.cuerpo);
+    this.suscribirProyecto();
     this.reconstruirLienzos();
     this.estadoTexto.textContent =
       "Elige una zona rápida o pinta una con «Seleccionar» · arrastra para girar, rueda para acercar";
+  }
+
+  /** Complexión guardada en el proyecto abierto (o la inicial si no hay proyecto). */
+  private complexionDelProyecto(): Complexion {
+    const m = app.proyecto?.datos.modelo;
+    if (!m) return { ...COMPLEXION_INICIAL };
+    return {
+      sexo: m.sexo ?? COMPLEXION_INICIAL.sexo,
+      musculatura: m.musculatura ?? COMPLEXION_INICIAL.musculatura,
+      peso: m.complexion ?? COMPLEXION_INICIAL.peso,
+      altura: m.altura || COMPLEXION_INICIAL.altura,
+    };
+  }
+
+  private cuerpoDelProyecto(): Cuerpo {
+    return this.formas ? aplicarComplexion(this.base!, this.formas, this.complexionDelProyecto()) : this.base!;
+  }
+
+  private suscribirProyecto(): void {
+    this.panelCuerpo.sincronizar();
+    if (this.proyectoSuscrito === app.proyecto) return;
+    this.proyectoSuscrito?.removeEventListener("modelo", this.alCambiarModelo);
+    this.proyectoSuscrito = app.proyecto;
+    this.proyectoSuscrito?.addEventListener("modelo", this.alCambiarModelo);
+    this.programarCuerpo();
+  }
+
+  /** Aplica el cuerpo del proyecto como mucho una vez por fotograma (los deslizadores lo cambian en vivo). */
+  private programarCuerpo(): void {
+    if (this.cuerpoPendiente || !this.base) return;
+    this.cuerpoPendiente = true;
+    requestAnimationFrame(() => {
+      this.cuerpoPendiente = false;
+      this.actualizarCuerpo();
+    });
+  }
+
+  /**
+   * Cambia la forma del cuerpo sin cambiar su topología: la selección (triángulos) se
+   * conserva y los lienzos se recolocan sobre la nueva forma.
+   */
+  private actualizarCuerpo(): void {
+    if (!this.base || !this.mallaCuerpo) return;
+    const material = this.mallaCuerpo.material as THREE.MeshStandardMaterial;
+    material.color.set(app.proyecto?.datos.modelo.tonoPiel ?? 0xd8a98a);
+    this.cuerpo = this.cuerpoDelProyecto();
+    const geometria = this.mallaCuerpo.geometry;
+    const posicion = geometria.getAttribute("position") as THREE.BufferAttribute;
+    (posicion.array as Float32Array).set(this.cuerpo.vertices);
+    posicion.needsUpdate = true;
+    geometria.computeVertexNormals();
+    geometria.computeBoundingSphere();
+    geometria.computeBoundingBox();
+    this.normalesCuerpo = geometria.getAttribute("normal") as THREE.BufferAttribute;
+    this.precalcularCaras();
+    this.actualizarResaltado();
+    for (const [lienzo, m] of this.mallas) this.recolocarLienzo(lienzo, m);
+    app.fijarCuerpo(this.cuerpo);
   }
 
   private precalcularCaras(): void {
@@ -468,6 +550,7 @@ export class Visor3D implements IContentRenderer {
         triangulos: seleccion.triangulos,
         verticeBase: seleccion.verticeBase,
       });
+      if (app.proyecto) lienzo.tonoPiel = app.proyecto.datos.modelo.tonoPiel;
       this.fijarSeleccion([]);
       await añadirLienzo(lienzo);
       const tipo = aplanado.tipo === "manga" ? "Manga aplanada (con corte)" : "Parche aplanado";
@@ -513,46 +596,49 @@ export class Visor3D implements IContentRenderer {
     this.resaltarActivo();
   }
 
-  private crearMallaLienzo(lienzo: Lienzo): MallaLienzo {
-    const { malla, aplanado, verticeBase } = lienzo.zona;
+  /**
+   * Posiciones y normales de la zona de un lienzo sobre el cuerpo actual: se toman del
+   * vértice del cuerpo (verticeBase), así el lienzo sigue al cuerpo al cambiar la complexión.
+   */
+  private posicionesLienzo(lienzo: Lienzo): { posiciones: Float32Array; normales: Float32Array } {
+    const { aplanado, verticeBase } = lienzo.zona;
+    const cuerpo = this.cuerpo!.vertices;
     const normalesCuerpo = this.normalesCuerpo!;
-    // Normales del cuerpo completo: la zona se sombrea igual que la piel que la rodea.
     const n = aplanado.origen.length;
     const posiciones = new Float32Array(n * 3);
     const normales = new Float32Array(n * 3);
     for (let i = 0; i < n; i++) {
-      const o = aplanado.origen[i];
-      const b = verticeBase[o];
-      posiciones.set(malla.vertices.subarray(3 * o, 3 * o + 3), 3 * i);
+      const b = verticeBase[aplanado.origen[i]];
+      posiciones.set([cuerpo[3 * b], cuerpo[3 * b + 1], cuerpo[3 * b + 2]], 3 * i);
+      // Normales del cuerpo completo: la zona se sombrea igual que la piel que la rodea.
       normales.set([normalesCuerpo.getX(b), normalesCuerpo.getY(b), normalesCuerpo.getZ(b)], 3 * i);
     }
-    const geometria = new THREE.BufferGeometry();
+    return { posiciones, normales };
+  }
+
+  private recolocarLienzo(lienzo: Lienzo, m: MallaLienzo): void {
+    const geometria = (m.grupo.children[0] as THREE.Mesh).geometry;
+    const { posiciones, normales } = this.posicionesLienzo(lienzo);
     geometria.setAttribute("position", new THREE.BufferAttribute(posiciones, 3));
     geometria.setAttribute("normal", new THREE.BufferAttribute(normales, 3));
-    geometria.setAttribute("uv", new THREE.BufferAttribute(lienzo.geo.coordenadasDeTextura(), 2));
-    geometria.setIndex(new THREE.BufferAttribute(new Uint32Array(aplanado.caras), 1));
+    geometria.computeBoundingSphere();
+    for (const hijo of [...m.resalte.children]) {
+      m.resalte.remove(hijo);
+      if (hijo instanceof THREE.Mesh || hijo instanceof THREE.Line) hijo.geometry.dispose();
+    }
+    this.construirResalte(lienzo, m.resalte);
+  }
 
-    // flipY = false: las filas del lienzo y de la textura coinciden, lo que permite subir
-    // solo la región que cambia en cada trazo (copyTextureToTexture) en vez de la textura entera.
-    const textura = new THREE.Texture(lienzo.textura as unknown as HTMLCanvasElement);
-    textura.flipY = false;
-    textura.colorSpace = THREE.SRGBColorSpace;
-    textura.anisotropy = this.renderer.capabilities.getMaxAnisotropy();
-    textura.needsUpdate = true;
-    this.renderer.initTexture(textura);
-
-    const material = new THREE.MeshStandardMaterial({ map: textura, roughness: 0.75, polygonOffset: true });
-    const grupo = new THREE.Group();
-    grupo.add(new THREE.Mesh(geometria, material));
-
+  /** Borde de la zona (naranja) y cortes (rojo), visibles solo en el lienzo activo. */
+  private construirResalte(lienzo: Lienzo, resalte: THREE.Group): void {
+    const { aplanado, verticeBase } = lienzo.zona;
+    const cuerpo = this.cuerpo!.vertices;
+    const normalesCuerpo = this.normalesCuerpo!;
     const punto = (i: number, separacion: number) => {
-      const o = aplanado.origen[i];
-      const b = verticeBase[o];
-      const p = new THREE.Vector3().fromArray(malla.vertices, 3 * o);
+      const b = verticeBase[aplanado.origen[i]];
+      const p = new THREE.Vector3().fromArray(cuerpo, 3 * b);
       return p.addScaledVector(new THREE.Vector3(normalesCuerpo.getX(b), normalesCuerpo.getY(b), normalesCuerpo.getZ(b)), separacion);
     };
-    // Borde de la zona (naranja) y corte (rojo), visibles solo en el lienzo activo.
-    const resalte = new THREE.Group();
     for (const borde of lienzo.geo.bordesIndices) {
       const linea = new THREE.LineLoop(
         new THREE.BufferGeometry().setFromPoints(borde.map((i) => punto(i, 0.08))),
@@ -576,6 +662,31 @@ export class Visor3D implements IContentRenderer {
       }
       cerrarTramo();
     }
+  }
+
+  private crearMallaLienzo(lienzo: Lienzo): MallaLienzo {
+    const { posiciones, normales } = this.posicionesLienzo(lienzo);
+    const { aplanado } = lienzo.zona;
+    const geometria = new THREE.BufferGeometry();
+    geometria.setAttribute("position", new THREE.BufferAttribute(posiciones, 3));
+    geometria.setAttribute("normal", new THREE.BufferAttribute(normales, 3));
+    geometria.setAttribute("uv", new THREE.BufferAttribute(lienzo.geo.coordenadasDeTextura(), 2));
+    geometria.setIndex(new THREE.BufferAttribute(new Uint32Array(aplanado.caras), 1));
+
+    // flipY = false: las filas del lienzo y de la textura coinciden, lo que permite subir
+    // solo la región que cambia en cada trazo (copyTextureToTexture) en vez de la textura entera.
+    const textura = new THREE.Texture(lienzo.textura as unknown as HTMLCanvasElement);
+    textura.flipY = false;
+    textura.colorSpace = THREE.SRGBColorSpace;
+    textura.anisotropy = this.renderer.capabilities.getMaxAnisotropy();
+    textura.needsUpdate = true;
+    this.renderer.initTexture(textura);
+
+    const material = new THREE.MeshStandardMaterial({ map: textura, roughness: 0.75, polygonOffset: true });
+    const grupo = new THREE.Group();
+    grupo.add(new THREE.Mesh(geometria, material));
+    const resalte = new THREE.Group();
+    this.construirResalte(lienzo, resalte);
     grupo.add(resalte);
 
     const m: MallaLienzo = { grupo, textura, resalte, pendiente: new RegionSucia(), desconectar: () => {} };
@@ -710,17 +821,22 @@ interface ZonaRapida {
   seleccionar(c: Cuerpo): Seleccion;
 }
 
+/** Los radios de las zonas rápidas crecen con la complexión (un brazo robusto es más grueso). */
+const grosor = (c: Cuerpo) => {
+  const x = c.complexion ?? COMPLEXION_INICIAL;
+  return (c.altura / 170) * (1 + 0.5 * (x.peso - 0.5) + 0.25 * (x.musculatura - 0.5));
+};
 const manga = (lado: "l" | "r") => (c: Cuerpo) => {
   const eje = ejeDelBrazo(c, lado);
-  return seleccionarPorEje(c, eje, 4, longitud(eje) - 2, 8);
+  return seleccionarPorEje(c, eje, 4, longitud(eje) - 2, 8 * grosor(c));
 };
 const antebrazo = (lado: "l" | "r") => (c: Cuerpo) => {
   const eje = ejeDelBrazo(c, lado);
-  return seleccionarPorEje(c, eje, longitud(eje.slice(0, 2)) + 3, longitud(eje) - 2, 7);
+  return seleccionarPorEje(c, eje, longitud(eje.slice(0, 2)) + 3, longitud(eje) - 2, 7 * grosor(c));
 };
 const pierna = (lado: "l" | "r") => (c: Cuerpo) => {
   const eje = ejeDeLaPierna(c, lado);
-  return seleccionarPorEje(c, eje, 12, longitud(eje) - 4, 11);
+  return seleccionarPorEje(c, eje, 12, longitud(eje) - 4, 11 * grosor(c));
 };
 
 const ZONAS_RAPIDAS: ZonaRapida[] = [

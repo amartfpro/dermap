@@ -19,3 +19,14 @@ export function aplanadorReal(): Promise<Aplanador> {
   aplanador ??= Aplanador.crear(readFileSync(new URL("../src/geometria/dermap_geom.wasm", import.meta.url)));
   return aplanador;
 }
+
+let formas: import("../src/modelos/formas").Formas | null = null;
+/** Formas de MakeHuman (complexión), leídas del archivo del repositorio. */
+export async function formasBase() {
+  const { leerFormas } = await import("../src/modelos/formas");
+  if (!formas) {
+    const bin = readFileSync(new URL("../src/modelos/cuerpo-formas.bin", import.meta.url));
+    formas = leerFormas(bin.buffer.slice(bin.byteOffset, bin.byteOffset + bin.byteLength));
+  }
+  return formas;
+}

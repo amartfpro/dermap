@@ -11,6 +11,7 @@ import {
   type NodoCarpeta,
   type NodoLienzo,
   type Proyecto,
+  type ModeloCuerpo,
 } from "./modelo";
 import { escribirTextoSeguro, type SistemaArchivos } from "./sistema-archivos";
 
@@ -83,7 +84,7 @@ export class ProyectoAbierto extends EventTarget {
       id: nuevoId(),
       nombre,
       ficha: { cliente: nombre, notas: "", creado: ahora, modificado: ahora },
-      modelo: { altura: 167, complexion: 0.5, tonoPiel: "#d8a98a", versionMalla: "makehuman-base-1" },
+      modelo: { altura: 170, complexion: 0.5, sexo: 0.5, musculatura: 0.5, tonoPiel: "#d8a98a", versionMalla: "makehuman-base-1" },
       arbol: [],
     };
     await fs.crearCarpeta(carpeta);
@@ -267,6 +268,17 @@ export class ProyectoAbierto extends EventTarget {
     }
     this.cambioArbol();
     return quitados;
+  }
+
+  /**
+   * Cambia el cuerpo del proyecto. El tono de piel se aplica también a todos los lienzos
+   * (la tinta se ve mezclada con la piel, RF-41). Emite «modelo».
+   */
+  cambiarModelo(cambios: Partial<ModeloCuerpo>): void {
+    this.datos.modelo = { ...this.datos.modelo, ...cambios };
+    if (cambios.tonoPiel) for (const l of this.lienzos.values()) l.cambiar({ tonoPiel: cambios.tonoPiel });
+    this.dispatchEvent(new Event("modelo"));
+    this.programarGuardado();
   }
 
   renombrarProyecto(nombre: string): void {

@@ -29,9 +29,14 @@ export interface FichaCliente {
   modificado: string;
 }
 
+/** Cuerpo del proyecto (RF-12, RF-14): uno por proyecto, compartido por todos sus lienzos. */
 export interface ModeloCuerpo {
   altura: number; // cm
-  complexion: number; // 0 = delgada, 1 = robusta
+  complexion: number; // peso: 0 = delgada, 1 = robusta
+  /** 0 = mujer, 1 = hombre. Opcional en proyectos anteriores (0,5). */
+  sexo?: number;
+  /** 0–1. Opcional en proyectos anteriores (0,5). */
+  musculatura?: number;
   tonoPiel: string; // color CSS
   versionMalla: string; // versión de la malla base
 }
