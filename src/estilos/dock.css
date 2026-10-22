@@ -1,0 +1,305 @@
+
+.dockview-theme-dermap {
+  --dv-paneview-active-outline-color: dodgerblue;
+  --dv-tabs-and-actions-container-font-size: 13px;
+  --dv-tabs-and-actions-container-height: 35px;
+  --dv-drag-over-background-color: rgba(83, 89, 93, 0.5);
+  --dv-drag-over-border-color: transparent;
+  --dv-edge-dock-indicator-color: rgba(56, 139, 253, 0.9);
+  --dv-tabs-container-scrollbar-color: #888;
+  --dv-icon-hover-background-color: rgba(90, 93, 94, 0.31);
+  --dv-floating-box-shadow:
+      0 8px 32px rgba(0, 0, 0, 0.4), 0 2px 8px rgba(0, 0, 0, 0.25);
+  --dv-floating-border: 1px solid rgba(255, 255, 255, 0.1);
+  --dv-overlay-z-index: 999;
+  --dv-tab-font-size: inherit;
+  --dv-border-radius: 0px;
+  --dv-tab-margin: 0;
+  --dv-sash-color: transparent;
+  --dv-active-sash-color: transparent;
+  --dv-active-sash-transition-duration: 0.1s;
+  --dv-active-sash-transition-delay: 0.5s;
+  --dv-spacing-padding: 0px;
+  --dv-tab-border-radius: 0px;
+  --dv-sash-border-radius: 0px;
+  --dv-dropdown-border-radius: 0px;
+  --dv-tab-close-icon-size: inherit;
+  --dv-floating-group-border: none;
+  --dv-drag-over-border: none;
+  --dv-floating-group-dragging-opacity: 0.5;
+  --dv-floating-titlebar-height: 22px;
+  --dv-floating-titlebar-background-color: var(
+      --dv-tabs-and-actions-container-background-color
+  );
+  --dv-floating-titlebar-border-bottom: var(--dv-floating-border);
+  --dv-tab-group-color-grey: #5f6368;
+  --dv-tab-group-color-blue: #1a73e8;
+  --dv-tab-group-color-red: #d93025;
+  --dv-tab-group-color-yellow: #f9ab00;
+  --dv-tab-group-color-green: #188038;
+  --dv-tab-group-color-pink: #d01884;
+  --dv-tab-group-color-purple: #a142f4;
+  --dv-tab-group-color-cyan: #007b83;
+  --dv-tab-group-color-orange: #e8710a;
+  --dv-tab-group-chip-padding: 4px 8px;
+  --dv-tab-group-chip-border-radius: 6px;
+  --dv-tab-group-chip-font-size: 11px;
+  --dv-tab-group-line-height: 2px;
+  --dv-tab-group-line-opacity: 0.6;
+  --dv-spacing-padding: 10px;
+  --dv-tab-font-size: 12px;
+  --dv-border-radius: 12px;
+  --dv-tab-margin-block: 0.5rem;
+  --dv-tab-margin-inline: 0.25rem;
+  --dv-tab-margin: var(--dv-tab-margin-block) var(--dv-tab-margin-inline);
+  --dv-tabs-and-actions-container-height: 44px;
+  --dv-tab-border-radius: 8px;
+  --dv-sash-border-radius: 4px;
+  --dv-dropdown-border-radius: 8px;
+  --dv-tab-close-icon-size: 8px;
+  --dv-floating-group-border: 2px solid var(--dv-group-view-background-color);
+  --dv-floating-titlebar-background-color: var(
+      --dv-group-view-background-color
+  );
+  --dv-floating-titlebar-border-bottom: none;
+  box-sizing: border-box;
+  padding: var(--dv-spacing-padding);
+  background-color: var(--dv-group-view-background-color);
+}
+.dockview-theme-dermap .dv-dockview {
+  padding: 0;
+}
+.dockview-theme-dermap .dv-resize-container:has(> .dv-groupview) {
+  border-radius: 8px;
+}
+.dockview-theme-dermap .dv-sash {
+  border-radius: var(--dv-sash-border-radius);
+}
+.dockview-theme-dermap .dv-drop-target-anchor {
+  border-radius: calc(var(--dv-border-radius) / 4);
+}
+.dockview-theme-dermap .dv-drop-target-anchor.dv-drop-target-content {
+  border-radius: var(--dv-border-radius);
+}
+.dockview-theme-dermap .dv-resize-container {
+  border-radius: var(--dv-border-radius) !important;
+  border: none;
+}
+.dockview-theme-dermap .dv-resize-container .dv-groupview {
+  border: var(--dv-floating-group-border);
+}
+.dockview-theme-dermap .dv-resize-container > .dv-grid-view {
+  box-sizing: border-box;
+  padding: var(--dv-spacing-padding);
+}
+.dockview-theme-dermap .dv-resize-container-with-titlebar > .dv-grid-view {
+  padding-top: 0;
+}
+.dockview-theme-dermap .dv-resize-container-with-titlebar > .dv-floating-titlebar {
+  border-top-left-radius: var(--dv-border-radius);
+  border-top-right-radius: var(--dv-border-radius);
+}
+.dockview-theme-dermap .dv-tabs-overflow-container,
+.dockview-theme-dermap .dv-tabs-overflow-dropdown-default {
+  border-radius: var(--dv-dropdown-border-radius);
+  height: unset !important;
+}
+.dockview-theme-dermap .dv-render-overlay {
+  border-bottom-left-radius: var(--dv-border-radius);
+  border-bottom-right-radius: var(--dv-border-radius);
+}
+.dockview-theme-dermap .dv-tab {
+  border-radius: var(--dv-tab-border-radius);
+}
+.dockview-theme-dermap .dv-tab .dv-svg {
+  height: var(--dv-tab-close-icon-size);
+  width: var(--dv-tab-close-icon-size);
+}
+.dockview-theme-dermap .dv-tabs-container--wrap:not(.dv-tabs-container-vertical) .dv-tab {
+  height: calc(var(--dv-tabs-and-actions-container-height) - 2 * var(--dv-tab-margin-block));
+}
+.dockview-theme-dermap .dv-tabs-container-vertical .dv-tab {
+  margin: var(--dv-tab-margin-inline) var(--dv-tab-margin-block);
+}
+.dockview-theme-dermap .dv-tabs-container--wrap.dv-tabs-container-vertical .dv-tab {
+  width: calc(var(--dv-tabs-and-actions-container-height) - 2 * var(--dv-tab-margin-block));
+}
+.dockview-theme-dermap .dv-groupview {
+  border-radius: var(--dv-border-radius);
+}
+.dockview-theme-dermap .dv-groupview .dv-tabs-and-actions-container {
+  padding: 0px calc(var(--dv-border-radius) / 2);
+  border-top-left-radius: var(--dv-border-radius);
+  border-top-right-radius: var(--dv-border-radius);
+}
+.dockview-theme-dermap .dv-groupview .dv-tabs-and-actions-container.dv-groupview-header-vertical {
+  padding: calc(var(--dv-border-radius) / 2) 0;
+}
+.dockview-theme-dermap .dv-groupview .dv-content-container {
+  background-color: var(--dv-tabs-and-actions-container-background-color);
+  border-bottom-left-radius: var(--dv-border-radius);
+  border-bottom-right-radius: var(--dv-border-radius);
+}
+.dockview-theme-dermap .dv-groupview.dv-groupview-header-bottom > .dv-tabs-and-actions-container {
+  border-radius: 0 0 var(--dv-border-radius) var(--dv-border-radius);
+}
+.dockview-theme-dermap .dv-groupview.dv-groupview-header-bottom > .dv-content-container {
+  border-radius: var(--dv-border-radius) var(--dv-border-radius) 0 0;
+}
+.dockview-theme-dermap .dv-groupview.dv-groupview-header-left > .dv-tabs-and-actions-container {
+  border-radius: var(--dv-border-radius) 0 0 var(--dv-border-radius);
+}
+.dockview-theme-dermap .dv-groupview.dv-groupview-header-left > .dv-content-container {
+  border-radius: 0 var(--dv-border-radius) var(--dv-border-radius) 0;
+}
+.dockview-theme-dermap .dv-groupview.dv-groupview-header-right > .dv-tabs-and-actions-container {
+  border-radius: 0 var(--dv-border-radius) var(--dv-border-radius) 0;
+}
+.dockview-theme-dermap .dv-groupview.dv-groupview-header-right > .dv-content-container {
+  border-radius: var(--dv-border-radius) 0 0 var(--dv-border-radius);
+}
+.dockview-theme-dermap .dv-groupview.dv-edge-tool-window .dv-edge-peek-header {
+  border-top-left-radius: var(--dv-border-radius);
+  border-top-right-radius: var(--dv-border-radius);
+}
+.dockview-theme-dermap .dv-groupview.dv-edge-tool-window .dv-content-container {
+  border-radius: 0;
+}
+.dockview-theme-dermap .dv-groupview.dv-edge-tool-window .dv-tabs-and-actions-container {
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+  border-bottom-left-radius: var(--dv-border-radius);
+  border-bottom-right-radius: var(--dv-border-radius);
+}
+.dockview-theme-dermap .dv-edge-peek {
+  border-bottom-left-radius: var(--dv-border-radius);
+  border-bottom-right-radius: var(--dv-border-radius);
+}
+.dockview-theme-dermap .dv-edge-peek-clip {
+  border-bottom-left-radius: var(--dv-border-radius);
+  border-bottom-right-radius: var(--dv-border-radius);
+}
+.dockview-theme-dermap .dv-edge-peek-header {
+  border-top-left-radius: var(--dv-border-radius);
+  border-top-right-radius: var(--dv-border-radius);
+}
+.dockview-theme-dermap {
+  color-scheme: dark;
+  --dv-color-abyss-dark: rgb(11, 6, 17);
+  --dv-color-abyss: #16121f;
+  --dv-color-abyss-light: #201d2b;
+  --dv-color-abyss-lighter: #2a2837;
+  --dv-color-abyss-accent: rgb(91, 30, 207);
+  --dv-color-abyss-primary-text: white;
+  --dv-color-abyss-secondary-text: rgb(148, 151, 169);
+  --dv-drag-over-background-color: '';
+  --dv-group-view-background-color: var(--dv-color-abyss-dark);
+  --dv-tabs-and-actions-container-background-color: var(--dv-color-abyss);
+  --dv-activegroup-visiblepanel-tab-background-color: var(
+      --dv-color-abyss-lighter
+  );
+  --dv-activegroup-hiddenpanel-tab-background-color: var(
+      --dv-color-abyss-light
+  );
+  --dv-inactivegroup-visiblepanel-tab-background-color: var(
+      --dv-color-abyss-lighter
+  );
+  --dv-inactivegroup-hiddenpanel-tab-background-color: var(
+      --dv-color-abyss-light
+  );
+  --dv-tab-divider-color: transparent;
+  --dv-activegroup-visiblepanel-tab-color: var(--dv-color-abyss-primary-text);
+  --dv-activegroup-hiddenpanel-tab-color: var(
+      --dv-color-abyss-secondary-text
+  );
+  --dv-inactivegroup-visiblepanel-tab-color: var(
+      --dv-color-abyss-primary-text
+  );
+  --dv-inactivegroup-hiddenpanel-tab-color: var(
+      --dv-color-abyss-secondary-text
+  );
+  --dv-separator-border: transparent;
+  --dv-paneview-header-border-color: rgb(51, 51, 51);
+  --dv-active-sash-color: var(--dv-color-abyss-accent);
+  --dv-floating-group-border: 2px solid var(--dv-color-abyss-dark);
+}
+
+/* ── Dermap: colores y medidas propias sobre la base «spaced» ─────────────── */
+.dockview-theme-dermap {
+  --dv-group-view-background-color: var(--superficie);
+  --dv-tabs-and-actions-container-background-color: var(--superficie);
+  --dv-activegroup-visiblepanel-tab-background-color: var(--superficie-2);
+  --dv-activegroup-hiddenpanel-tab-background-color: transparent;
+  --dv-inactivegroup-visiblepanel-tab-background-color: var(--superficie-2);
+  --dv-inactivegroup-hiddenpanel-tab-background-color: transparent;
+  --dv-activegroup-visiblepanel-tab-color: var(--texto);
+  --dv-activegroup-hiddenpanel-tab-color: var(--texto-suave);
+  --dv-inactivegroup-visiblepanel-tab-color: var(--texto-suave);
+  --dv-inactivegroup-hiddenpanel-tab-color: var(--texto-tenue);
+  --dv-tab-divider-color: transparent;
+  --dv-separator-border: transparent;
+  --dv-paneview-header-border-color: var(--borde);
+  --dv-active-sash-color: transparent;
+  --dv-sash-color: transparent;
+  --dv-drag-over-background-color: var(--primario-tinte);
+  --dv-drag-over-border-color: var(--primario);
+  --dv-floating-group-border: 1px solid var(--borde);
+  --dv-icon-hover-background-color: var(--superficie-3);
+  --dv-border-radius: var(--radio-panel);
+  --dv-spacing-padding: 0px;
+  --dv-tab-font-size: 12px;
+  --dv-tabs-and-actions-container-height: 34px;
+  --dv-tab-margin-block: 5px;
+  --dv-tab-margin-inline: 2px;
+  --dv-tab-border-radius: var(--radio);
+  --dv-tab-close-icon-size: 8px;
+  --dv-sash-border-radius: 2px;
+  background: var(--fondo);
+}
+
+.dockview-theme-dermap .dv-groupview {
+  border: 1px solid var(--borde-suave);
+}
+
+.dockview-theme-dermap .dv-groupview .dv-tabs-and-actions-container {
+  border-bottom: 1px solid var(--borde-suave);
+  padding: 0 4px;
+}
+
+.dockview-theme-dermap .dv-tab {
+  padding: 0 10px;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+}
+
+/* Divisor entre paneles: invisible en reposo; al pasar por encima o arrastrar, una línea
+   fina del color primario a todo lo largo (como VS Code). */
+.dockview-theme-dermap .dv-sash {
+  background-color: transparent !important;
+}
+.dockview-theme-dermap .dv-sash::after {
+  content: "";
+  position: absolute;
+  background: var(--primario);
+  border-radius: 2px;
+  opacity: 0;
+  transition: opacity 0.12s ease 0.12s;
+}
+.dockview-theme-dermap .dv-horizontal > .dv-sash-container > .dv-sash::after {
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 2px;
+  transform: translateX(-50%);
+}
+.dockview-theme-dermap .dv-vertical > .dv-sash-container > .dv-sash::after {
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 2px;
+  transform: translateY(-50%);
+}
+.dockview-theme-dermap .dv-sash.dv-enabled:hover::after,
+.dockview-theme-dermap .dv-sash.dv-enabled:active::after {
+  opacity: 1;
+}

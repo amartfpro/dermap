@@ -272,7 +272,7 @@ export class PanelLienzo implements IContentRenderer {
 
     const preset = document.createElement("select");
     preset.title = t("Pinceles para tatuaje");
-    preset.className = "selector-preset";
+    preset.className = "desplegable selector-preset";
     preset.append(new Option(t("Pincel…"), ""), ...PRESETS.map((p, i) => new Option(t(p.nombre), String(i))));
     preset.addEventListener("change", () => {
       const p = PRESETS[Number(preset.value)];
@@ -1061,7 +1061,7 @@ export class PanelLienzo implements IContentRenderer {
   private pintar(): void {
     const ctx = this.ctx;
     ctx.setTransform(1, 0, 0, 1, 0, 0);
-    ctx.fillStyle = "#2a2d33";
+    ctx.fillStyle = "#141211";
     ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
     const l = this.lienzo;
     if (!l) return;
@@ -1102,7 +1102,7 @@ export class PanelLienzo implements IContentRenderer {
     ctx.lineWidth = 1.5 / escala;
     ctx.strokeStyle = "#8a8f98";
     ctx.stroke(geo.contorno);
-    ctx.strokeStyle = "#e0483e";
+    ctx.strokeStyle = "#3fb8ff";
     ctx.lineWidth = 2.5 / escala;
     ctx.stroke(geo.costura);
 
@@ -1128,7 +1128,7 @@ export class PanelLienzo implements IContentRenderer {
     ctx.strokeStyle = "#8a8f98";
     ctx.stroke(r.contorno);
     // Los bordes izquierdo y derecho son el corte: se tocan alrededor del brazo.
-    ctx.strokeStyle = "#e0483e";
+    ctx.strokeStyle = "#3fb8ff";
     ctx.lineWidth = 2.5 / escala;
     ctx.beginPath();
     ctx.moveTo(r.margen, r.margen);
@@ -1173,7 +1173,7 @@ export class PanelLienzo implements IContentRenderer {
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     const { esquinas, giro } = this.manijas();
     const dpr = window.devicePixelRatio;
-    ctx.strokeStyle = "#d9774b";
+    ctx.strokeStyle = "#ff4600";
     ctx.lineWidth = 1.5 * dpr;
     ctx.beginPath();
     esquinas.forEach((p, i) => (i ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y)));

@@ -1,6 +1,8 @@
 import { cambiarIdioma, IDIOMAS, idiomaActual, t, traducible } from "./i18n";
-import { createDockview, themeVisualStudio, type DockviewApi, type IContentRenderer } from "dockview-core";
+import { createDockview, type DockviewApi, type DockviewTheme, type IContentRenderer } from "dockview-core";
 import "./vendor/dockview-8.6.1.css"; // hoja de estilos de dockview (MIT), copiada del paquete «dockview»
+import "./estilos/dock.css";
+import "@fontsource-variable/inter";
 import { PanelProyectos } from "./panels/proyectos";
 import { Visor3D, visorActual } from "./panels/visor3d";
 import { abrirFicha } from "./panels/ficha";
@@ -20,9 +22,19 @@ const componentes: Record<string, () => IContentRenderer> = {
   capas: () => new PanelCapas(),
 };
 
+/** Paneles como tarjetas con radio sobre el fondo, separados por un hueco. */
+const temaDermap: DockviewTheme = {
+  name: "dermap",
+  className: "dockview-theme-dermap",
+  colorScheme: "dark",
+  gap: 8,
+  dndOverlayMounting: "absolute",
+  dndPanelOverlay: "group",
+};
+
 const contenedor = document.getElementById("espacio")!;
 const dock = createDockview(contenedor, {
-  theme: themeVisualStudio,
+  theme: temaDermap,
   createComponent: ({ name }) => {
     const crear = componentes[name];
     if (!crear) throw new Error(`Panel desconocido: ${name}`);

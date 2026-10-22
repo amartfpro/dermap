@@ -74,7 +74,7 @@ export class Visor3D implements IContentRenderer {
   private resaltado = new THREE.Mesh(
     new THREE.BufferGeometry(),
     new THREE.MeshBasicMaterial({
-      color: 0xd9774b,
+      color: 0xff4600,
       transparent: true,
       opacity: 0.55,
       depthWrite: false,
@@ -155,7 +155,7 @@ export class Visor3D implements IContentRenderer {
 
     this.renderer = new THREE.WebGLRenderer({ antialias: true });
     this.renderer.setPixelRatio(window.devicePixelRatio);
-    this.renderer.setClearColor(0x22252a);
+    this.renderer.setClearColor(0x141211);
     this.element.appendChild(this.renderer.domElement);
 
     const barra = document.createElement("div");
@@ -424,10 +424,10 @@ export class Visor3D implements IContentRenderer {
     this.resaltado.frustumCulled = false;
     this.resaltado.visible = false;
     this.escena.add(this.resaltado);
-    const solido = new THREE.Mesh(new THREE.BufferGeometry(), new THREE.MeshBasicMaterial({ color: 0xe0483e }));
+    const solido = new THREE.Mesh(new THREE.BufferGeometry(), new THREE.MeshBasicMaterial({ color: 0x3fb8ff }));
     const traslucido = new THREE.Mesh(
       new THREE.BufferGeometry(),
-      new THREE.MeshBasicMaterial({ color: 0xe0483e, transparent: true, opacity: 0.35, depthTest: false, depthWrite: false }),
+      new THREE.MeshBasicMaterial({ color: 0x3fb8ff, transparent: true, opacity: 0.35, depthTest: false, depthWrite: false }),
     );
     traslucido.renderOrder = 10;
     this.previaCorte.add(solido, traslucido);
@@ -803,11 +803,11 @@ export class Visor3D implements IContentRenderer {
     ctx.beginPath();
     this.lazo.puntos.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)));
     ctx.closePath();
-    ctx.fillStyle = this.lazo.quitar ? "rgba(90, 140, 230, 0.18)" : "rgba(217, 119, 75, 0.18)";
+    ctx.fillStyle = this.lazo.quitar ? "rgba(90, 140, 230, 0.18)" : "rgba(255, 70, 0, 0.18)";
     ctx.fill();
     ctx.setLineDash([5, 4]);
     ctx.lineWidth = 1.5;
-    ctx.strokeStyle = this.lazo.quitar ? "#5a8ce6" : "#d9774b";
+    ctx.strokeStyle = this.lazo.quitar ? "#5a8ce6" : "#ff4600";
     ctx.stroke();
   }
 
@@ -1192,7 +1192,7 @@ export class Visor3D implements IContentRenderer {
     for (const borde of lienzo.geo.bordesIndices) {
       const linea = new THREE.LineLoop(
         new THREE.BufferGeometry().setFromPoints(borde.map((i) => punto(i, 0.08))),
-        new THREE.LineBasicMaterial({ color: 0xd9774b }),
+        new THREE.LineBasicMaterial({ color: 0xff4600 }),
       );
       resalte.add(linea);
     }
@@ -1203,7 +1203,7 @@ export class Visor3D implements IContentRenderer {
       aplanado.origen.forEach((o, i) => cortado.set(o, i));
       let tramo: THREE.Vector3[] = [];
       const cerrarTramo = () => {
-        if (tramo.length > 1) resalte.add(new THREE.Mesh(tubo(tramo, 0.12), new THREE.MeshBasicMaterial({ color: 0xe0483e })));
+        if (tramo.length > 1) resalte.add(new THREE.Mesh(tubo(tramo, 0.12), new THREE.MeshBasicMaterial({ color: 0x3fb8ff })));
         tramo = [];
       };
       for (const v of aplanado.corte) {

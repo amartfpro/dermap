@@ -189,11 +189,11 @@ export function abrirDialogoExportar(lienzo: Lienzo): void {
     ctx.drawImage(temporal, 0, 0);
     ctx.restore();
     if (opciones.formato === "pdf" && plan.piezas.length > 1) {
-      ctx.strokeStyle = "rgba(217, 119, 75, 0.9)";
+      ctx.strokeStyle = "rgba(255, 70, 0, 0.9)";
       ctx.lineWidth = 1.5;
       ctx.setLineDash([]);
       ctx.font = "12px system-ui, sans-serif";
-      ctx.fillStyle = "rgba(217, 119, 75, 1)";
+      ctx.fillStyle = "rgba(255, 70, 0, 1)";
       plan.piezas.forEach((p, i) => {
         const pw = (p.rect.x1 - p.rect.x0) * escala;
         const x = opciones.espejo ? w - (p.rect.x0 - rect.x0) * escala - pw : (p.rect.x0 - rect.x0) * escala;
