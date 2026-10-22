@@ -16,6 +16,11 @@ export interface OpcionesStencil {
   soloLineas: boolean;
   /** Dibuja el contorno de la zona (discontinuo) y la costura del corte (raya y punto). */
   contorno: boolean;
+  /**
+   * Imprime en espejo (volteado en horizontal): para papel de stencil de inyección de tinta o
+   * para calcar a mano por el reverso. La impresora térmica no lo necesita.
+   */
+  espejo?: boolean;
   formato: "pdf" | "png";
 }
 
@@ -137,6 +142,14 @@ export function renderizar(lienzo: Lienzo, r: Rect, opciones: OpcionesStencil): 
     ctx.stroke(lienzo.geo.costura);
     ctx.restore();
   }
+  if (opciones.espejo) {
+    const volteada = crearLamina(ancho, alto);
+    const cv = contexto(volteada);
+    cv.translate(ancho, 0);
+    cv.scale(-1, 1);
+    cv.drawImage(c, 0, 0);
+    return volteada;
+  }
   return c;
 }
 
@@ -193,7 +206,9 @@ export async function exportarStencil(
       width: anchoMm * PT_POR_MM,
       height: altoMm * PT_POR_MM,
     });
-    marcarSolapes(pagina, plan, pieza, x, yArriba, anchoMm, altoMm);
+    marcarSolapes(pagina, plan, pieza, x, yArriba, anchoMm, altoMm, !!opciones.espejo);
+    // En espejo, las columnas se leen al revés.
+    const columna = opciones.espejo ? plan.columnas - 1 - pieza.columna : pieza.columna;
     const titulo =
       total > 1
         ? t("{lienzo} · hoja {i} de {total} (fila {fila}, columna {columna}) · escala 1:1", {
@@ -201,17 +216,18 @@ export async function exportarStencil(
             i: i + 1,
             total,
             fila: pieza.fila + 1,
-            columna: pieza.columna + 1,
+            columna: columna + 1,
           })
         : t("{lienzo} · escala 1:1", { lienzo: lienzo.nombre });
-    texto(pagina, fuente, `Dermap · ${titulo}`, MARGEN.lado, h - 8, 8);
+    const pie = opciones.espejo ? ` · ${t("EN ESPEJO")}` : "";
+    texto(pagina, fuente, `Dermap · ${titulo}${pie}`, MARGEN.lado, h - 8, 8);
     regla(pagina, fuente, MARGEN.lado, 9);
   }
   return { bytes: await pdf.save(), extension: "pdf", hojas: total };
 }
 
 /** Bandas de solape con las hojas vecinas: borde punteado y a qué hoja unir. */
-function marcarSolapes(pagina: PDFPage, plan: Plan, pieza: Pieza, x: number, yArriba: number, anchoMm: number, altoMm: number): void {
+function marcarSolapes(pagina: PDFPage, plan: Plan, pieza: Pieza, x: number, yArriba: number, anchoMm: number, altoMm: number, espejo: boolean): void {
   const gris = rgb(0.45, 0.45, 0.45);
   const linea = (x0: number, y0: number, x1: number, y1: number) =>
     pagina.drawLine({
@@ -228,7 +244,11 @@ function marcarSolapes(pagina: PDFPage, plan: Plan, pieza: Pieza, x: number, yAr
   linea(x, yAbajo, x, yArriba);
   linea(x + anchoMm, yAbajo, x + anchoMm, yArriba);
   // Inicio del solape con la hoja de la derecha y con la de abajo.
-  if (pieza.columna < plan.columnas - 1) linea(x + anchoMm - SOLAPE_MM, yAbajo, x + anchoMm - SOLAPE_MM, yArriba);
+  // (En espejo, la hoja que sigue queda a la izquierda.)
+  if (pieza.columna < plan.columnas - 1) {
+    const xs = espejo ? x + SOLAPE_MM : x + anchoMm - SOLAPE_MM;
+    linea(xs, yAbajo, xs, yArriba);
+  }
   if (pieza.fila < plan.filas - 1) linea(x, yAbajo + SOLAPE_MM, x + anchoMm, yAbajo + SOLAPE_MM);
 }
 

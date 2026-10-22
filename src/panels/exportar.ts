@@ -20,6 +20,7 @@ export function abrirDialogoExportar(lienzo: Lienzo): void {
     capas: new Set(lienzo.doc.capas.filter((c) => c.enStencil && c.visible).map((c) => c.id)),
     soloLineas: true,
     contorno: true,
+    espejo: leerEspejo(),
     formato: "pdf",
   };
 
@@ -53,6 +54,11 @@ export function abrirDialogoExportar(lienzo: Lienzo): void {
     }),
     casilla(t("Marcar contorno y corte (para unir piezas)"), opciones.contorno, (v) => {
       opciones.contorno = v;
+      actualizar();
+    }),
+    casilla(t("En espejo (papel de inyección de tinta o calco a mano)"), !!opciones.espejo, (v) => {
+      opciones.espejo = v;
+      guardarEspejo(v);
       actualizar();
     }),
   );
@@ -172,7 +178,13 @@ export function abrirDialogoExportar(lienzo: Lienzo): void {
       t.stroke(lienzo.geo.contorno);
       t.stroke(lienzo.geo.costura);
     }
+    ctx.save();
+    if (opciones.espejo) {
+      ctx.translate(w, 0);
+      ctx.scale(-1, 1);
+    }
     ctx.drawImage(temporal, 0, 0);
+    ctx.restore();
     if (opciones.formato === "pdf" && plan.piezas.length > 1) {
       ctx.strokeStyle = "rgba(217, 119, 75, 0.9)";
       ctx.lineWidth = 1.5;
@@ -180,9 +192,10 @@ export function abrirDialogoExportar(lienzo: Lienzo): void {
       ctx.font = "12px system-ui, sans-serif";
       ctx.fillStyle = "rgba(217, 119, 75, 1)";
       plan.piezas.forEach((p, i) => {
-        const x = (p.rect.x0 - rect.x0) * escala;
+        const pw = (p.rect.x1 - p.rect.x0) * escala;
+        const x = opciones.espejo ? w - (p.rect.x0 - rect.x0) * escala - pw : (p.rect.x0 - rect.x0) * escala;
         const y = (p.rect.y0 - rect.y0) * escala;
-        ctx.strokeRect(x + 1, y + 1, (p.rect.x1 - p.rect.x0) * escala - 2, (p.rect.y1 - p.rect.y0) * escala - 2);
+        ctx.strokeRect(x + 1, y + 1, pw - 2, (p.rect.y1 - p.rect.y0) * escala - 2);
         ctx.fillText(String(i + 1), x + 6, y + 16);
       });
     }
@@ -221,4 +234,21 @@ function radio(grupo: string, texto: string, inicial: boolean, alElegir: () => v
   r.addEventListener("change", () => r.checked && alElegir());
   etiqueta.append(r, ` ${texto}`);
   return etiqueta;
+}
+
+/** La opción de espejo depende del papel del estudio: se recuerda entre exportaciones. */
+function leerEspejo(): boolean {
+  try {
+    return localStorage.getItem("dermap.stencil.espejo") === "1";
+  } catch {
+    return false;
+  }
+}
+
+function guardarEspejo(v: boolean): void {
+  try {
+    localStorage.setItem("dermap.stencil.espejo", v ? "1" : "0");
+  } catch {
+    // Sin almacenamiento.
+  }
 }

@@ -71,7 +71,8 @@ el almacenamiento del navegador, no en disco).
    una zona con otro corte) o lo lleva **en espejo** a la zona simétrica (del brazo izquierdo al
    derecho, por ejemplo).
 6. **Exportar stencil…**: PDF A4 a escala real (en piezas con solape si no cabe) o PNG a 300 ppp,
-   con las capas que elijas y en negro puro para la impresora térmica. **Imagen 3D…** guarda la
+   con las capas que elijas, en negro puro para la impresora térmica y, si hace falta, en espejo
+   (papel de stencil de inyección de tinta o calco a mano). **Imagen 3D…** guarda la
    vista del visor.
 7. **Presentar** (o F5): el 3D a pantalla completa para el cliente, girando, con botones para
    mostrar u ocultar cada lienzo y comparar versiones (duplica un lienzo con ⧉ para hacer otra).

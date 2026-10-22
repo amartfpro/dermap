@@ -414,5 +414,7 @@
   "Traer dibujo en espejo de {lienzo}": "Bring mirrored drawing from {lienzo}",
   "Traer dibujo de {lienzo}": "Bring drawing from {lienzo}",
   "De «{lienzo}» (espejo)": "From “{lienzo}” (mirrored)",
-  "De «{lienzo}»": "From “{lienzo}”"
+  "De «{lienzo}»": "From “{lienzo}”",
+  "En espejo (papel de inyección de tinta o calco a mano)": "Mirrored (inkjet stencil paper or hand tracing)",
+  "EN ESPEJO": "MIRRORED"
 }
