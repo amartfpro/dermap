@@ -18,6 +18,9 @@ import { contexto, crearLamina, RegionSucia, type Rect } from "../lienzo/teselas
 
 type P3 = [number, number, number];
 
+/** Píxeles del lienzo por centímetro (300 ppp). */
+const PX_POR_CM_3D = 300 / 2.54;
+
 /**
  * Visor 3D: el cuerpo base, la selección de zona a pincel (RF-20) y la zona aplanada
  * texturizada con el lienzo. Unidades de la escena: centímetros, pies en y = 0.
@@ -76,6 +79,11 @@ export class Visor3D implements IContentRenderer {
   private modoSeleccion = false;
   /** Lazo libre (RF-20): se dibuja un contorno en pantalla y se añaden los triángulos visibles dentro. */
   private modoLazo = false;
+  /** Pintar directamente sobre el modelo, en el lienzo activo (RF-39). */
+  private modoPintar = false;
+  private botonPintar!: HTMLButtonElement;
+  private pintando3d = false;
+  private trazo3d: { lienzo: Lienzo; doc: { x: number; y: number }; p3: THREE.Vector3 } | null = null;
   private botonLazo!: HTMLButtonElement;
   private lazo: { puntos: [number, number][]; quitar: boolean } | null = null;
   private capaLazo: HTMLCanvasElement;
@@ -172,6 +180,10 @@ export class Visor3D implements IContentRenderer {
       titulo(boton("Quitar cortes", () => this.quitarCortesExtra()), "Quitar los cortes extra"),
       boton("Aplanar zona", () => void this.aplanar()),
       titulo(boton("Imagen 3D…", () => void this.exportarImagen()), "Guardar la vista actual en PNG para enseñarla al cliente"),
+      (this.botonPintar = titulo(
+        boton("Pintar en 3D", () => this.alternarPintar()),
+        "Dibuja sobre el modelo con el pincel actual, en el lienzo activo (gira con el botón derecho)",
+      )),
       titulo(boton("Ver zona", () => app.activo && this.encuadrarZona(app.activo)), "Centrar la cámara en la zona del lienzo activo"),
       titulo(boton("Cuerpo…", () => this.panelCuerpo.alternar()), "Altura, complexión y tono de piel del cliente"),
     );
@@ -295,6 +307,7 @@ export class Visor3D implements IContentRenderer {
       if (this.modoCorte) this.alternarModoCorte();
       if (this.modoLazo) this.alternarLazo();
       if (this.modoCorteManual) this.alternarCorteManual();
+      if (this.modoPintar) this.alternarPintar();
       this.activo = true;
       if (this.cuerpo) this.encuadrar([0, this.cuerpo.altura / 2, 0], this.cuerpo.altura / 2, [0, 0.1, 1]);
       this.alternarGiro(true);
@@ -618,14 +631,84 @@ export class Visor3D implements IContentRenderer {
   private alternarSeleccion(): void {
     if (!this.modoSeleccion && this.modoCorte) this.alternarModoCorte();
     if (!this.modoSeleccion && this.modoLazo) this.alternarLazo();
+    if (!this.modoSeleccion && this.modoPintar) this.alternarPintar();
     this.modoSeleccion = !this.modoSeleccion;
     this.botonSeleccionar.classList.toggle("activo", this.modoSeleccion);
     this.botonesCamara(this.modoSeleccion);
   }
 
+  private alternarPintar(): void {
+    if (!this.modoPintar) {
+      if (this.modoSeleccion) this.alternarSeleccion();
+      if (this.modoLazo) this.alternarLazo();
+      if (this.modoCorte) this.alternarModoCorte();
+      if (this.modoCorteManual) this.alternarCorteManual();
+    }
+    this.modoPintar = !this.modoPintar;
+    this.botonPintar.classList.toggle("activo", this.modoPintar);
+    this.botonesCamara(this.modoPintar);
+    if (this.modoPintar)
+      this.estadoTexto.textContent = app.activo
+        ? `Pintando en «${app.activo.nombre}» con el pincel del panel Lienzo. Gira con el botón derecho.`
+        : "Abre o crea un lienzo para pintar sobre el modelo.";
+  }
+
+  /** Punto del lienzo activo bajo el puntero, en píxeles del documento. */
+  private puntoEnLienzo(e: PointerEvent): { lienzo: Lienzo; doc: { x: number; y: number }; p3: THREE.Vector3 } | null {
+    const lienzo = app.activo;
+    const m = lienzo && this.mallas.get(lienzo);
+    if (!lienzo || !m) return null;
+    const r = this.renderer.domElement.getBoundingClientRect();
+    const ndc = new THREE.Vector2(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
+    this.raycaster.setFromCamera(ndc, this.camara);
+    // Solo vale si el lienzo es lo primero que toca el rayo (no a través del cuerpo).
+    const golpes = this.raycaster.intersectObjects([this.mallaCuerpo!, m.grupo.children[0]], false);
+    const g = golpes.find((x) => x.object === m.grupo.children[0]);
+    if (!g || !g.uv || (golpes[0].object !== g.object && golpes[0].distance < g.distance - 0.3)) return null;
+    const geo = lienzo.geo;
+    return {
+      lienzo,
+      doc: { x: (g.uv.x * geo.anchoPrevia) / geo.escalaPrevia, y: (g.uv.y * geo.altoPrevia) / geo.escalaPrevia },
+      p3: g.point.clone(),
+    };
+  }
+
+  private pintar3d(e: PointerEvent, empezar: boolean): void {
+    const punto = this.puntoEnLienzo(e);
+    const presion = e.pointerType === "mouse" ? 0.5 : e.pressure || 0.5;
+    if (!punto) {
+      this.terminarTrazo3d();
+      return;
+    }
+    const a = this.trazo3d;
+    // Un salto grande en el lienzo para un paso pequeño en el cuerpo = se ha cruzado la
+    // costura: se corta el trazo y sigue al otro lado (el lienzo ya continúa los bordes).
+    const salto =
+      a &&
+      a.lienzo === punto.lienzo &&
+      Math.hypot(punto.doc.x - a.doc.x, punto.doc.y - a.doc.y) > (a.p3.distanceTo(punto.p3) * PX_POR_CM_3D * 3 + 30);
+    if (empezar || !a || a.lienzo !== punto.lienzo || salto) {
+      this.terminarTrazo3d();
+      const herramienta = app.ajustes.herramienta === "goma" ? "goma" : "pincel";
+      if (!punto.lienzo.empezarTrazo({ ...app.ajustes, herramienta }, punto.doc.x, punto.doc.y, presion)) {
+        this.estadoTexto.textContent = `La capa «${punto.lienzo.doc.activa.nombre}» está bloqueada u oculta.`;
+        return;
+      }
+    } else {
+      punto.lienzo.continuarTrazo(punto.doc.x, punto.doc.y, presion);
+    }
+    this.trazo3d = punto;
+  }
+
+  private terminarTrazo3d(): void {
+    if (this.trazo3d) this.trazo3d.lienzo.terminarTrazo();
+    this.trazo3d = null;
+  }
+
   private alternarLazo(): void {
     if (!this.modoLazo && this.modoCorte) this.alternarModoCorte();
     if (!this.modoLazo && this.modoSeleccion) this.alternarSeleccion();
+    if (!this.modoLazo && this.modoPintar) this.alternarPintar();
     this.modoLazo = !this.modoLazo;
     this.botonLazo.classList.toggle("activo", this.modoLazo);
     this.botonesCamara(this.modoLazo);
@@ -748,6 +831,12 @@ export class Visor3D implements IContentRenderer {
       this.añadirPuntoCorte(e);
       return;
     }
+    if (this.modoPintar && e.button === 0) {
+      this.renderer.domElement.setPointerCapture(e.pointerId);
+      this.pintando3d = true;
+      this.pintar3d(e, true);
+      return;
+    }
     if (this.modoLazo && e.button === 0) {
       this.lazo = { puntos: [this.posicionEnVisor(e)], quitar: e.shiftKey };
       this.renderer.domElement.setPointerCapture(e.pointerId);
@@ -761,6 +850,11 @@ export class Visor3D implements IContentRenderer {
 
   /** Al soltar, se suaviza el borde de la selección (quita picos de la malla base). */
   private terminarPincel(e?: PointerEvent): void {
+    if (this.pintando3d) {
+      this.pintando3d = false;
+      this.terminarTrazo3d();
+      return;
+    }
     if (this.lazo) {
       const { puntos, quitar } = this.lazo;
       this.lazo = null;
@@ -780,6 +874,10 @@ export class Visor3D implements IContentRenderer {
   }
 
   private moverPincel(e: PointerEvent): void {
+    if (this.pintando3d) {
+      for (const ev of e.getCoalescedEvents?.() ?? [e]) this.pintar3d(ev, false);
+      return;
+    }
     if (this.lazo) {
       const p = this.posicionEnVisor(e);
       const u = this.lazo.puntos[this.lazo.puntos.length - 1];
