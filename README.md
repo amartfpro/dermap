@@ -72,6 +72,10 @@ el almacenamiento del navegador, no en disco).
 Para tatuajes ya hechos o cicatrices, crea lienzos aparte (por ejemplo en una carpeta
 «Previos»): todos los lienzos visibles se ven a la vez en el 3D.
 
+La interfaz está en español y en inglés (selector de idioma en la barra superior). Para
+añadir otro idioma basta con copiar `src/i18n/en.json`, traducirlo y registrarlo en `src/i18n.ts`;
+`npx tsx scripts/textos.ts <idioma>` lista lo que falte.
+
 ### Atajos
 
 Todos están en la ayuda (botón **?** o F1). Los principales:
