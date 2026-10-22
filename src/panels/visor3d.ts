@@ -73,6 +73,11 @@ export class Visor3D implements IContentRenderer {
     }),
   );
   private modoSeleccion = false;
+  /** Lazo libre (RF-20): se dibuja un contorno en pantalla y se añaden los triángulos visibles dentro. */
+  private modoLazo = false;
+  private botonLazo!: HTMLButtonElement;
+  private lazo: { puntos: [number, number][]; quitar: boolean } | null = null;
+  private capaLazo: HTMLCanvasElement;
   private pendiente: PointerEvent | null = null;
   /** Submalla de la selección actual (se invalida al cambiar la selección). */
   private seleccionCacheada: Seleccion | null = null;
@@ -123,6 +128,10 @@ export class Visor3D implements IContentRenderer {
       desplegable("Zona rápida", ZONAS_RAPIDAS.map((z) => z.nombre), (i) => this.zonaRapida(i)),
       this.botonSeleccionar,
       radio,
+      (this.botonLazo = titulo(
+        boton("Lazo", () => this.alternarLazo()),
+        "Rodea la zona con el ratón: se añade lo que se ve dentro. Mayús + arrastrar para quitar.",
+      )),
       boton("Limpiar", () => this.fijarSeleccion([])),
       (this.botonCorte = titulo(
         boton("Corte extra", () => this.alternarModoCorte()),
@@ -133,6 +142,9 @@ export class Visor3D implements IContentRenderer {
       titulo(boton("Imagen 3D…", () => void this.exportarImagen()), "Guardar la vista actual en PNG para enseñarla al cliente"),
       titulo(boton("Cuerpo…", () => this.panelCuerpo.alternar()), "Altura, complexión y tono de piel del cliente"),
     );
+    this.capaLazo = document.createElement("canvas");
+    this.capaLazo.className = "capa-lazo";
+    this.element.append(this.capaLazo);
     this.panelCuerpo = new PanelCuerpo();
     this.barraPresentacion = this.montarBarraPresentacion();
     this.element.append(barra, this.estadoTexto, this.panelCuerpo.element, this.barraPresentacion);
@@ -154,7 +166,7 @@ export class Visor3D implements IContentRenderer {
     const lienzo = this.renderer.domElement;
     lienzo.addEventListener("pointerdown", (e) => this.empezarPincel(e));
     lienzo.addEventListener("pointermove", (e) => this.moverPincel(e));
-    lienzo.addEventListener("pointerup", () => this.terminarPincel());
+    lienzo.addEventListener("pointerup", (e) => this.terminarPincel(e));
     lienzo.addEventListener("contextmenu", (e) => e.preventDefault());
 
     this.observador = new ResizeObserver(() => this.ajustarTamano());
@@ -226,6 +238,7 @@ export class Visor3D implements IContentRenderer {
       for (const o of ocultar) o.visible = false;
       if (this.modoSeleccion) this.alternarSeleccion();
       if (this.modoCorte) this.alternarModoCorte();
+      if (this.modoLazo) this.alternarLazo();
       this.activo = true;
       if (this.cuerpo) this.encuadrar([0, this.cuerpo.altura / 2, 0], this.cuerpo.altura / 2, [0, 0.1, 1]);
       this.alternarGiro(true);
@@ -467,17 +480,136 @@ export class Visor3D implements IContentRenderer {
 
   private alternarSeleccion(): void {
     if (!this.modoSeleccion && this.modoCorte) this.alternarModoCorte();
+    if (!this.modoSeleccion && this.modoLazo) this.alternarLazo();
     this.modoSeleccion = !this.modoSeleccion;
     this.botonSeleccionar.classList.toggle("activo", this.modoSeleccion);
-    // En modo selección el botón izquierdo pinta; la cámara gira con el derecho.
-    this.controles.mouseButtons.LEFT = this.modoSeleccion ? null : THREE.MOUSE.ROTATE;
-    this.controles.mouseButtons.RIGHT = this.modoSeleccion ? THREE.MOUSE.ROTATE : THREE.MOUSE.PAN;
-    this.renderer.domElement.style.cursor = this.modoSeleccion ? "crosshair" : "";
+    this.botonesCamara(this.modoSeleccion);
+  }
+
+  private alternarLazo(): void {
+    if (!this.modoLazo && this.modoCorte) this.alternarModoCorte();
+    if (!this.modoLazo && this.modoSeleccion) this.alternarSeleccion();
+    this.modoLazo = !this.modoLazo;
+    this.botonLazo.classList.toggle("activo", this.modoLazo);
+    this.botonesCamara(this.modoLazo);
+    if (this.modoLazo) this.estadoTexto.textContent = "Rodea la zona con el ratón (Mayús para quitar). Gira la vista con el botón derecho.";
+  }
+
+  /** En los modos de selección el botón izquierdo selecciona; la cámara gira con el derecho. */
+  private botonesCamara(seleccionando: boolean): void {
+    this.controles.mouseButtons.LEFT = seleccionando ? null : THREE.MOUSE.ROTATE;
+    this.controles.mouseButtons.RIGHT = seleccionando ? THREE.MOUSE.ROTATE : THREE.MOUSE.PAN;
+    this.renderer.domElement.style.cursor = seleccionando ? "crosshair" : "";
+  }
+
+  private pintarLazo(): void {
+    const c = this.capaLazo;
+    const dpr = window.devicePixelRatio;
+    const { clientWidth: w, clientHeight: h } = this.renderer.domElement;
+    if (c.width !== Math.round(w * dpr) || c.height !== Math.round(h * dpr)) {
+      c.width = Math.round(w * dpr);
+      c.height = Math.round(h * dpr);
+    }
+    const ctx = c.getContext("2d")!;
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.clearRect(0, 0, c.width, c.height);
+    if (!this.lazo || this.lazo.puntos.length < 2) return;
+    ctx.scale(dpr, dpr);
+    ctx.beginPath();
+    this.lazo.puntos.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)));
+    ctx.closePath();
+    ctx.fillStyle = this.lazo.quitar ? "rgba(90, 140, 230, 0.18)" : "rgba(217, 119, 75, 0.18)";
+    ctx.fill();
+    ctx.setLineDash([5, 4]);
+    ctx.lineWidth = 1.5;
+    ctx.strokeStyle = this.lazo.quitar ? "#5a8ce6" : "#d9774b";
+    ctx.stroke();
+  }
+
+  /**
+   * Triángulos del cuerpo visibles dentro del lazo: se dibuja el cuerpo con el número de
+   * cada triángulo como color (sin luces ni suavizado) y se leen los píxeles dentro del contorno.
+   * Así solo entra lo que se ve, nunca la cara de atrás del brazo.
+   */
+  private triangulosEnLazo(puntos: [number, number][]): number[] {
+    if (!this.cuerpo || puntos.length < 3) return [];
+    const { vertices: v, caras: f } = this.cuerpo;
+    const nT = f.length / 3;
+    const posiciones = new Float32Array(nT * 9);
+    const colores = new Float32Array(nT * 9);
+    for (let t = 0; t < nT; t++) {
+      const id = t + 1;
+      const rgb = [(id & 255) / 255, ((id >> 8) & 255) / 255, ((id >> 16) & 255) / 255];
+      for (let k = 0; k < 3; k++) {
+        const o = 3 * f[3 * t + k];
+        posiciones.set([v[o], v[o + 1], v[o + 2]], 9 * t + 3 * k);
+        colores.set(rgb, 9 * t + 3 * k);
+      }
+    }
+    const geometria = new THREE.BufferGeometry();
+    geometria.setAttribute("position", new THREE.BufferAttribute(posiciones, 3));
+    geometria.setAttribute("color", new THREE.BufferAttribute(colores, 3));
+    const material = new THREE.ShaderMaterial({
+      vertexShader: "attribute vec3 color; varying vec3 vId; void main() { vId = color; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }",
+      fragmentShader: "varying vec3 vId; void main() { gl_FragColor = vec4(vId, 1.0); }",
+    });
+    const escena = new THREE.Scene();
+    escena.add(new THREE.Mesh(geometria, material));
+    const dpr = this.renderer.getPixelRatio();
+    const { clientWidth: w, clientHeight: h } = this.renderer.domElement;
+    const ancho = Math.max(1, Math.round(w * dpr)), alto = Math.max(1, Math.round(h * dpr));
+    const destino = new THREE.WebGLRenderTarget(ancho, alto, { minFilter: THREE.NearestFilter, magFilter: THREE.NearestFilter });
+    const colorAntes = new THREE.Color();
+    this.renderer.getClearColor(colorAntes);
+    const alfaAntes = this.renderer.getClearAlpha();
+    this.renderer.setRenderTarget(destino);
+    this.renderer.setClearColor(0x000000, 1);
+    this.renderer.clear();
+    this.renderer.render(escena, this.camara);
+    const pixeles = new Uint8Array(ancho * alto * 4);
+    this.renderer.readRenderTargetPixels(destino, 0, 0, ancho, alto, pixeles);
+    this.renderer.setRenderTarget(null);
+    this.renderer.setClearColor(colorAntes, alfaAntes);
+    destino.dispose();
+    geometria.dispose();
+    material.dispose();
+
+    // Máscara del lazo a la misma resolución.
+    const mascara = new OffscreenCanvas(ancho, alto);
+    const ctx = mascara.getContext("2d", { willReadFrequently: true })!;
+    ctx.scale(dpr, dpr);
+    ctx.beginPath();
+    puntos.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)));
+    ctx.closePath();
+    ctx.fill();
+    const m = ctx.getImageData(0, 0, ancho, alto).data;
+    const elegidos = new Set<number>();
+    for (let y = 0; y < alto; y++) {
+      // readRenderTargetPixels empieza por abajo; la máscara, por arriba.
+      const filaId = (alto - 1 - y) * ancho;
+      for (let x = 0; x < ancho; x++) {
+        if (m[4 * (y * ancho + x) + 3] < 128) continue;
+        const i = 4 * (filaId + x);
+        const id = pixeles[i] | (pixeles[i + 1] << 8) | (pixeles[i + 2] << 16);
+        if (id > 0 && id <= nT) elegidos.add(id - 1);
+      }
+    }
+    return [...elegidos];
+  }
+
+  private posicionEnVisor(e: PointerEvent): [number, number] {
+    const r = this.renderer.domElement.getBoundingClientRect();
+    return [e.clientX - r.left, e.clientY - r.top];
   }
 
   private empezarPincel(e: PointerEvent): void {
     if (this.modoCorte && e.button === 0) {
       this.añadirCorteExtra(e);
+      return;
+    }
+    if (this.modoLazo && e.button === 0) {
+      this.lazo = { puntos: [this.posicionEnVisor(e)], quitar: e.shiftKey };
+      this.renderer.domElement.setPointerCapture(e.pointerId);
       return;
     }
     if (!this.modoSeleccion || e.button !== 0 || !this.cuerpo) return;
@@ -487,13 +619,35 @@ export class Visor3D implements IContentRenderer {
   }
 
   /** Al soltar, se suaviza el borde de la selección (quita picos de la malla base). */
-  private terminarPincel(): void {
+  private terminarPincel(e?: PointerEvent): void {
+    if (this.lazo) {
+      const { puntos, quitar } = this.lazo;
+      this.lazo = null;
+      this.pintarLazo();
+      if (e && this.renderer.domElement.hasPointerCapture(e.pointerId)) this.renderer.domElement.releasePointerCapture(e.pointerId);
+      const dentro = this.triangulosEnLazo(puntos);
+      if (!dentro.length || !this.cuerpo) return;
+      const seleccion = new Set(this.seleccionados);
+      for (const t of dentro) quitar ? seleccion.delete(t) : seleccion.add(t);
+      this.fijarSeleccion(suavizarSeleccion(this.cuerpo, seleccion));
+      this.estadoTexto.textContent = `${this.seleccionados.size} triángulos seleccionados. Gira la vista y rodea más zona, o pulsa «Aplanar zona».`;
+      return;
+    }
     if (!this.pintando || !this.cuerpo) return;
     this.pintando = null;
     this.fijarSeleccion(suavizarSeleccion(this.cuerpo, this.seleccionados));
   }
 
   private moverPincel(e: PointerEvent): void {
+    if (this.lazo) {
+      const p = this.posicionEnVisor(e);
+      const u = this.lazo.puntos[this.lazo.puntos.length - 1];
+      if (Math.hypot(p[0] - u[0], p[1] - u[1]) >= 3) {
+        this.lazo.puntos.push(p);
+        this.pintarLazo();
+      }
+      return;
+    }
     if (!this.pintando) return;
     // Como mucho una pasada del pincel por fotograma.
     if (!this.pendiente) requestAnimationFrame(() => {
