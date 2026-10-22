@@ -6,6 +6,7 @@ import { aplanarEnSegundoPlano } from "../geometria/cliente";
 import { corteExtraHasta, corteManual, corteSugerido, verticeMasCercano } from "../geometria/corte";
 import { medirDeformacion } from "../geometria/metricas";
 import { longitud, seleccionarPorEje, submalla, suavizarSeleccion, type Seleccion } from "../geometria/seleccion";
+import { prepararSimetria } from "../geometria/simetria";
 import { cargarCuerpo, ejeDeLaPierna, ejeDelBrazo, type Cuerpo } from "../modelos/cuerpo";
 import { aplicarComplexion, cargarFormas, COMPLEXION_INICIAL, type Complexion, type Formas } from "../modelos/formas";
 import type { ProyectoAbierto } from "../proyectos/proyecto";
@@ -438,6 +439,7 @@ export class Visor3D implements IContentRenderer {
   private async cargar(): Promise<void> {
     try {
       this.base = await cargarCuerpo();
+      prepararSimetria(this.base);
     } catch (error) {
       this.estadoTexto.textContent = t("No se pudo cargar el cuerpo: {error}", { error: String(error) });
       return;

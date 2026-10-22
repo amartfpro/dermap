@@ -407,5 +407,12 @@
   "¿Eliminar el lienzo «{nombre}»? No se puede deshacer.": "Delete the canvas “{nombre}”? This cannot be undone.",
   "¿Eliminar el proyecto «{nombre}» y su lienzo? Se borra del disco y no se puede deshacer. Si quieres conservar una copia, usa antes «Exportar…».": "Delete the project “{nombre}” and its canvas? It is removed from disk and cannot be undone. To keep a copy, use “Export…” first.",
   "¿Eliminar el proyecto «{nombre}» y sus {n} lienzos? Se borra del disco y no se puede deshacer. Si quieres conservar una copia, usa antes «Exportar…».": "Delete the project “{nombre}” and its {n} canvases? It is removed from disk and cannot be undone. To keep a copy, use “Export…” first.",
-  "¿Eliminar la carpeta «{nombre}» y todo lo que contiene? No se puede deshacer.": "Delete the folder “{nombre}” and everything in it? This cannot be undone."
+  "¿Eliminar la carpeta «{nombre}» y todo lo que contiene? No se puede deshacer.": "Delete the folder “{nombre}” and everything in it? This cannot be undone.",
+  "{lienzo} en espejo ({pct} %)": "{lienzo} mirrored ({pct} %)",
+  "En espejo (lado contrario)": "Mirrored (opposite side)",
+  "{lienzo} (espejo)": "{lienzo} (mirrored)",
+  "Traer dibujo en espejo de {lienzo}": "Bring mirrored drawing from {lienzo}",
+  "Traer dibujo de {lienzo}": "Bring drawing from {lienzo}",
+  "De «{lienzo}» (espejo)": "From “{lienzo}” (mirrored)",
+  "De «{lienzo}»": "From “{lienzo}”"
 }

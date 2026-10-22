@@ -64,8 +64,12 @@ el almacenamiento del navegador, no en disco).
    **Vista recta** muestra la piel desenrollada en un rectángulo (una línea horizontal es un
    anillo alrededor del brazo), y **Pintar en 3D** dibuja directamente sobre el modelo.
 5. **Capas**: crear, duplicar, reordenar, ocultar, bloquear, opacidad, modo de fusión,
-   **Importar imagen…** (PNG/JPG), **Copiar/Pegar** entre lienzos y **Traer dibujo de…**, que
-   recoloca el dibujo de otro lienzo sobre la misma piel (para rehacer una zona con otro corte).
+   **Importar imagen…** (PNG/JPG), **A stencil…** (convierte una foto o boceto importado en
+   líneas o en blanco y negro, en una capa nueva), **Texto…** (lettering con las tipografías
+   instaladas y la altura de las mayúsculas en mm reales), **Copiar/Pegar** entre lienzos y
+   **Traer dibujo de…**, que recoloca el dibujo de otro lienzo sobre la misma piel (para rehacer
+   una zona con otro corte) o lo lleva **en espejo** a la zona simétrica (del brazo izquierdo al
+   derecho, por ejemplo).
 6. **Exportar stencil…**: PDF A4 a escala real (en piezas con solape si no cabe) o PNG a 300 ppp,
    con las capas que elijas y en negro puro para la impresora térmica. **Imagen 3D…** guarda la
    vista del visor.

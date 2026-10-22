@@ -1,3 +1,5 @@
+import { t } from "../i18n";
+import type { Simetria } from "../geometria/simetria";
 import type { Lienzo } from "./lienzo";
 import { contexto, crearLamina, teselasEn, TESELA, type Lamina, type Rect } from "./teselas";
 
@@ -13,15 +15,26 @@ type P2 = [number, number];
  * Crea una capa nueva en el destino (se puede deshacer) y devuelve cuántos triángulos de
  * la zona de destino tenían dibujo de origen.
  */
-export function transferirDibujo(origen: Lienzo, destino: Lienzo): { comunes: number; total: number } {
+export function transferirDibujo(origen: Lienzo, destino: Lienzo, espejo?: Simetria): { comunes: number; total: number } {
   // Triángulo del cuerpo → cara de la zona de origen.
   const enOrigen = new Map<number, number>();
   origen.zona.triangulos.forEach((t, i) => enOrigen.set(t, i));
   const pares: { s: P2[]; d: P2[]; rect: Rect }[] = [];
   destino.zona.triangulos.forEach((t, j) => {
-    const i = enOrigen.get(t);
+    // En espejo, el triángulo de origen es el reflejo del de destino.
+    const ts = espejo ? espejo.triangulos[t] : t;
+    const i = ts < 0 ? undefined : enOrigen.get(ts);
     if (i === undefined) return;
-    const s = esquinas(origen, i);
+    let s = esquinas(origen, i);
+    if (espejo) {
+      // Las esquinas del reflejo no van en el mismo orden: se emparejan por vértice.
+      const c = espejo.caras;
+      const orden = [0, 1, 2].map((k) => {
+        const reflejo = espejo.vertices[c[3 * t + k]];
+        return [0, 1, 2].find((m) => c[3 * ts + m] === reflejo) ?? k;
+      });
+      s = orden.map((m) => s[m]);
+    }
     const d = esquinas(destino, j);
     pares.push({ s, d: ampliar(d, 0.75), rect: caja(d, 2) });
   });
@@ -46,8 +59,8 @@ export function transferirDibujo(origen: Lienzo, destino: Lienzo): { comunes: nu
   };
 
   const doc = destino.doc;
-  destino.historial.registrar(doc.instantaneaCapas(`Traer dibujo de ${origen.nombre}`));
-  const capa = doc.añadirCapa(`De «${origen.nombre}»`);
+  destino.historial.registrar(doc.instantaneaCapas(espejo ? t("Traer dibujo en espejo de {lienzo}", { lienzo: origen.nombre }) : t("Traer dibujo de {lienzo}", { lienzo: origen.nombre })));
+  const capa = doc.añadirCapa(espejo ? t("De «{lienzo}» (espejo)", { lienzo: origen.nombre }) : t("De «{lienzo}»", { lienzo: origen.nombre }));
   let total: Rect | null = null;
   for (const par of pares) {
     const m = afin(par.s, par.d);

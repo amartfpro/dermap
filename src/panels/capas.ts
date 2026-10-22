@@ -3,6 +3,7 @@ import type { IContentRenderer } from "dockview-core";
 import { app } from "../estado";
 import { MODOS_FUSION, nuevoId, type Capa, type ModoFusion } from "../lienzo/capa";
 import type { Lienzo } from "../lienzo/lienzo";
+import { simetriaActual } from "../geometria/simetria";
 import { transferirDibujo } from "../lienzo/transferir";
 import { abrirDialogoTexto } from "./texto";
 import { abrirDialogoFiltro } from "./filtro";
@@ -139,14 +140,31 @@ export class PanelCapas implements IContentRenderer {
       const actual = this.lienzo;
       if (!actual) return;
       const propios = new Set(actual.zona.triangulos);
+      const sim = simetriaActual();
+      const reflejados = sim ? new Set(Array.from(actual.zona.triangulos, (tri) => sim.triangulos[tri])) : null;
+      const espejos: HTMLOptionElement[] = [];
       for (const otro of app.lienzos) {
         if (otro === actual) continue;
-        let comunes = 0;
-        for (const tri of otro.zona.triangulos) if (propios.has(tri)) comunes++;
+        let comunes = 0, enEspejo = 0;
+        for (const tri of otro.zona.triangulos) {
+          if (propios.has(tri)) comunes++;
+          if (reflejados?.has(tri)) enEspejo++;
+        }
         const pct = Math.round((100 * comunes) / propios.size);
         const o = new Option(comunes ? t("{lienzo} ({pct} % común)", { lienzo: otro.nombre, pct }) : t("{lienzo} (no coincide)", { lienzo: otro.nombre }), otro.id);
         o.disabled = comunes === 0;
         s.append(o);
+        // La zona simétrica (el otro brazo, la otra pierna…) se ofrece en espejo.
+        if (enEspejo > propios.size * 0.05) {
+          const pe = Math.round((100 * enEspejo) / propios.size);
+          espejos.push(new Option(t("{lienzo} en espejo ({pct} %)", { lienzo: otro.nombre, pct: pe }), `espejo:${otro.id}`));
+        }
+      }
+      if (espejos.length) {
+        const grupo = document.createElement("optgroup");
+        grupo.label = t("En espejo (lado contrario)");
+        grupo.append(...espejos);
+        s.append(grupo);
       }
       if (s.options.length === 1) s.append(Object.assign(new Option(t("No hay otros lienzos"), ""), { disabled: true }));
     };
@@ -154,14 +172,19 @@ export class PanelCapas implements IContentRenderer {
     s.addEventListener("pointerdown", rellenar);
     s.addEventListener("focus", rellenar);
     s.addEventListener("change", () => {
-      const origen = app.lienzos.find((l) => l.id === s.value);
+      const espejo = s.value.startsWith("espejo:");
+      const id = espejo ? s.value.slice(7) : s.value;
+      const origen = app.lienzos.find((l) => l.id === id);
       s.value = "";
       if (!origen || !this.lienzo) return;
-      const { comunes, total } = transferirDibujo(origen, this.lienzo);
+      const sim = espejo ? simetriaActual() : null;
+      if (espejo && !sim) return;
+      const { comunes, total } = transferirDibujo(origen, this.lienzo, sim ?? undefined);
+      const nombre = espejo ? t("{lienzo} (espejo)", { lienzo: origen.nombre }) : origen.nombre;
       if (comunes < total) {
         const fuera = Math.round((100 * (total - comunes)) / total);
-        this.aviso(t("Dibujo traído de «{lienzo}». El {pct} % de esta zona no estaba en el original y queda vacío.", { lienzo: origen.nombre, pct: fuera }));
-      } else this.aviso(t("Dibujo traído de «{lienzo}».", { lienzo: origen.nombre }));
+        this.aviso(t("Dibujo traído de «{lienzo}». El {pct} % de esta zona no estaba en el original y queda vacío.", { lienzo: nombre, pct: fuera }));
+      } else this.aviso(t("Dibujo traído de «{lienzo}».", { lienzo: nombre }));
     });
     return s;
   }
