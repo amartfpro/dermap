@@ -503,3 +503,93 @@ body {
 .fila-arbol.dañada .nombre {
   color: #e0483e;
 }
+
+/* Diálogo modal */
+.fondo-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal {
+  background: var(--fondo-panel);
+  border: 1px solid var(--borde);
+  border-radius: 8px;
+  padding: 16px 18px;
+  width: min(900px, calc(100vw - 32px));
+  max-height: calc(100vh - 32px);
+  overflow: auto;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+}
+
+.modal h2 {
+  margin: 0 0 12px;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.modal-columnas {
+  display: flex;
+  gap: 18px;
+  flex-wrap: wrap;
+}
+
+.modal-opciones {
+  flex: 1 1 260px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.modal-opciones fieldset {
+  border: 1px solid var(--borde);
+  border-radius: 6px;
+  padding: 6px 10px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+}
+
+.modal-opciones legend {
+  color: var(--texto-suave);
+  padding: 0 4px;
+}
+
+.modal-previa {
+  flex: 1 1 420px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.modal-previa canvas {
+  max-width: 100%;
+  background: #fff;
+  border: 1px solid var(--borde);
+}
+
+.modal-previa .resumen {
+  margin: 0;
+  color: var(--texto-suave);
+}
+
+.modal-pie {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.estado-modal {
+  flex: 1;
+  color: var(--texto-suave);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

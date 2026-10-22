@@ -7,6 +7,7 @@ import { longitud, seleccionarPorEje, submalla, suavizarSeleccion, type Seleccio
 import { cargarCuerpo, ejeDeLaPierna, ejeDelBrazo, type Cuerpo } from "../modelos/cuerpo";
 import { app } from "../estado";
 import { añadirLienzo } from "../proyectos/gestor";
+import { guardarExportacion } from "../exportar/guardar";
 import { nuevoId } from "../lienzo/capa";
 import { Lienzo } from "../lienzo/lienzo";
 import { contexto, crearLamina, RegionSucia, type Rect } from "../lienzo/teselas";
@@ -93,6 +94,7 @@ export class Visor3D implements IContentRenderer {
       radio,
       boton("Limpiar", () => this.fijarSeleccion([])),
       boton("Aplanar zona", () => void this.aplanar()),
+      titulo(boton("Imagen 3D…", () => void this.exportarImagen()), "Guardar la vista actual en PNG para enseñarla al cliente"),
     );
     this.element.append(barra, this.estadoTexto);
 
@@ -479,6 +481,31 @@ export class Visor3D implements IContentRenderer {
     }
   }
 
+  // ── Imagen para el cliente (RF-52) ──────────────────────────────────────────
+
+  /** Guarda la vista actual a doble resolución, sin selección ni bordes de edición. */
+  private async exportarImagen(): Promise<void> {
+    const resaltes = [...this.mallas.values()].map((m) => m.resalte.visible);
+    const resaltado = this.resaltado.visible;
+    for (const m of this.mallas.values()) m.resalte.visible = false;
+    this.resaltado.visible = false;
+    const proporcion = this.renderer.getPixelRatio();
+    this.renderer.setPixelRatio(Math.max(2, proporcion * 2));
+    const { clientWidth: ancho, clientHeight: alto } = this.element;
+    this.renderer.setSize(ancho, alto, false);
+    this.renderer.render(this.escena, this.camara);
+    // Hay que leer el canvas en el mismo instante del render (el búfer no se conserva).
+    const url = this.renderer.domElement.toDataURL("image/png");
+    this.renderer.setPixelRatio(proporcion);
+    this.renderer.setSize(ancho, alto, false);
+    [...this.mallas.values()].forEach((m, i) => (m.resalte.visible = resaltes[i]));
+    this.resaltado.visible = resaltado;
+    const bytes = Uint8Array.from(atob(url.split(",")[1]), (c) => c.charCodeAt(0));
+    const nombre = `${app.proyecto?.nombre ?? "Dermap"} - vista 3D`;
+    const ruta = await guardarExportacion(bytes, nombre, { descripcion: "Imagen PNG", extension: "png", mime: "image/png" });
+    if (ruta) this.estadoTexto.textContent = `Imagen guardada: ${ruta}`;
+  }
+
   // ── Cámara ────────────────────────────────────────────────────────────────────
 
   private ajustarTamano(): void {
@@ -572,6 +599,11 @@ function geometriaDe(vertices: Float64Array, caras: Int32Array): THREE.BufferGeo
   g.setIndex(new THREE.BufferAttribute(new Uint32Array(caras), 1));
   g.computeVertexNormals();
   return g;
+}
+
+function titulo<T extends HTMLElement>(el: T, texto: string): T {
+  el.title = texto;
+  return el;
 }
 
 function boton(texto: string, alPulsar: () => void): HTMLButtonElement {

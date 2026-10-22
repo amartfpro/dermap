@@ -4,6 +4,7 @@ import { PX_POR_MM } from "../lienzo/geometria-zona";
 import { ImagenFlotante } from "../lienzo/imagen";
 import type { Lienzo } from "../lienzo/lienzo";
 import type { Rect } from "../lienzo/teselas";
+import { abrirDialogoExportar } from "./exportar";
 
 type P = { x: number; y: number };
 type Arrastre =
@@ -224,6 +225,8 @@ export class PanelLienzo implements IContentRenderer {
     });
     const encajar = boton("Encajar", () => this.encajar());
     encajar.title = "Ver el lienzo entero (0)";
+    const exportar = boton("Exportar stencil…", () => this.lienzo && abrirDialogoExportar(this.lienzo));
+    exportar.title = "Stencil a escala real en PDF (A4) o PNG";
 
     this.controles = {
       pincel,
@@ -242,6 +245,7 @@ export class PanelLienzo implements IContentRenderer {
       grupo(etiqueta("Tamaño", tamano), etiqueta("Opacidad", opacidad), etiqueta("Dureza", dureza), presion),
       grupo(deshacer, rehacer),
       grupo(cuadricula, deformacion, encajar),
+      grupo(exportar),
     );
   }
 

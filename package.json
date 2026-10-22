@@ -14,6 +14,7 @@
     "@tauri-apps/plugin-dialog": "^2.8.3",
     "@tauri-apps/plugin-fs": "^2.7.1",
     "dockview-core": "^8.6.1",
+    "pdf-lib": "^1.17.1",
     "three": "^0.186.1"
   },
   "devDependencies": {
