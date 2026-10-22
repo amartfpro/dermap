@@ -43,6 +43,8 @@ export interface ModeloCuerpo {
   /** 0–1. Opcional en proyectos anteriores (0,5). */
   musculatura?: number;
   tonoPiel: string; // color CSS
+  /** Contornos reales del cliente en cm (opcionales): ver modelos/medidas.ts. */
+  medidas?: import("../modelos/medidas").Medidas;
   versionMalla: string; // versión de la malla base
 }
 

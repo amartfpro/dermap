@@ -4,6 +4,7 @@ import { ALTURA_MAXIMA, ALTURA_MINIMA, COMPLEXION_INICIAL } from "../modelos/for
 import { asegurarProyecto } from "../proyectos/gestor";
 import type { ModeloCuerpo } from "../proyectos/modelo";
 import { POSE_RECTA, type Pose } from "../modelos/pose";
+import type { Medida, Medidas } from "../modelos/medidas";
 
 /** Tonos de piel de partida (RF-14); el selector de color permite cualquier otro. */
 const TONOS = ["#f3d6c4", "#e8bfa0", "#d8a98a", "#c08a64", "#8f5f3f", "#5e3d29"];
@@ -25,7 +26,12 @@ export class PanelCuerpo {
   private pose: Pose = { ...POSE_RECTA };
   private deslizadoresPose: Partial<Record<keyof Pose, HTMLInputElement>> = {};
 
-  constructor(private readonly alCambiarPose: (pose: Pose) => void = () => {}) {
+  private camposMedida: Partial<Record<Medida, HTMLInputElement>> = {};
+
+  constructor(
+    private readonly alCambiarPose: (pose: Pose) => void = () => {},
+    private readonly contornosModelo: () => Required<Medidas> | null = () => null,
+  ) {
     this.element = document.createElement("div");
     this.element.className = "ventana-cuerpo";
     this.element.hidden = true;
@@ -98,12 +104,13 @@ export class PanelCuerpo {
         sexo: COMPLEXION_INICIAL.sexo,
         complexion: COMPLEXION_INICIAL.peso,
         musculatura: COMPLEXION_INICIAL.musculatura,
+        medidas: {},
       }),
     );
     const nota = document.createElement("p");
     nota.className = "nota";
     nota.textContent =
-      t("Es una aproximación para ver el diseño en proporción: la medida real del stencil es la del lienzo, en centímetros.");
+      t("Sin medidas del cliente, el cuerpo es una aproximación para ver el diseño en proporción. La medida del stencil es siempre la del lienzo, en centímetros.");
 
     // Postura (RF-13): solo para ver cómo se deforma el diseño; no se guarda ni cambia los lienzos.
     const postura = document.createElement("div");
@@ -139,6 +146,47 @@ export class PanelCuerpo {
       recta,
     );
 
+    // Medidas reales del cliente: con ellas los lienzos nuevos salen a su escala real.
+    const medidas = document.createElement("div");
+    medidas.className = "medidas";
+    const NOMBRES: [Medida, string][] = [
+      ["brazo", t("Brazo (bíceps)")],
+      ["antebrazo", t("Antebrazo")],
+      ["muneca", t("Muñeca")],
+      ["muslo", t("Muslo")],
+      ["gemelo", t("Gemelo")],
+      ["tobillo", t("Tobillo")],
+    ];
+    for (const [clave, nombre] of NOMBRES) {
+      const entrada = document.createElement("input");
+      entrada.type = "number";
+      entrada.min = "5";
+      entrada.max = "120";
+      entrada.step = "0.5";
+      entrada.className = "numero";
+      entrada.addEventListener("change", () => {
+        const valor = Number(entrada.value);
+        const actuales = { ...(app.proyecto?.datos.modelo.medidas ?? {}) };
+        if (entrada.value === "" || !(valor > 0)) delete actuales[clave];
+        else actuales[clave] = Math.min(120, Math.max(5, valor));
+        this.cambiar({ medidas: actuales });
+      });
+      this.camposMedida[clave] = entrada;
+      const fila = document.createElement("label");
+      fila.className = "fila-medida";
+      const texto = document.createElement("span");
+      texto.textContent = nombre;
+      const cm = document.createElement("small");
+      cm.textContent = "cm";
+      fila.append(texto, entrada, cm);
+      medidas.append(fila);
+    }
+    const notaMedidas = document.createElement("p");
+    notaMedidas.className = "nota";
+    notaMedidas.textContent = t(
+      "Contornos con cinta métrica, iguales en los dos lados. Con ellos, los lienzos que crees después salen a la escala real del cliente; los ya creados conservan su tamaño. En gris, la medida actual del modelo.",
+    );
+
     this.element.append(
       cabecera,
       campo(t("Altura"), alturaFila),
@@ -148,6 +196,8 @@ export class PanelCuerpo {
       campo(t("Tono de piel"), tonos),
       nota,
       restablecer,
+      campo(t("Medidas del cliente"), medidas),
+      notaMedidas,
       campo(t("Postura (solo para ver)"), postura),
     );
     this.sincronizar();
@@ -175,6 +225,12 @@ export class PanelCuerpo {
     const tono = m?.tonoPiel ?? "#d8a98a";
     this.color.value = tono;
     for (const b of this.muestras) b.classList.toggle("activo", b.title === tono);
+    const modelo = this.contornosModelo();
+    for (const [clave, entrada] of Object.entries(this.camposMedida) as [Medida, HTMLInputElement][]) {
+      const valor = m?.medidas?.[clave];
+      entrada.value = valor ? String(valor) : "";
+      entrada.placeholder = modelo ? modelo[clave].toFixed(1) : "";
+    }
   }
 
   private cambiar(cambios: Partial<ModeloCuerpo>): void {

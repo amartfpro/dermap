@@ -12,6 +12,7 @@ import type { ProyectoAbierto } from "../proyectos/proyecto";
 import { enTauri } from "../proyectos/sistema-archivos";
 import { PanelCuerpo } from "./cuerpo";
 import { aplicarPose, esRecta, POSE_RECTA, type Pose } from "../modelos/pose";
+import { aplicarMedidas, medirContornos, type Medidas } from "../modelos/medidas";
 import { app } from "../estado";
 import { añadirLienzo } from "../proyectos/gestor";
 import { guardarExportacion } from "../exportar/guardar";
@@ -203,10 +204,13 @@ export class Visor3D implements IContentRenderer {
     this.capaLazo = document.createElement("canvas");
     this.capaLazo.className = "capa-lazo";
     this.element.append(this.capaLazo);
-    this.panelCuerpo = new PanelCuerpo((pose) => {
-      this.pose = pose;
-      this.programarCuerpo();
-    });
+    this.panelCuerpo = new PanelCuerpo(
+      (pose) => {
+        this.pose = pose;
+        this.programarCuerpo();
+      },
+      () => this.contornosDelModelo(),
+    );
     this.barraPresentacion = this.montarBarraPresentacion();
     this.element.append(barra, this.estadoTexto, this.panelCuerpo.element, this.barraPresentacion);
 
@@ -477,8 +481,22 @@ export class Visor3D implements IContentRenderer {
   }
 
   private cuerpoDelProyecto(): Cuerpo {
-    const cuerpo = this.formas ? aplicarComplexion(this.base!, this.formas, this.complexionDelProyecto()) : this.base!;
+    const cuerpo = this.cuerpoSinPostura();
     return aplicarPose(cuerpo, this.pose);
+  }
+
+  /** Cuerpo con complexión y medidas del cliente, en postura recta. */
+  private cuerpoSinPostura(): Cuerpo {
+    const conForma = this.formas ? aplicarComplexion(this.base!, this.formas, this.complexionDelProyecto()) : this.base!;
+    const medidas = app.proyecto?.datos.modelo.medidas;
+    return medidas ? aplicarMedidas(conForma, medidas) : conForma;
+  }
+
+  /** Contornos del modelo sin las medidas del cliente (para orientar al introducirlas). */
+  private contornosDelModelo(): Required<Medidas> | null {
+    if (!this.base) return null;
+    const conForma = this.formas ? aplicarComplexion(this.base, this.formas, this.complexionDelProyecto()) : this.base;
+    return medirContornos(conForma);
   }
 
   /** Con el cuerpo doblado no se seleccionan ni se aplanan zonas: el lienzo se hace en postura recta. */

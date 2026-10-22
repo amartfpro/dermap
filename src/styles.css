@@ -899,3 +899,33 @@ body {
 .postura .boton-texto {
   align-self: flex-start;
 }
+
+.medidas {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 4px;
+}
+
+.fila-medida {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+}
+
+.fila-medida span {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fila-medida .numero {
+  width: 64px;
+}
+
+.fila-medida input::placeholder {
+  color: var(--texto-suave);
+  opacity: 0.6;
+}

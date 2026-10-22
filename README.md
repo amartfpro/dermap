@@ -49,7 +49,9 @@ el almacenamiento del navegador, no en disco).
    **Importar…** lo abre como proyecto nuevo (con la aplicación instalada, también basta con
    hacer doble clic en el archivo `.dermap`).
 2. **Cuerpo** (visor 3D → **Cuerpo…**): altura real, sexo, complexión, musculatura y tono de
-   piel. Los lienzos siguen al cuerpo al cambiarlo. **Postura** dobla codos y rodillas solo para
+   piel. Los lienzos siguen al cuerpo al cambiarlo. Con las **medidas del cliente** (contornos
+   de brazo, antebrazo, muñeca, muslo, gemelo y tobillo tomados con cinta) los lienzos nuevos
+   salen a su escala real. **Postura** dobla codos y rodillas solo para
    ver cómo se deforma el diseño.
 3. **Zona** (visor 3D): una «Zona rápida», **Seleccionar** (pincel) o **Lazo** (rodear lo que
    se ve); Mayús quita. En mangas, la línea roja es el corte: va por la cara que no estás
