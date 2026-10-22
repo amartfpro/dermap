@@ -110,12 +110,20 @@ export class Visor3D implements IContentRenderer {
   private raycaster = new THREE.Raycaster();
 
   private zonas3d = new THREE.Group();
+  /** Fotogramas que aún hay que dibujar tras un cambio (dibujado bajo demanda). */
+  private framesPendientes = 2;
+  private ultimoRender = 0;
+  private redibujar = () => {
+    this.framesPendientes = 3;
+  };
   private mallas = new Map<Lienzo, MallaLienzo>();
   private alCambiarLienzos = () => {
+    this.redibujar();
     this.reconstruirLienzos();
     if (this.presentando) this.pintarVersiones();
   };
   private alCambiarActivo = () => {
+    this.redibujar();
     this.resaltarActivo();
     // RF-41: al cambiar de lienzo, la cámara va a su zona.
     if (app.activo && app.activo !== this.ultimoActivo && !this.presentando) this.encuadrarZona(app.activo);
@@ -224,11 +232,21 @@ export class Visor3D implements IContentRenderer {
     this.observador = new ResizeObserver(() => this.ajustarTamano());
     this.observador.observe(this.element);
 
-    this.renderer.setAnimationLoop(() => {
+    // Se dibuja solo cuando algo cambia (cámara, texturas, escena o entrada del usuario), y
+    // además una vez por segundo por si acaso: así el visor no gasta GPU mientras se dibuja
+    // en el lienzo ni cuando no se toca (RNF-01, RNF-02).
+    for (const tipo of ["pointerdown", "pointermove", "pointerup", "wheel", "keydown", "keyup"]) {
+      this.element.addEventListener(tipo, this.redibujar, { passive: true });
+    }
+    this.renderer.setAnimationLoop((t) => {
       if (!this.activo) return;
-      this.controles.update();
-      this.subirTexturas();
-      this.renderer.render(this.escena, this.camara);
+      const movida = this.controles.update();
+      const texturas = this.subirTexturas();
+      if (movida || texturas || this.framesPendientes > 0 || this.controles.autoRotate || t - this.ultimoRender > 1000) {
+        this.framesPendientes = Math.max(0, this.framesPendientes - 1);
+        this.ultimoRender = t;
+        this.renderer.render(this.escena, this.camara);
+      }
     });
 
     visores.push(this);
@@ -360,6 +378,7 @@ export class Visor3D implements IContentRenderer {
   }
 
   private encuadrar(centro: P3, radio: number, direccion: P3): void {
+    this.redibujar();
     this.controles.target.set(...centro);
     const dir = new THREE.Vector3(...direccion).normalize();
     this.camara.position.copy(this.controles.target).addScaledVector(dir, this.distanciaPara(radio));
@@ -370,6 +389,9 @@ export class Visor3D implements IContentRenderer {
     if (this.presentando) this.presentar(false);
     visores.splice(visores.indexOf(this), 1);
     this.renderer.setAnimationLoop(null);
+    for (const tipo of ["pointerdown", "pointermove", "pointerup", "wheel", "keydown", "keyup"]) {
+      this.element.removeEventListener(tipo, this.redibujar);
+    }
     this.observador.disconnect();
     this.controles.dispose();
     this.renderer.dispose();
@@ -491,6 +513,7 @@ export class Visor3D implements IContentRenderer {
    */
   private actualizarCuerpo(): void {
     if (!this.base || !this.mallaCuerpo) return;
+    this.redibujar();
     const material = this.mallaCuerpo.material as THREE.MeshStandardMaterial;
     material.color.set(app.proyecto?.datos.modelo.tonoPiel ?? 0xd8a98a);
     this.cuerpo = this.cuerpoDelProyecto();
@@ -977,6 +1000,7 @@ export class Visor3D implements IContentRenderer {
   }
 
   private actualizarCorte(): void {
+    this.redibujar();
     const seleccion = this.pintando ? null : this.seleccionActual();
     const corte = seleccion && this.corteActual(seleccion);
     this.previaCorte.visible = !!corte;
@@ -1205,11 +1229,15 @@ export class Visor3D implements IContentRenderer {
   }
 
   /** Sube a la GPU solo las regiones de textura que han cambiado (P3). */
-  private subirTexturas(): void {
+  /** Devuelve si ha subido algo (y por tanto hay que volver a dibujar). */
+  private subirTexturas(): boolean {
+    let algo = false;
     for (const [lienzo, m] of this.mallas) {
       if (m.pendiente.vacia) continue;
       for (const r of m.pendiente.vaciar()) this.subirRegion(lienzo, m, r);
+      algo = true;
     }
+    return algo;
   }
 
   private subirRegion(lienzo: Lienzo, m: MallaLienzo, r: Rect): void {
@@ -1260,6 +1288,7 @@ export class Visor3D implements IContentRenderer {
   // ── Cámara ────────────────────────────────────────────────────────────────────
 
   private ajustarTamano(): void {
+    this.redibujar();
     const { clientWidth: ancho, clientHeight: alto } = this.element;
     if (ancho === 0 || alto === 0) return;
     this.renderer.setSize(ancho, alto, false);
