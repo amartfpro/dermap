@@ -1,5 +1,6 @@
 import { idiomaActual, plural, t } from "../i18n";
 import { app } from "../estado";
+import { medirDiseno } from "../lienzo/medir";
 import { asegurarProyecto } from "../proyectos/gestor";
 
 /**
@@ -66,7 +67,23 @@ export async function abrirFicha(): Promise<void> {
   pie.append(info, cancelar, guardar);
   info.style.flex = "1";
 
-  caja.append(titulo, rejilla, campoNotas, pie);
+  // Tamaño de cada diseño (para presupuestar): caja y superficie con tinta.
+  const disenos = document.createElement("div");
+  disenos.className = "campo-ficha ancho";
+  const tituloDisenos = document.createElement("span");
+  tituloDisenos.textContent = t("Diseños");
+  const tabla = document.createElement("table");
+  tabla.className = "tabla-disenos";
+  for (const lienzo of app.lienzos) {
+    const m = medirDiseno(lienzo);
+    const fila = tabla.insertRow();
+    fila.insertCell().textContent = lienzo.nombre;
+    fila.insertCell().textContent = m ? `${m.anchoCm.toFixed(1)} × ${m.altoCm.toFixed(1)} cm` : t("vacío");
+    fila.insertCell().textContent = m ? t("{area} cm² con tinta", { area: Math.round(m.tintaCm2) }) : "";
+  }
+  disenos.append(tituloDisenos, tabla);
+
+  caja.append(titulo, rejilla, campoNotas, ...(app.lienzos.length ? [disenos] : []), pie);
   document.body.append(fondo);
   cliente.focus();
 

@@ -420,5 +420,8 @@
   "Voltear ↕": "Flip ↕",
   "Coloca la imagen: arrastra para mover, esquinas para escalar, punto superior para girar (Mayús: de 15 en 15°).": "Place the image: drag to move, corners to scale, top handle to rotate (Shift: 15° steps).",
   "Mayús+H · Mayús+V": "Shift+H · Shift+V",
-  "Voltear la imagen flotante en horizontal · en vertical": "Flip the floating image horizontally · vertically"
+  "Voltear la imagen flotante en horizontal · en vertical": "Flip the floating image horizontally · vertically",
+  "Diseños": "Designs",
+  "vacío": "empty",
+  "{area} cm² con tinta": "{area} cm² inked"
 }

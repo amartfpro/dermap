@@ -968,3 +968,17 @@ body {
   font-size: 12px;
   color: var(--texto-suave);
 }
+
+.tabla-disenos {
+  border-collapse: collapse;
+  font-size: 12px;
+  width: 100%;
+}
+.tabla-disenos td {
+  padding: 3px 8px 3px 0;
+  border-bottom: 1px solid var(--borde, #3a3a3a);
+  color: var(--texto-suave, #bbb);
+}
+.tabla-disenos td:first-child {
+  color: inherit;
+}

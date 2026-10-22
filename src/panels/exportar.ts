@@ -1,4 +1,5 @@
 import { plural, t } from "../i18n";
+import { medirDiseno } from "../lienzo/medir";
 import { exportarStencil, planificar, rectContenido, type OpcionesStencil } from "../exportar/stencil";
 import { guardarExportacion } from "../exportar/guardar";
 import { PX_POR_MM } from "../lienzo/geometria-zona";
@@ -142,6 +143,8 @@ export function abrirDialogoExportar(lienzo: Lienzo): void {
             ? plural(plan.piezas.length, "1 hoja A4 apaisada", "{n} hojas A4 apaisadas, con 1 cm de solape")
             : plural(plan.piezas.length, "1 hoja A4 vertical", "{n} hojas A4 verticales, con 1 cm de solape"))
         : " · 300 ppp");
+    const medida = medirDiseno(lienzo, (c) => opciones.capas.has(c.id));
+    if (medida) resumen.textContent += " · " + t("{area} cm² con tinta", { area: Math.round(medida.tintaCm2) });
 
     // Vista previa a baja resolución, con el reparto en hojas encima.
     const lado = 420;
@@ -152,31 +155,31 @@ export function abrirDialogoExportar(lienzo: Lienzo): void {
     lienzoPrevia.height = h;
     const ctx = lienzoPrevia.getContext("2d")!;
     const temporal = crearLamina(w, h);
-    const t = contexto(temporal);
-    t.fillStyle = "#fff";
-    t.fillRect(0, 0, w, h);
-    t.setTransform(escala, 0, 0, escala, -rect.x0 * escala, -rect.y0 * escala);
-    t.save();
-    t.clip(lienzo.geo.recorte);
-    t.imageSmoothingQuality = "high";
-    lienzo.doc.componer(t, rect, (c) => opciones.capas.has(c.id));
-    t.restore();
+    const tc = contexto(temporal);
+    tc.fillStyle = "#fff";
+    tc.fillRect(0, 0, w, h);
+    tc.setTransform(escala, 0, 0, escala, -rect.x0 * escala, -rect.y0 * escala);
+    tc.save();
+    tc.clip(lienzo.geo.recorte);
+    tc.imageSmoothingQuality = "high";
+    lienzo.doc.componer(tc, rect, (c) => opciones.capas.has(c.id));
+    tc.restore();
     if (opciones.soloLineas) {
-      t.setTransform(1, 0, 0, 1, 0, 0);
-      const img = t.getImageData(0, 0, w, h);
+      tc.setTransform(1, 0, 0, 1, 0, 0);
+      const img = tc.getImageData(0, 0, w, h);
       for (let i = 0; i < img.data.length; i += 4) {
         const v = 0.299 * img.data[i] + 0.587 * img.data[i + 1] + 0.114 * img.data[i + 2] < 128 ? 0 : 255;
         img.data[i] = img.data[i + 1] = img.data[i + 2] = v;
       }
-      t.putImageData(img, 0, 0);
-      t.setTransform(escala, 0, 0, escala, -rect.x0 * escala, -rect.y0 * escala);
+      tc.putImageData(img, 0, 0);
+      tc.setTransform(escala, 0, 0, escala, -rect.x0 * escala, -rect.y0 * escala);
     }
     if (opciones.contorno) {
-      t.strokeStyle = "#000";
-      t.lineWidth = 1 / escala;
-      t.setLineDash([4 / escala, 3 / escala]);
-      t.stroke(lienzo.geo.contorno);
-      t.stroke(lienzo.geo.costura);
+      tc.strokeStyle = "#000";
+      tc.lineWidth = 1 / escala;
+      tc.setLineDash([4 / escala, 3 / escala]);
+      tc.stroke(lienzo.geo.contorno);
+      tc.stroke(lienzo.geo.costura);
     }
     ctx.save();
     if (opciones.espejo) {
