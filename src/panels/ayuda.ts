@@ -22,6 +22,7 @@ const SECCIONES: { titulo: string; filas: [string, string][] }[] = [
       [traducible("B · E"), traducible("Pincel · goma")],
       [traducible("G · L · U"), traducible("Relleno · lazo · formas (línea, rectángulo, elipse)")],
       [traducible("I o Alt + clic"), traducible("Cuentagotas")],
+      [traducible("T"), traducible("Texto (lettering) a tamaño real")],
       [traducible("[ · ]"), traducible("Pincel más pequeño · más grande")],
       [traducible("Mayús + clic"), traducible("Línea recta desde el final del trazo anterior")],
       [traducible("Ctrl+Z · Ctrl+Mayús+Z"), traducible("Deshacer · rehacer")],

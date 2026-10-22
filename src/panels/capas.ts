@@ -4,6 +4,7 @@ import { app } from "../estado";
 import { MODOS_FUSION, nuevoId, type Capa, type ModoFusion } from "../lienzo/capa";
 import type { Lienzo } from "../lienzo/lienzo";
 import { transferirDibujo } from "../lienzo/transferir";
+import { abrirDialogoTexto } from "./texto";
 import { boton, panelLienzoActual } from "./lienzo";
 
 /**
@@ -42,6 +43,7 @@ export class PanelCapas implements IContentRenderer {
       titulado(boton(t("↑"), () => this.mover(1)), t("Subir la capa")),
       titulado(boton(t("↓"), () => this.mover(-1)), t("Bajar la capa")),
       titulado(boton(t("Importar imagen…"), () => archivo.click()), t("Importar un PNG o JPG como capa nueva")),
+      titulado(boton(t("Texto…"), () => abrirDialogoTexto()), t("Escribir un texto (lettering) con tipografía y tamaño real (T)")),
       titulado(boton(t("Copiar"), () => void panelLienzoActual()?.copiar()), t("Copiar la capa activa (Ctrl+C)")),
       titulado(boton(t("Pegar"), () => panelLienzoActual()?.pegar()), t("Pegar la capa copiada, en este u otro lienzo (Ctrl+V)")),
       this.selectorTraer(),

@@ -836,6 +836,9 @@ export class PanelLienzo implements IContentRenderer {
       const capas = this.lienzo.doc.capas;
       const i = capas.indexOf(this.lienzo.doc.activa) + (e.key === "ArrowUp" ? 1 : -1);
       if (i >= 0 && i < capas.length) this.lienzo.doc.seleccionarCapa(capas[i]);
+    } else if (tecla === "t") {
+      e.preventDefault();
+      void import("./texto").then((m) => m.abrirDialogoTexto());
     } else if (tecla === "g") {
       app.cambiarAjustes({ herramienta: "relleno" });
     } else if (tecla === "l") {
