@@ -80,6 +80,11 @@ export const POSE_NATURAL: Pose = {
   caderaR: -6,
 };
 
+/** Brazos en horizontal, para mangas y axilas. */
+export const POSE_EN_T: Pose = { ...POSE_RECTA, hombroL: 48, hombroR: 48 };
+
+export const mismaPose = (a: Pose, b: Pose) => (Object.keys(POSE_RECTA) as (keyof Pose)[]).every((k) => a[k] === b[k]);
+
 /** Límites de cada articulación (grados). */
 export const LIMITES_POSE: Record<keyof Pose, [number, number]> = {
   hombroL: [-45, 50],

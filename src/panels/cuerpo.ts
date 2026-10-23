@@ -5,7 +5,7 @@ import { app } from "../estado";
 import { ALTURA_MAXIMA, ALTURA_MINIMA, COMPLEXION_INICIAL } from "../modelos/formas";
 import { asegurarProyecto } from "../proyectos/gestor";
 import type { ModeloCuerpo } from "../proyectos/modelo";
-import { LIMITES_POSE, POSE_NATURAL, POSE_RECTA, poseDe, type Pose } from "../modelos/pose";
+import { LIMITES_POSE, mismaPose, POSE_EN_T, POSE_NATURAL, POSE_RECTA, poseDe, type Pose } from "../modelos/pose";
 
 /** Tonos de piel de partida (RF-14); el selector de color permite cualquier otro. */
 export const TONOS = ["#f3d6c4", "#e8bfa0", "#d8a98a", "#c08a64", "#8f5f3f", "#5e3d29", "#3f281b", "#2a1a12"];
@@ -26,6 +26,8 @@ export class PanelCuerpo {
   private muestras: HTMLButtonElement[] = [];
   private pose: Pose = { ...POSE_NATURAL };
   private casillaSimetrica!: HTMLInputElement;
+  /** Botones de postura: el de la postura actual se marca como activo. */
+  private botonesPostura: [HTMLButtonElement, Pose][] = [];
   private deslizadoresPose: Partial<Record<keyof Pose, HTMLInputElement>> = {};
   private valoresPose: Partial<Record<keyof Pose, HTMLElement>> = {};
 
@@ -199,7 +201,8 @@ export class PanelCuerpo {
     enT.className = "boton-texto";
     enT.textContent = t("En T");
     enT.title = t("Brazos en horizontal (útil para mangas y axilas)");
-    enT.addEventListener("click", () => this.fijarPose({ ...POSE_RECTA, hombroL: 48, hombroR: 48 }));
+    enT.addEventListener("click", () => this.fijarPose(POSE_EN_T));
+    this.botonesPostura = [[natural, POSE_NATURAL], [recta, POSE_RECTA], [enT, POSE_EN_T]];
     const atajos = document.createElement("div");
     atajos.className = "atajos-postura";
     atajos.append(natural, recta, enT);
@@ -251,6 +254,7 @@ export class PanelCuerpo {
   }
 
   private mostrarValoresPose(): void {
+    for (const [b, p] of this.botonesPostura) b.classList.toggle("activo", mismaPose(this.pose, p));
     const pares: [keyof Pose, keyof Pose][] = [
       ["hombroL", "hombroR"],
       ["brazoL", "brazoR"],
