@@ -1,4 +1,5 @@
-import { idiomaActual, plural, t } from "../i18n";
+import { cambiarIdioma, IDIOMAS, idiomaActual, plural, t } from "../i18n";
+import { botonMenu } from "../ui/menu";
 import { app } from "../estado";
 import { confirmar } from "../dialogos";
 import { ALTURA_MAXIMA, ALTURA_MINIMA } from "../modelos/formas";
@@ -103,7 +104,19 @@ async function pintarRecientes(): Promise<void> {
   buscar.type = "text";
   buscar.className = "inicio-buscar";
   buscar.placeholder = t("Buscar por proyecto o cliente…");
-  cabecera.append(titulo, buscar);
+  // Idioma, a la derecha del buscador (como en la barra superior del espacio de trabajo).
+  const idioma = botonMenu("idioma", t("Idioma"), () =>
+    Object.entries(IDIOMAS).map(([codigo, { nombre }]) => ({
+      texto: nombre,
+      marcado: codigo === idiomaActual(),
+      accion: () => cambiarIdioma(codigo),
+    })),
+  );
+  idioma.classList.add("fantasma", "idioma-inicio");
+  const derecha = document.createElement("div");
+  derecha.className = "inicio-cabecera-derecha";
+  derecha.append(buscar, idioma);
+  cabecera.append(titulo, derecha);
   const rejilla = document.createElement("div");
   rejilla.className = "inicio-rejilla";
   cont.append(cabecera, rejilla);
@@ -244,7 +257,7 @@ function pintarNuevo(): void {
   titulo.textContent = t("Nuevo proyecto");
   const intro = document.createElement("p");
   intro.className = "nota";
-  intro.textContent = t("Planifica directamente sobre la piel: la ficha, el cuerpo y los diseños de cada cliente, en un solo lugar.");
+  intro.textContent = t("Planifica directamente sobre la piel. Ficha, cuerpo y diseños de cada cliente, en un solo proyecto.");
   // Dónde se guardará, en una segunda línea más discreta.
   const donde = document.createElement("p");
   donde.className = "nota tenue";

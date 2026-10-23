@@ -1710,10 +1710,7 @@ body.en-inicio > #espacio {
   font-size: 15px;
   font-weight: 600;
   letter-spacing: -0.01em;
-  background: linear-gradient(90deg, var(--texto) 30%, var(--primario-suave));
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
+  color: var(--texto);
 }
 
 .inicio-nav {
@@ -2691,4 +2688,23 @@ body.en-inicio > .barra-estado {
 
 .inicio-pie .firma {
   align-self: flex-start;
+}
+
+.inicio-cabecera-derecha {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: min(380px, 55%);
+}
+
+.inicio-cabecera-derecha .inicio-buscar {
+  flex: 1;
+  width: auto;
+}
+
+.idioma-inicio {
+  width: 36px !important;
+  height: 36px !important;
+  border-radius: 8px !important;
+  color: var(--texto-suave);
 }
