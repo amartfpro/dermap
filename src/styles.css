@@ -2745,3 +2745,38 @@ body.en-inicio > .barra-estado {
 .tonos .muestra-actual {
   margin-left: 4px;
 }
+
+/* Postura: con simetría, un solo deslizador por articulación; sin ella, los dos más estrechos. */
+.postura.simetrica .lado-postura:nth-child(2) {
+  display: none;
+}
+
+.postura.simetrica .lados-postura {
+  grid-template-columns: 1fr;
+}
+
+.postura.simetrica .lado-postura small {
+  display: none;
+}
+
+.lados-postura {
+  gap: 8px;
+  min-width: 0;
+}
+
+.lado-postura {
+  min-width: 0;
+}
+
+.lado-postura small {
+  width: auto;
+  flex: none;
+}
+
+.ventana-cuerpo {
+  overflow-x: hidden;
+}
+
+.atajos-postura .casilla {
+  margin-left: auto;
+}

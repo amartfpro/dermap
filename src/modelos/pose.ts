@@ -17,7 +17,8 @@ type P3 = [number, number, number];
  * Postura del cuerpo (RF-13), en grados. 0 = la postura de la malla base (brazos en «A»).
  *  - hombro: + sube el brazo de lado hacia la «T», − lo baja hacia el costado.
  *  - brazo: + lleva el brazo hacia delante, − hacia atrás.
- *  - codo / rodilla: flexión (0 = recto).
+ *  - codo: flexión desde la postura base (que ya lo dobla unos 45°); − lo estira, hasta ~160°.
+ *  - rodilla: flexión (0 = recta).
  *  - muneca: + dobla la mano hacia la palma.
  *  - cadera: + abre la pierna, − la cierra.
  *  - pierna: + levanta la pierna hacia delante, − hacia atrás.
@@ -69,8 +70,8 @@ export const LIMITES_POSE: Record<keyof Pose, [number, number]> = {
   hombroR: [-45, 50],
   brazoL: [-30, 80],
   brazoR: [-30, 80],
-  codoL: [0, 145],
-  codoR: [0, 145],
+  codoL: [-30, 145],
+  codoR: [-30, 145],
   munecaL: [-60, 60],
   munecaR: [-60, 60],
   caderaL: [-15, 45],

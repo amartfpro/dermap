@@ -140,7 +140,18 @@ export class PanelCuerpo {
     const casillaSimetrica = document.createElement("input");
     casillaSimetrica.type = "checkbox";
     casillaSimetrica.checked = true;
-    simetrica.append(casillaSimetrica, " " + t("Igual en los dos lados"));
+    simetrica.append(casillaSimetrica, " " + t("Simetría"));
+    simetrica.title = t("Mover igual los dos lados; desmárcala para ajustar cada lado por separado");
+    postura.classList.add("simetrica");
+    casillaSimetrica.addEventListener("change", () => {
+      postura.classList.toggle("simetrica", casillaSimetrica.checked);
+      // Al volver a la simetría, el lado derecho copia al izquierdo.
+      if (casillaSimetrica.checked) {
+        const pose = { ...this.pose };
+        for (const k of Object.keys(pose) as (keyof Pose)[]) if (k.endsWith("L")) pose[k.replace(/L$/, "R") as keyof Pose] = pose[k];
+        this.fijarPose(pose);
+      }
+    });
     const fila = (nombre: string, izq: keyof Pose, der: keyof Pose, extremoA: string, extremoB: string) => {
       const f = document.createElement("div");
       f.className = "fila-postura";
@@ -189,17 +200,18 @@ export class PanelCuerpo {
     };
     const recta = document.createElement("button");
     recta.className = "boton-texto";
-    recta.textContent = t("Postura base");
+    recta.textContent = t("Base");
+    recta.title = t("La postura de la malla base, sin girar nada");
     recta.addEventListener("click", () => {
       this.posturaRecta();
       this.alCambiarPose({ ...this.pose });
     });
     const natural = document.createElement("button");
     natural.className = "boton-texto";
-    natural.textContent = t("Postura natural");
-    natural.title = t("Brazos bajados junto al cuerpo y piernas juntas");
+    natural.textContent = t("Natural");
+    natural.title = t("Brazos bajados junto al cuerpo, codos casi rectos y piernas juntas");
     natural.addEventListener("click", () => {
-      this.fijarPose({ ...POSE_RECTA, hombroL: -32, hombroR: -32, caderaL: -6, caderaR: -6 });
+      this.fijarPose({ ...POSE_RECTA, hombroL: -32, hombroR: -32, codoL: -27, codoR: -27, caderaL: -6, caderaR: -6 });
     });
     const enT = document.createElement("button");
     enT.className = "boton-texto";
@@ -208,7 +220,7 @@ export class PanelCuerpo {
     enT.addEventListener("click", () => this.fijarPose({ ...POSE_RECTA, hombroL: 48, hombroR: 48 }));
     const atajos = document.createElement("div");
     atajos.className = "atajos-postura";
-    atajos.append(natural, enT, recta);
+    atajos.append(natural, recta, enT, simetrica);
     postura.append(
       atajos,
       fila(t("Hombros"), "hombroL", "hombroR", t("abajo"), t("en T")),
@@ -220,7 +232,6 @@ export class PanelCuerpo {
       fila(t("Rodillas"), "rodillaL", "rodillaR", t("recta"), t("doblada")),
       fila(t("Torso"), "torso", "torso", t("giro a la derecha"), t("giro a la izquierda")),
       fila(t("Cabeza"), "cabeza", "cabeza", t("giro a la derecha"), t("giro a la izquierda")),
-      simetrica,
     );
 
     // Medidas reales del cliente: con ellas los lienzos nuevos salen a su escala real.
