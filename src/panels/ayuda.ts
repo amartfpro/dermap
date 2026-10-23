@@ -8,7 +8,7 @@ const SECCIONES: { titulo: string; filas: [string, string][] }[] = [
     titulo: traducible("Flujo de trabajo"),
     filas: [
       [traducible("1 · Proyecto"), traducible("Uno por cliente. «Ficha del cliente» guarda contacto, cita y notas.")],
-      [traducible("2 · Cuerpo"), traducible("«Cuerpo…» en el visor 3D: altura, complexión y tono de piel.")],
+      [traducible("2 · Modelo"), traducible("«Modelo» en el visor 3D: altura, sexo, complexión, tono de piel y postura.")],
       [traducible("3 · Zona"), traducible("Zona rápida, «Seleccionar» (pincel) o «Lazo» sobre el cuerpo.")],
       [traducible("4 · Corte"), traducible("En mangas, la línea azul es el corte: gira la vista para moverlo o usa «Corte manual».")],
       [traducible("5 · Aplanar"), traducible("Crea un lienzo nuevo con la forma de la zona, a escala real.")],

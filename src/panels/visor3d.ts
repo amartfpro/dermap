@@ -218,7 +218,7 @@ export class Visor3D implements IContentRenderer {
       vistas,
       botonIcono("encuadrar", t("Encuadrar la zona del lienzo activo (F)"), () => app.activo && this.encuadrarZona(app.activo)),
       botonIcono("camara", t("Guardar la vista en PNG para enseñarla al cliente"), () => void this.exportarImagen()),
-      botonIcono("cuerpo", t("Cuerpo del cliente: complexión, postura y tono de piel"), () => this.panelCuerpo.alternar()),
+      botonIcono("cuerpo", t("Modelo: altura, complexión, postura y tono de piel"), () => this.panelCuerpo.alternar()),
     );
 
     // ── Barra de control (arriba): opciones de la herramienta activa ──

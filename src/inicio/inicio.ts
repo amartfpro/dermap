@@ -251,7 +251,7 @@ function pintarNuevo(): void {
   titulo.textContent = t("Nuevo proyecto");
   const intro = document.createElement("p");
   intro.className = "nota";
-  intro.textContent = t("Planifica directamente sobre la piel. Ficha, cuerpo y diseños de cada cliente, en un solo proyecto.");
+  intro.textContent = t("Planifica directamente sobre la piel. Ficha, modelo y diseños de cada cliente, en un solo proyecto.");
   // Dónde se guardará, en una segunda línea más discreta.
   const donde = document.createElement("p");
   donde.className = "nota tenue";
@@ -316,7 +316,7 @@ function pintarNuevo(): void {
   );
   tonos.append(libre);
   const tarjetaCuerpo = bloque(
-    t("Cuerpo"),
+    t("Modelo"),
     filaCampo(t("Sexo"), sexoSeg),
     filaCampo(t("Altura"), altura.el),
     filaCampo(t("Complexión"), complexion.el),

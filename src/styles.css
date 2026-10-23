@@ -308,13 +308,15 @@ input[type="range"]::-webkit-slider-runnable-track {
 
 input[type="range"]::-webkit-slider-thumb {
   -webkit-appearance: none;
-  width: 12px;
-  height: 12px;
-  margin-top: -4px;
+  width: 14px;
+  height: 14px;
+  margin-top: -5px;
   border-radius: 50%;
-  background: var(--primario);
-  border: none;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+  /* «Cristal» naranja como el botón activo de un segmentado, pero opaco: la pista no se ve a través. */
+  background: color-mix(in srgb, var(--primario) 22%, var(--superficie));
+  border: 1.5px solid var(--primario);
+  box-sizing: border-box;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
   transition: transform var(--transicion);
 }
 
@@ -334,11 +336,12 @@ input[type="range"]::-moz-range-track {
 }
 
 input[type="range"]::-moz-range-thumb {
-  width: 12px;
-  height: 12px;
+  width: 14px;
+  height: 14px;
+  box-sizing: border-box;
   border-radius: 50%;
-  background: var(--primario);
-  border: none;
+  background: color-mix(in srgb, var(--primario) 22%, var(--superficie));
+  border: 1.5px solid var(--primario);
 }
 
 /* Casillas y radios */
@@ -1099,16 +1102,32 @@ input[type="radio"] {
   right: 10px;
   width: 300px;
   max-height: calc(100% - 110px);
-  overflow: auto;
-  padding: 14px;
+  overflow: hidden;
+  padding: 0;
   background: var(--superficie);
   border: 1px solid var(--borde);
   border-radius: var(--radio-panel);
   box-shadow: var(--sombra);
   display: flex;
   flex-direction: column;
-  gap: 12px;
   z-index: 5;
+}
+
+.ventana-cuerpo > .ventana-cabecera {
+  flex: none;
+  padding: 8px 8px 8px 14px;
+  border-bottom: 1px solid var(--borde);
+}
+
+.ventana-contenido {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
 .ventana-cuerpo[hidden] {
@@ -2123,9 +2142,14 @@ body.en-inicio > #espacio {
 
 /* Postura (panel Cuerpo) */
 .atajos-postura {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 6px;
+}
+
+.atajos-postura .boton-texto {
+  justify-content: center;
+  align-self: stretch;
 }
 
 .fila-postura {

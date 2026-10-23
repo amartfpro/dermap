@@ -6,7 +6,6 @@
   "1 hoja A4 apaisada": "1 landscape A4 sheet",
   "1 hoja A4 vertical": "1 portrait A4 sheet",
   "1 · Proyecto": "1 · Project",
-  "2 · Cuerpo": "2 · Body",
   "3 · Zona": "3 · Area",
   "4 · Corte": "4 · Cut",
   "5 · Aplanar": "5 · Flatten",
@@ -390,7 +389,6 @@
   "{n} triángulos seleccionados. Gira la vista y rodea más zona, o pulsa «Aplanar zona».": "{n} triangles selected. Rotate the view and circle more, or press “Flatten area”.",
   "{proyecto} - vista 3D": "{proyecto} - 3D view",
   "{tipo} en {s} s · {ancho} × {alto} cm · {pct} % del área con deformación ≤ 2 %": "{tipo} in {s} s · {ancho} × {alto} cm · {pct}% of the area with distortion ≤ 2%",
-  "«Cuerpo…» en el visor 3D: altura, complexión y tono de piel.": "“Body…” in the 3D viewer: height, build and skin tone.",
   "«Exportar stencil…»: PDF A4 en piezas con regla, o PNG a 300 ppp.": "“Export stencil…”: A4 PDF in pieces with a ruler, or PNG at 300 dpi.",
   "¿Eliminar el lienzo «{nombre}»? No se puede deshacer.": "Delete the canvas “{nombre}”? This cannot be undone.",
   "¿Eliminar el proyecto «{nombre}» y su lienzo? Se borra del disco y no se puede deshacer. Si quieres conservar una copia, usa antes «Exportar…».": "Delete the project “{nombre}” and its canvas? It is removed from disk and cannot be undone. To keep a copy, use “Export…” first.",
@@ -530,7 +528,6 @@
   "Dibuja sobre el modelo con el pincel del lienzo; botón derecho para girar.": "Draw on the model with the canvas brush; right button to rotate.",
   "Selecciona una zona con las herramientas de la izquierda, ajusta el corte y pulsa Aplanar.": "Select a zone with the tools on the left, adjust the cut and press Flatten.",
   "Se guarda en {donde}. Puedes cambiarlo todo después.": "Saved in {donde}. You can change everything later.",
-  "Planifica directamente sobre la piel. Ficha, cuerpo y diseños de cada cliente, en un solo proyecto.": "Plan right on the skin. Each client's details, body and designs, in one project.",
   "Planifica tus proyectos sobre la piel.": "Plan your projects on the skin.",
   "Construido por": "Built by",
   "Brazos": "Arms",
@@ -552,6 +549,10 @@
   "Dedos": "Fingers",
   "abiertos": "open",
   "cerrados": "closed",
-  "El cuerpo es una aproximación para ver el diseño en proporción. La medida del stencil es siempre la del lienzo, en centímetros.": "The body is an approximation to see the design in proportion. The stencil's size is always the canvas size, in centimetres.",
-  "Cuerpo del cliente: complexión, postura y tono de piel": "Client's body: build, pose and skin tone"
+  "Modelo": "Model",
+  "El modelo es una aproximación para ver el diseño en proporción. La medida del stencil es siempre la del lienzo, en centímetros.": "The model is an approximation to see the design in proportion. The stencil's size is always the canvas size, in centimetres.",
+  "Modelo: altura, complexión, postura y tono de piel": "Model: height, build, pose and skin tone",
+  "Planifica directamente sobre la piel. Ficha, modelo y diseños de cada cliente, en un solo proyecto.": "Plan directly on the skin. Each client's details, model and designs, in a single project.",
+  "2 · Modelo": "2 · Model",
+  "«Modelo» en el visor 3D: altura, sexo, complexión, tono de piel y postura.": "“Model” in the 3D viewer: height, sex, build, skin tone and pose."
 }

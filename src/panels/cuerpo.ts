@@ -1,4 +1,5 @@
 import { t } from "../i18n";
+import { botonIcono } from "../ui/iconos";
 import { botonColorLibre } from "../ui/selector-color";
 import { app } from "../estado";
 import { ALTURA_MAXIMA, ALTURA_MINIMA, COMPLEXION_INICIAL } from "../modelos/formas";
@@ -37,12 +38,8 @@ export class PanelCuerpo {
     const cabecera = document.createElement("div");
     cabecera.className = "ventana-cabecera";
     const titulo = document.createElement("strong");
-    titulo.textContent = t("Cuerpo del cliente");
-    const cerrar = document.createElement("button");
-    cerrar.className = "boton-texto";
-    cerrar.textContent = t("×");
-    cerrar.title = t("Cerrar");
-    cerrar.addEventListener("click", () => (this.element.hidden = true));
+    titulo.textContent = t("Modelo");
+    const cerrar = botonIcono("cerrar", t("Cerrar"), () => (this.element.hidden = true));
     cabecera.append(titulo, cerrar);
 
     this.altura = rango(ALTURA_MINIMA, ALTURA_MAXIMA, 1);
@@ -113,7 +110,7 @@ export class PanelCuerpo {
     const nota = document.createElement("p");
     nota.className = "nota";
     nota.textContent =
-      t("El cuerpo es una aproximación para ver el diseño en proporción. La medida del stencil es siempre la del lienzo, en centímetros.");
+      t("El modelo es una aproximación para ver el diseño en proporción. La medida del stencil es siempre la del lienzo, en centímetros.");
 
     // Postura (RF-13): para ver el diseño en una postura natural y para seleccionar mejor las
     // zonas. No se guarda ni cambia los lienzos (se aplanan siempre en la postura base).
@@ -220,8 +217,10 @@ export class PanelCuerpo {
       fila(t("Cabeza"), "cabeza", "cabeza", t("giro a la derecha"), t("giro a la izquierda")),
     );
 
-    this.element.append(
-      cabecera,
+    // Cabecera fija; los ajustes, debajo, con su propio scroll.
+    const contenido = document.createElement("div");
+    contenido.className = "ventana-contenido";
+    contenido.append(
       campo(t("Altura"), alturaFila),
       campo(t("Sexo"), this.sexo),
       campo(t("Complexión"), extremos(t("Delgada"), this.peso, t("Robusta"))),
@@ -230,6 +229,7 @@ export class PanelCuerpo {
       nota,
       campo(t("Postura"), postura),
     );
+    this.element.append(cabecera, contenido);
     this.sincronizar();
   }
 

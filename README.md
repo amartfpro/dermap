@@ -56,7 +56,7 @@ herramienta activa y menús con un triangulito en la esquina del icono. Los tres
    **Exportar .dermap** guarda el proyecto entero en un archivo (copia de seguridad o para otro
    ordenador) y **Abrir archivo .dermap…** lo abre como proyecto nuevo (con la aplicación
    instalada, también basta con hacer doble clic en el archivo).
-2. **Cuerpo** (visor 3D → **Cuerpo**): altura real, hombre o mujer, complexión, musculatura y
+2. **Modelo** (visor 3D → **Modelo**): altura real, hombre o mujer, complexión, musculatura y
    tono de piel. El modelo se ve suavizado (teselado de Phong) con un material y una luz de piel. Los lienzos siguen al cuerpo al cambiarlo.
    **Postura** mueve el esqueleto de MakeHuman (163
    huesos, con sus pesos y skinning de cuaterniones duales): hombros (de brazos al costado a «en
@@ -120,7 +120,7 @@ Todos están en la ayuda (botón **?** o F1). Los principales:
 - **Three.js**: visor 3D. **dockview**: paneles acoplables.
 - **libigl compilado a WebAssembly**: aplanado de zonas (LSCM + SLIM) en un Web Worker.
 - **pdf-lib**: exportación del stencil en PDF. **fflate**: archivos `.dermap` (ZIP).
-- Cuerpo: malla base y formas de [MakeHuman](https://github.com/makehumancommunity/makehuman) y esqueleto «default» con sus pesos de [MPFB](https://github.com/makehumancommunity/mpfb2) (todo CC0).
+- Modelo: malla base y formas de [MakeHuman](https://github.com/makehumancommunity/makehuman) y esqueleto «default» con sus pesos de [MPFB](https://github.com/makehumancommunity/mpfb2) (todo CC0).
 - Todas las dependencias tienen licencias permisivas (MIT, BSD, Apache, MPL); libigl se usa
   con su licencia MPL 2.0.
 
