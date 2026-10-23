@@ -258,3 +258,63 @@ export function abrirSelectorColor(ancla: HTMLElement, o: OpcionesSelector): voi
   pintarSv();
   actualizar(false);
 }
+
+/** Paleta guardada aparte (por ejemplo, los tonos de piel personalizados). */
+export function paletaGuardada(clave: string): { leer: () => string[]; guardar: (p: string[]) => void } {
+  return {
+    leer: () => {
+      try {
+        const p = JSON.parse(localStorage.getItem(clave) ?? "[]");
+        return Array.isArray(p) ? p.filter((c) => typeof c === "string").slice(0, MAX_PALETA) : [];
+      } catch {
+        return [];
+      }
+    },
+    guardar: (p) => {
+      try {
+        localStorage.setItem(clave, JSON.stringify(p.slice(0, MAX_PALETA)));
+      } catch {
+        // Sin almacenamiento local.
+      }
+    },
+  };
+}
+
+/**
+ * Muestra circular «otro color» que abre el selector propio (el mismo que el del lienzo). Si
+ * el color actual no es una de las muestras fijas, la muestra lo enseña y queda marcada.
+ */
+export function botonColorLibre(titulo: string, color: () => string, alCambiar: (c: string) => void, claveP: string): HTMLButtonElement & { refrescar: (fijos: string[]) => void } {
+  const b = document.createElement("button") as HTMLButtonElement & { refrescar: (fijos: string[]) => void };
+  b.type = "button";
+  b.className = "muestra muestra-libre";
+  b.title = titulo;
+  const paleta = paletaGuardada(claveP);
+  // Mientras se arrastra en el selector, el cambio se aplica como mucho cada 120 ms.
+  let pendiente: ReturnType<typeof setTimeout> | null = null;
+  let ultimo = "";
+  b.addEventListener("click", () =>
+    abrirSelectorColor(b, {
+      color: color(),
+      alCambiar: (c) => {
+        ultimo = c;
+        b.style.setProperty("--color-libre", c);
+        b.classList.add("con-color", "activo");
+        pendiente ??= setTimeout(() => {
+          pendiente = null;
+          alCambiar(ultimo);
+        }, 120);
+      },
+      paleta: paleta.leer,
+      guardarPaleta: paleta.guardar,
+    }),
+  );
+  b.refrescar = (fijos) => {
+    const c = color();
+    const propio = !fijos.includes(c);
+    b.classList.toggle("con-color", propio);
+    b.classList.toggle("activo", propio);
+    if (propio) b.style.setProperty("--color-libre", c);
+  };
+  return b;
+}

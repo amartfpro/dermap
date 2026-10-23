@@ -19,6 +19,7 @@ import { sistemaArchivos } from "../proyectos/sistema-archivos";
 import { TONOS } from "../panels/cuerpo";
 import { icono } from "../ui/iconos";
 import { firma } from "../ui/firma";
+import { botonColorLibre } from "../ui/selector-color";
 
 /**
  * Pantalla de inicio (como en Illustrator): proyectos recientes y «Nuevo proyecto», donde se
@@ -300,9 +301,21 @@ function pintarNuevo(): void {
     m.addEventListener("click", () => {
       tono = c;
       for (const x of tonos.children) x.classList.toggle("activo", x === m);
+      libre.refrescar(TONOS);
     });
     tonos.append(m);
   }
+  const libre = botonColorLibre(
+    t("Otro tono"),
+    () => tono,
+    (c) => {
+      tono = c;
+      for (const x of tonos.children) if (x !== libre) x.classList.remove("activo");
+      libre.refrescar(TONOS);
+    },
+    "dermap.tonos-piel",
+  );
+  tonos.append(libre);
   const tarjetaCuerpo = bloque(
     t("Cuerpo"),
     filaCampo(t("Sexo"), sexoSeg),

@@ -200,3 +200,179 @@ function rotarQ(q: Q, p: P3): P3 {
 
 const add = (a: P3, b: P3): P3 => [a[0] + b[0], a[1] + b[1], a[2] + b[2]];
 const sub = (a: P3, b: P3): P3 => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
+
+// ── Delta Mush ───────────────────────────────────────────────────────────────
+
+/**
+ * Delta Mush (Mancewicz et al., 2014): corrige los pliegues y abultamientos del skinning en
+ * hombros, axilas y caderas. Se suaviza la malla posada y se le devuelven los detalles de la
+ * malla en reposo, guardados como desplazamientos en un marco local de cada vértice. En reposo
+ * el resultado es exactamente el cuerpo original, y las zonas que se mueven rígidas no cambian.
+ */
+interface DatosMush {
+  vecinos: Int32Array;
+  inicio: Int32Array;
+  /** Desplazamiento en reposo (vértice − suavizado), en el marco local (t, b, n). */
+  delta: Float64Array;
+}
+
+const ITERACIONES_MUSH = 12;
+const cacheMush = new WeakMap<Float64Array, DatosMush>();
+
+function vecindario(caras: Int32Array, n: number): { vecinos: Int32Array; inicio: Int32Array } {
+  const conj = Array.from({ length: n }, () => new Set<number>());
+  for (let f = 0; f < caras.length; f += 3)
+    for (let j = 0; j < 3; j++) {
+      const a = caras[f + j], b = caras[f + ((j + 1) % 3)];
+      conj[a].add(b);
+      conj[b].add(a);
+    }
+  const inicio = new Int32Array(n + 1);
+  for (let i = 0; i < n; i++) inicio[i + 1] = inicio[i] + conj[i].size;
+  const vecinos = new Int32Array(inicio[n]);
+  conj.forEach((s, i) => vecinos.set([...s], inicio[i]));
+  return { vecinos, inicio };
+}
+
+function suavizar(p: Float64Array, vecinos: Int32Array, inicio: Int32Array, iter: number): Float64Array {
+  let a = Float64Array.from(p);
+  let b = new Float64Array(p.length);
+  const n = p.length / 3;
+  for (let k = 0; k < iter; k++) {
+    for (let i = 0; i < n; i++) {
+      let sx = 0, sy = 0, sz = 0;
+      const i0 = inicio[i], i1 = inicio[i + 1];
+      for (let j = i0; j < i1; j++) {
+        const v = vecinos[j];
+        sx += a[3 * v];
+        sy += a[3 * v + 1];
+        sz += a[3 * v + 2];
+      }
+      const m = i1 - i0 || 1;
+      // Mitad hacia la media de los vecinos: suavizado estable.
+      b[3 * i] = 0.5 * a[3 * i] + (0.5 * sx) / m;
+      b[3 * i + 1] = 0.5 * a[3 * i + 1] + (0.5 * sy) / m;
+      b[3 * i + 2] = 0.5 * a[3 * i + 2] + (0.5 * sz) / m;
+    }
+    [a, b] = [b, a];
+  }
+  return a;
+}
+
+/** Marco local (tangente, binormal, normal) de cada vértice de una malla suavizada. */
+function marco(s: Float64Array, vecinos: Int32Array, inicio: Int32Array, i: number, normales: Float64Array): number[] {
+  const nx = normales[3 * i], ny = normales[3 * i + 1], nz = normales[3 * i + 2];
+  const v = vecinos[inicio[i]];
+  let tx = s[3 * v] - s[3 * i], ty = s[3 * v + 1] - s[3 * i + 1], tz = s[3 * v + 2] - s[3 * i + 2];
+  const d = tx * nx + ty * ny + tz * nz;
+  tx -= d * nx;
+  ty -= d * ny;
+  tz -= d * nz;
+  const lt = Math.hypot(tx, ty, tz) || 1;
+  tx /= lt;
+  ty /= lt;
+  tz /= lt;
+  // b = n × t
+  return [tx, ty, tz, ny * tz - nz * ty, nz * tx - nx * tz, nx * ty - ny * tx, nx, ny, nz];
+}
+
+function normalesDe(p: Float64Array, caras: Int32Array): Float64Array {
+  const n = new Float64Array(p.length);
+  for (let f = 0; f < caras.length; f += 3) {
+    const a = caras[f], b = caras[f + 1], c = caras[f + 2];
+    const ux = p[3 * b] - p[3 * a], uy = p[3 * b + 1] - p[3 * a + 1], uz = p[3 * b + 2] - p[3 * a + 2];
+    const vx = p[3 * c] - p[3 * a], vy = p[3 * c + 1] - p[3 * a + 1], vz = p[3 * c + 2] - p[3 * a + 2];
+    const cx = uy * vz - uz * vy, cy = uz * vx - ux * vz, cz = ux * vy - uy * vx;
+    for (const i of [a, b, c]) {
+      n[3 * i] += cx;
+      n[3 * i + 1] += cy;
+      n[3 * i + 2] += cz;
+    }
+  }
+  for (let i = 0; i < n.length; i += 3) {
+    const l = Math.hypot(n[i], n[i + 1], n[i + 2]) || 1;
+    n[i] /= l;
+    n[i + 1] /= l;
+    n[i + 2] /= l;
+  }
+  return n;
+}
+
+function datosMush(reposo: Float64Array, caras: Int32Array): DatosMush {
+  const cache = cacheMush.get(reposo);
+  if (cache) return cache;
+  const n = reposo.length / 3;
+  const { vecinos, inicio } = vecindario(caras, n);
+  const s = suavizar(reposo, vecinos, inicio, ITERACIONES_MUSH);
+  const normales = normalesDe(s, caras);
+  const delta = new Float64Array(reposo.length);
+  for (let i = 0; i < n; i++) {
+    const m = marco(s, vecinos, inicio, i, normales);
+    const dx = reposo[3 * i] - s[3 * i], dy = reposo[3 * i + 1] - s[3 * i + 1], dz = reposo[3 * i + 2] - s[3 * i + 2];
+    delta[3 * i] = dx * m[0] + dy * m[1] + dz * m[2];
+    delta[3 * i + 1] = dx * m[3] + dy * m[4] + dz * m[5];
+    delta[3 * i + 2] = dx * m[6] + dy * m[7] + dz * m[8];
+  }
+  const datos = { vecinos, inicio, delta };
+  cacheMush.set(reposo, datos);
+  return datos;
+}
+
+/**
+ * Aplica Delta Mush a una malla posada, solo donde `mascara` > 0 (0–1 por vértice): así las
+ * manos, los pies y la cara conservan exactamente su forma.
+ */
+export function deltaMush(reposo: Float64Array, posada: Float64Array, caras: Int32Array, mascara: Float32Array): Float64Array {
+  const { vecinos, inicio, delta } = datosMush(reposo, caras);
+  const s = suavizar(posada, vecinos, inicio, ITERACIONES_MUSH);
+  const normales = normalesDe(s, caras);
+  const out = Float64Array.from(posada);
+  const n = posada.length / 3;
+  for (let i = 0; i < n; i++) {
+    const w = mascara[i];
+    if (!w) continue;
+    const m = marco(s, vecinos, inicio, i, normales);
+    const a = delta[3 * i], b = delta[3 * i + 1], c = delta[3 * i + 2];
+    for (let k = 0; k < 3; k++) {
+      const corregido = s[3 * i + k] + a * m[k] + b * m[3 + k] + c * m[6 + k];
+      out[3 * i + k] = (1 - w) * posada[3 * i + k] + w * corregido;
+    }
+  }
+  return out;
+}
+
+/**
+ * Máscara de Delta Mush para unos huesos girados: vértices que reparten peso entre un hueso
+ * girado y otro que no lo está (las zonas de articulación), con un borde suave.
+ */
+export function mascaraArticulaciones(caras: Int32Array, nv: number, girados: Set<number>): Float32Array {
+  const mezcla = new Float32Array(nv);
+  for (let i = 0; i < nv; i++) {
+    let enGiro = 0;
+    for (let k = 0; k < 4; k++) if (girados.has(INDICES[4 * i + k])) enGiro += PESOS[4 * i + k] / 255;
+    // 1 en el reparto 50/50, 0 si todo el peso está de un lado.
+    mezcla[i] = Math.min(1, 4 * enGiro * (1 - enGiro));
+  }
+  // Se ensancha y suaviza el borde.
+  const { vecinos, inicio } = vecindario(caras, nv);
+  let a = mezcla;
+  for (let k = 0; k < 6; k++) {
+    const b = new Float32Array(nv);
+    for (let i = 0; i < nv; i++) {
+      let m = a[i];
+      for (let j = inicio[i]; j < inicio[i + 1]; j++) m = Math.max(m, a[vecinos[j]] * 0.85);
+      b[i] = m;
+    }
+    a = b;
+  }
+  return a;
+}
+
+/** Huesos que heredan algún giro (los girados y todos sus descendientes). */
+export function huesosAfectados(giros: GiroHueso[]): Set<number> {
+  const s = new Set(giros.filter((g) => g.angulo).map((g) => g.hueso));
+  HUESOS.forEach((h, i) => {
+    if (h.p >= 0 && s.has(h.p)) s.add(i);
+  });
+  return s;
+}

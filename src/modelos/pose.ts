@@ -1,5 +1,15 @@
 import type { Cuerpo, Lado } from "./cuerpo";
-import { hueso, HUESO_DE_ARTICULACION, moverConHueso, posar, posicionesHuesos, type GiroHueso } from "./esqueleto";
+import {
+  deltaMush,
+  hueso,
+  HUESO_DE_ARTICULACION,
+  huesosAfectados,
+  mascaraArticulaciones,
+  moverConHueso,
+  posar,
+  posicionesHuesos,
+  type GiroHueso,
+} from "./esqueleto";
 
 type P3 = [number, number, number];
 
@@ -55,10 +65,10 @@ export const POSE_RECTA: Pose = {
 
 /** Límites de cada articulación (grados). */
 export const LIMITES_POSE: Record<keyof Pose, [number, number]> = {
-  hombroL: [-45, 60],
-  hombroR: [-45, 60],
-  brazoL: [-40, 120],
-  brazoR: [-40, 120],
+  hombroL: [-45, 50],
+  hombroR: [-45, 50],
+  brazoL: [-30, 80],
+  brazoR: [-30, 80],
   codoL: [0, 145],
   codoR: [0, 145],
   munecaL: [-60, 60],
@@ -96,7 +106,12 @@ export function girosDePose(cuerpo: Cuerpo, pose: Pose): GiroHueso[] {
     const extra = Math.max(0, abd - 30) * 0.35;
     g(`shoulder01${s}`, [0, 0, signo], extra);
     g(`upperarm01${s}`, [0, 0, signo], abd - extra);
-    g(`upperarm01${s}`, [1, 0, 0], -v("brazo"));
+    // Adelante/atrás en el plano del brazo y «delante» (no de lado, aunque el brazo esté en «A»).
+    // Parte la hace la escápula (hombro01), como en el cuerpo real; así el deltoides no se abulta.
+    const brazoRaiz = dir(hueso(`upperarm01${s}`));
+    const ejeFlex = normalizar(cruz(brazoRaiz, [0, 0, 1]));
+    g(`shoulder01${s}`, ejeFlex, v("brazo") * 0.25);
+    g(`upperarm01${s}`, ejeFlex, v("brazo") * 0.75);
     // Codo: perpendicular al brazo y a «delante», en la postura base.
     const brazo = dir(hueso(`upperarm02${s}`));
     g(`lowerarm01${s}`, normalizar(cruz(brazo, [0, 0, 1])), v("codo"));
@@ -118,7 +133,11 @@ export function girosDePose(cuerpo: Cuerpo, pose: Pose): GiroHueso[] {
 
 export function aplicarPose(cuerpo: Cuerpo, pose: Pose): Cuerpo {
   if (esRecta(pose)) return cuerpo;
-  const r = posar(cuerpo, girosDePose(cuerpo, pose));
+  const giros = girosDePose(cuerpo, pose);
+  const r = posar(cuerpo, giros);
+  // Delta Mush en las zonas de articulación (hombros, axilas, caderas, codos…).
+  const mascara = mascaraArticulaciones(cuerpo.caras, cuerpo.vertices.length / 3, huesosAfectados(giros));
+  r.vertices = deltaMush(cuerpo.vertices, r.vertices, cuerpo.caras, mascara);
   const articulaciones: Record<string, P3> = {};
   for (const [nombre, pos] of Object.entries(cuerpo.articulaciones)) {
     const b = HUESO_DE_ARTICULACION.get(nombre);

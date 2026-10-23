@@ -217,7 +217,7 @@ if (enTauri()) {
 // Acceso para las pruebas automáticas en navegador (solo con ?prueba en la URL).
 if (new URLSearchParams(location.search).has("prueba")) {
   void Promise.all([import("./proyectos/paquete"), import("./lienzo/vista-recta")]).then(([paquete, { VistaRecta }]) => {
-    (window as unknown as { dermap: unknown }).dermap = { app, sistemaArchivos, paquete, VistaRecta };
+    (window as unknown as { dermap: unknown }).dermap = { app, sistemaArchivos, paquete, VistaRecta, visorActual };
   });
   (window as unknown as { dermap: unknown }).dermap = { app, sistemaArchivos };
 }

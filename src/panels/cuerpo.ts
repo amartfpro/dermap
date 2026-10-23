@@ -1,4 +1,5 @@
 import { t } from "../i18n";
+import { botonColorLibre } from "../ui/selector-color";
 import { app } from "../estado";
 import { ALTURA_MAXIMA, ALTURA_MINIMA, COMPLEXION_INICIAL } from "../modelos/formas";
 import { asegurarProyecto } from "../proyectos/gestor";
@@ -21,7 +22,7 @@ export class PanelCuerpo {
   private sexo: HTMLElement;
   private peso: HTMLInputElement;
   private musculatura: HTMLInputElement;
-  private color: HTMLInputElement;
+  private color: ReturnType<typeof botonColorLibre>;
   private muestras: HTMLButtonElement[] = [];
   private pose: Pose = { ...POSE_RECTA };
   private deslizadoresPose: Partial<Record<keyof Pose, HTMLInputElement>> = {};
@@ -87,12 +88,13 @@ export class PanelCuerpo {
     this.musculatura = rango(0, 100, 1);
     this.musculatura.addEventListener("input", () => this.cambiar({ musculatura: Number(this.musculatura.value) / 100 }));
 
-    this.color = document.createElement("input");
-    this.color.type = "color";
-    this.color.className = "selector-color";
-    this.color.title = t("Otro tono");
-    // «change» y no «input»: cambiar el tono recompone la vista previa de todos los lienzos.
-    this.color.addEventListener("change", () => this.cambiar({ tonoPiel: this.color.value }));
+    // Otro tono: el mismo selector de color que el del lienzo.
+    this.color = botonColorLibre(
+      t("Otro tono"),
+      () => app.proyecto?.datos.modelo.tonoPiel ?? "#d8a98a",
+      (c) => this.cambiar({ tonoPiel: c }),
+      "dermap.tonos-piel",
+    );
     const tonos = document.createElement("div");
     tonos.className = "tonos";
     for (const tono of TONOS) {
@@ -329,8 +331,8 @@ export class PanelCuerpo {
     this.peso.value = String(Math.round((m?.complexion ?? COMPLEXION_INICIAL.peso) * 100));
     this.musculatura.value = String(Math.round((m?.musculatura ?? COMPLEXION_INICIAL.musculatura) * 100));
     const tono = m?.tonoPiel ?? "#d8a98a";
-    this.color.value = tono;
     for (const b of this.muestras) b.classList.toggle("activo", b.title === tono);
+    this.color.refrescar(TONOS);
     const modelo = this.contornosModelo();
     for (const [clave, entrada] of Object.entries(this.camposMedida) as [Medida, HTMLInputElement][]) {
       const valor = m?.medidas?.[clave];
