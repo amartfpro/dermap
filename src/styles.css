@@ -1952,13 +1952,18 @@ body.en-inicio > #espacio {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
   gap: 16px;
-  align-items: start;
+  align-items: stretch;
 }
 
 .inicio-columnas > div {
   display: flex;
   flex-direction: column;
   gap: 16px;
+}
+
+/* Las dos tarjetas (Proyecto y Modelo) con el mismo alto. */
+.inicio-columnas > div > .inicio-bloque {
+  flex: 1;
 }
 
 .inicio-bloque {

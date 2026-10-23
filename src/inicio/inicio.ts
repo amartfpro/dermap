@@ -266,7 +266,7 @@ function pintarNuevo(): void {
   const telefono = campoTexto(t("Teléfono"), "tel", "");
   const correo = campoTexto(t("Correo"), "email", "");
   const cita = campoTexto(t("Cita"), "date", "");
-  const tarjetaCliente = bloque(t("Cliente"), rejilla(nombre.el, cliente.el, telefono.el, correo.el, cita.el));
+  const tarjetaCliente = bloque(t("Proyecto"), rejilla(nombre.el, cliente.el, telefono.el, correo.el, cita.el));
 
   // Cuerpo
   let sexo = 0;
