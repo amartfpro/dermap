@@ -9,7 +9,8 @@ import { medirDeformacion } from "../geometria/metricas";
 import { longitud, seleccionarPorEje, submalla, suavizarSeleccion, type Seleccion } from "../geometria/seleccion";
 import { prepararSimetria } from "../geometria/simetria";
 import { crearPlanTeselado, evaluarTeselado, type PlanTeselado } from "../geometria/teselado";
-import { botonIcono, seccion, segmentado } from "../ui/iconos";
+import { botonIcono } from "../ui/iconos";
+import { botonMenu } from "../ui/menu";
 import { cargarCuerpo, ejeDeLaPierna, ejeDelBrazo, type Cuerpo } from "../modelos/cuerpo";
 import { aplicarComplexion, cargarFormas, COMPLEXION_INICIAL, type Complexion, type Formas } from "../modelos/formas";
 import type { ProyectoAbierto } from "../proyectos/proyecto";
@@ -45,6 +46,9 @@ export class Visor3D implements IContentRenderer {
   private observador: ResizeObserver;
   private estadoTexto: HTMLElement;
   private botonSeleccionar!: HTMLButtonElement;
+  private area!: HTMLElement;
+  private controlSeleccion!: HTMLElement;
+  private ayudaControl!: HTMLElement;
   private radioPincel = 2.5;
   private activo = true;
 
@@ -158,90 +162,96 @@ export class Visor3D implements IContentRenderer {
 
   constructor() {
     this.element = document.createElement("div");
-    this.element.className = "panel";
+    this.element.className = "panel panel-visor";
 
     this.renderer = new THREE.WebGLRenderer({ antialias: true });
     this.renderer.setPixelRatio(window.devicePixelRatio);
     this.renderer.setClearColor(0x141211);
-    this.element.appendChild(this.renderer.domElement);
+    // Zona del 3D (a la derecha del riel de herramientas).
+    this.area = document.createElement("div");
+    this.area.className = "area-visor";
+    this.area.appendChild(this.renderer.domElement);
 
-    const barra = document.createElement("div");
-    barra.className = "herramientas flotante";
-    this.botonSeleccionar = boton(t("Seleccionar"), () => this.alternarSeleccion());
-    this.botonSeleccionar.title = t("Pinta la zona sobre el cuerpo. Mayús + arrastrar para quitar.");
+    this.estadoTexto = document.createElement("div");
+    this.estadoTexto.className = "etiqueta-flotante";
+    this.estadoTexto.textContent = t("Cargando cuerpo…");
+
+    // ── Riel de herramientas (como en Illustrator): solo iconos, con tooltip y atajo ──
+    this.botonSeleccionar = botonIcono("seleccionar", t("Pincel de selección: pinta la zona sobre el cuerpo; Mayús quita (S)"), () => this.alternarSeleccion());
+    this.botonLazo = botonIcono("lazo", t("Lazo: rodea la zona; se añade lo que se ve dentro; Mayús quita (L)"), () => this.alternarLazo());
+    const zonaRapida = botonMenu("zonaRapida", t("Zona rápida: manga, antebrazo o pierna de una vez"), () =>
+      ZONAS_RAPIDAS.map((z, i) => ({ texto: t(z.nombre), accion: () => this.zonaRapida(i) })),
+      { lado: "derecha" },
+    );
+    this.botonCorteManual = botonIcono(
+      "corte",
+      t("Corte manual: marca con clics por dónde va el corte de la manga"),
+      () => this.alternarCorteManual(),
+    );
+    this.botonCorte = botonIcono("curva", t("Corte extra: clic en la zona para abrir una pinza desde el borde (menos deformación)"), () =>
+      this.alternarModoCorte(),
+    );
+    this.botonPintar = botonIcono("pintar3d", t("Pintar en 3D sobre el modelo, en el lienzo activo; gira con el botón derecho"), () => this.alternarPintar());
+    const vistas = botonMenu("vistas", t("Vistas de cámara (teclas 1 a 9)"), () => VISTAS.map((v, i) => ({ texto: t(v.nombre), atajo: String(i + 1), accion: () => this.verVista(i) })), {
+      lado: "derecha",
+    });
+    const separador = () => Object.assign(document.createElement("span"), { className: "separador-riel" });
+    const hueco = Object.assign(document.createElement("span"), { className: "hueco" });
+    const riel = document.createElement("div");
+    riel.className = "riel";
+    riel.append(
+      this.botonSeleccionar,
+      this.botonLazo,
+      zonaRapida,
+      botonIcono("borrar", t("Vaciar la selección"), () => this.fijarSeleccion([])),
+      separador(),
+      this.botonCorteManual,
+      this.botonCorte,
+      botonIcono("cerrar", t("Quitar los cortes"), () => this.quitarCortesExtra()),
+      separador(),
+      botonIcono("aplanar", t("Aplanar la zona seleccionada en un lienzo nuevo (Intro)"), () => void this.aplanar(), { clase: "acento" }),
+      separador(),
+      this.botonPintar,
+      hueco,
+      vistas,
+      botonIcono("encuadrar", t("Encuadrar la zona del lienzo activo (F)"), () => app.activo && this.encuadrarZona(app.activo)),
+      botonIcono("camara", t("Guardar la vista en PNG para enseñarla al cliente"), () => void this.exportarImagen()),
+      botonIcono("cuerpo", t("Cuerpo del cliente: complexión, medidas, postura y tono de piel"), () => this.panelCuerpo.alternar()),
+    );
+
+    // ── Barra de control (arriba): opciones de la herramienta activa ──
     const radio = document.createElement("input");
     radio.type = "range";
     radio.min = "1";
     radio.max = "6";
     radio.step = "0.5";
     radio.value = String(this.radioPincel);
-    radio.title = t("Radio del pincel de selección");
     radio.className = "deslizador";
-    radio.addEventListener("input", () => (this.radioPincel = Number(radio.value)));
-    this.estadoTexto = document.createElement("div");
-    this.estadoTexto.className = "etiqueta-flotante";
-    this.estadoTexto.textContent = t("Cargando cuerpo…");
-    const zonaRapida = desplegable(t("Zona rápida…"), ZONAS_RAPIDAS.map((z) => t(z.nombre)), (i) => this.zonaRapida(i));
-    zonaRapida.title = t("Seleccionar de una vez una manga, un antebrazo o una pierna");
-    this.botonSeleccionar = botonIcono("seleccionar", t("Pinta la zona sobre el cuerpo (S). Mayús + arrastrar para quitar."), () => this.alternarSeleccion(), {
-      texto: t("Pincel"),
+    const valorRadio = Object.assign(document.createElement("span"), { className: "valor" });
+    const mostrarRadio = () => (valorRadio.textContent = `${this.radioPincel.toFixed(1)} cm`);
+    radio.addEventListener("input", () => {
+      this.radioPincel = Number(radio.value);
+      mostrarRadio();
     });
-    this.botonLazo = botonIcono("lazo", t("Rodea la zona con el ratón (L): se añade lo que se ve dentro. Mayús + arrastrar para quitar."), () => this.alternarLazo(), {
-      texto: t("Lazo"),
-    });
-    this.botonCorteManual = botonIcono(
-      "corte",
-      t("Marca con clics por dónde debe ir el corte de la manga; se une a los dos bordes por el camino más corto"),
-      () => this.alternarCorteManual(),
-      { texto: t("Manual") },
-    );
-    this.botonCorte = botonIcono(
-      "curva",
-      t("Haz clic en la zona para abrir un corte desde el borde hasta ese punto (como una pinza): reduce la deformación en zonas muy curvas"),
-      () => this.alternarModoCorte(),
-      { texto: t("Extra") },
-    );
-    const aplanar = botonIcono("zona", t("Aplanar la zona seleccionada en un lienzo (Intro)"), () => void this.aplanar(), {
-      texto: t("Aplanar zona"),
-      clase: "primario",
-    });
-    barra.append(
-      seccion(
-        t("1 · Zona"),
-        zonaRapida,
-        segmentado(this.botonSeleccionar, this.botonLazo),
-        radio,
-        botonIcono("borrar", t("Vaciar la selección"), () => this.fijarSeleccion([])),
-      ),
-      seccion(
-        t("2 · Corte"),
-        segmentado(this.botonCorteManual, this.botonCorte),
-        botonIcono("cerrar", t("Quitar los cortes extra"), () => this.quitarCortesExtra()),
-      ),
-      seccion(t("3 · Lienzo"), aplanar),
-    );
+    mostrarRadio();
+    const etiquetaRadio = document.createElement("label");
+    etiquetaRadio.className = "control-etiquetado";
+    etiquetaRadio.title = t("Radio del pincel de selección");
+    etiquetaRadio.append(t("Radio"), radio, valorRadio);
+    this.controlSeleccion = etiquetaRadio;
+    this.ayudaControl = Object.assign(document.createElement("span"), { className: "ayuda-control" });
+    const barra = document.createElement("div");
+    barra.className = "herramientas barra-control";
+    barra.append(etiquetaRadio, this.ayudaControl);
 
-    // Barra de vista (abajo): cámara, cuerpo y pintar en 3D.
-    const barraVista = document.createElement("div");
-    barraVista.className = "barra-vista barra-vista-3d";
-    const vista = desplegable(t("Vista"), VISTAS.map((v) => t(v.nombre)), (i) => this.verVista(i));
-    vista.title = t("Vistas de cámara (teclas 1 a 9)");
-    this.botonPintar = botonIcono("pintar3d", t("Dibuja sobre el modelo con el pincel actual, en el lienzo activo (gira con el botón derecho)"), () => this.alternarPintar(), {
-      texto: t("Pintar en 3D"),
-    });
-    barraVista.append(
-      vista,
-      segmentado(
-        botonIcono("encajar", t("Centrar la cámara en la zona del lienzo activo (F)"), () => app.activo && this.encuadrarZona(app.activo)),
-        botonIcono("camara", t("Guardar la vista actual en PNG para enseñarla al cliente"), () => void this.exportarImagen()),
-      ),
-      this.botonPintar,
-      botonIcono("cuerpo", t("Cuerpo del cliente: complexión, medidas, postura y tono de piel"), () => this.panelCuerpo.alternar(), { texto: t("Cuerpo") }),
-    );
-    this.element.append(barraVista);
+    const cuerpoVisor = document.createElement("div");
+    cuerpoVisor.className = "cuerpo-visor";
+    cuerpoVisor.append(riel, this.area);
+    this.element.append(barra, cuerpoVisor);
+
     this.capaLazo = document.createElement("canvas");
     this.capaLazo.className = "capa-lazo";
-    this.element.append(this.capaLazo);
+    this.area.append(this.capaLazo);
     this.panelCuerpo = new PanelCuerpo(
       (pose) => {
         this.pose = pose;
@@ -250,7 +260,9 @@ export class Visor3D implements IContentRenderer {
       () => this.contornosDelModelo(),
     );
     this.barraPresentacion = this.montarBarraPresentacion();
-    this.element.append(barra, this.estadoTexto, this.panelCuerpo.element, this.barraPresentacion);
+    this.area.append(this.estadoTexto, this.panelCuerpo.element);
+    this.element.append(this.barraPresentacion);
+    this.actualizarControl();
 
     this.controles = new OrbitControls(this.camara, this.renderer.domElement);
     this.controles.enableDamping = true;
@@ -274,7 +286,7 @@ export class Visor3D implements IContentRenderer {
     lienzo.addEventListener("contextmenu", (e) => e.preventDefault());
 
     this.observador = new ResizeObserver(() => this.ajustarTamano());
-    this.observador.observe(this.element);
+    this.observador.observe(this.area);
 
     // Se dibuja solo cuando algo cambia (cámara, texturas, escena o entrada del usuario), y
     // además una vez por segundo por si acaso: así el visor no gasta GPU mientras se dibuja
@@ -658,12 +670,30 @@ export class Visor3D implements IContentRenderer {
 
   // ── Selección a pincel ────────────────────────────────────────────────────────
 
+  /** Barra de control: las opciones y la ayuda de la herramienta activa. */
+  private actualizarControl(): void {
+    if (!this.ayudaControl) return;
+    this.controlSeleccion.hidden = !this.modoSeleccion;
+    this.ayudaControl.textContent = this.modoSeleccion
+      ? t("Arrastra sobre el cuerpo para añadir piel a la zona; Mayús + arrastrar quita.")
+      : this.modoLazo
+        ? t("Rodea la zona con el ratón: se añade lo que se ve dentro. Mayús quita.")
+        : this.modoCorteManual
+          ? t("Haz clic sobre la zona para marcar por dónde va el corte; se une a los bordes solo.")
+          : this.modoCorte
+            ? t("Haz clic dentro de la zona donde debe terminar el corte extra.")
+            : this.modoPintar
+              ? t("Dibuja sobre el modelo con el pincel del lienzo; botón derecho para girar.")
+              : t("Selecciona una zona con las herramientas de la izquierda, ajusta el corte y pulsa Aplanar.");
+  }
+
   private alternarCorteManual(): void {
     this.modoCorteManual = !this.modoCorteManual;
     if (this.modoCorteManual && this.modoCorte) this.alternarModoCorte();
     if (this.modoCorteManual && this.modoSeleccion) this.alternarSeleccion();
     if (this.modoCorteManual && this.modoLazo) this.alternarLazo();
     this.botonCorteManual.classList.toggle("activo", this.modoCorteManual);
+    this.actualizarControl();
     this.renderer.domElement.style.cursor = this.modoCorteManual ? "crosshair" : "";
     if (this.modoCorteManual)
       this.estadoTexto.textContent = t("Haz clic en la manga por donde quieras que pase el corte (puedes marcar varios puntos).");
@@ -708,6 +738,7 @@ export class Visor3D implements IContentRenderer {
     this.modoCorte = !this.modoCorte;
     if (this.modoCorte && this.modoSeleccion) this.alternarSeleccion();
     this.botonCorte.classList.toggle("activo", this.modoCorte);
+    this.actualizarControl();
     this.renderer.domElement.style.cursor = this.modoCorte ? "crosshair" : "";
     if (this.modoCorte) this.estadoTexto.textContent = t("Haz clic en la zona seleccionada donde debe terminar el corte extra.");
   }
@@ -763,6 +794,7 @@ export class Visor3D implements IContentRenderer {
     if (!this.modoSeleccion && this.modoPintar) this.alternarPintar();
     this.modoSeleccion = !this.modoSeleccion;
     this.botonSeleccionar.classList.toggle("activo", this.modoSeleccion);
+    this.actualizarControl();
     this.botonesCamara(this.modoSeleccion);
   }
 
@@ -775,6 +807,7 @@ export class Visor3D implements IContentRenderer {
     }
     this.modoPintar = !this.modoPintar;
     this.botonPintar.classList.toggle("activo", this.modoPintar);
+    this.actualizarControl();
     this.botonesCamara(this.modoPintar);
     if (this.modoPintar)
       this.estadoTexto.textContent = app.activo
@@ -840,6 +873,7 @@ export class Visor3D implements IContentRenderer {
     if (!this.modoLazo && this.modoPintar) this.alternarPintar();
     this.modoLazo = !this.modoLazo;
     this.botonLazo.classList.toggle("activo", this.modoLazo);
+    this.actualizarControl();
     this.botonesCamara(this.modoLazo);
     if (this.modoLazo) this.estadoTexto.textContent = t("Rodea la zona con el ratón (Mayús para quitar). Gira la vista con el botón derecho.");
   }
@@ -1398,7 +1432,7 @@ export class Visor3D implements IContentRenderer {
    * la pantalla de inicio. Encuadra todo el cuerpo de frente si no hay lienzos.
    */
   capturaPortada(): Uint8Array | null {
-    if (!this.cuerpo || this.element.clientWidth === 0) return null;
+    if (!this.cuerpo || this.area.clientWidth === 0) return null;
     const resaltes = [...this.mallas.values()].map((m) => m.resalte.visible);
     const resaltado = this.resaltado.visible;
     for (const m of this.mallas.values()) m.resalte.visible = false;
@@ -1424,7 +1458,7 @@ export class Visor3D implements IContentRenderer {
     this.resaltado.visible = false;
     const proporcion = this.renderer.getPixelRatio();
     this.renderer.setPixelRatio(Math.max(2, proporcion * 2));
-    const { clientWidth: ancho, clientHeight: alto } = this.element;
+    const { clientWidth: ancho, clientHeight: alto } = this.area;
     this.renderer.setSize(ancho, alto, false);
     this.renderer.render(this.escena, this.camara);
     // Hay que leer el canvas en el mismo instante del render (el búfer no se conserva).
@@ -1443,7 +1477,7 @@ export class Visor3D implements IContentRenderer {
 
   private ajustarTamano(): void {
     this.redibujar();
-    const { clientWidth: ancho, clientHeight: alto } = this.element;
+    const { clientWidth: ancho, clientHeight: alto } = this.area;
     if (ancho === 0 || alto === 0) return;
     this.renderer.setSize(ancho, alto, false);
     this.camara.aspect = ancho / alto;
@@ -1609,14 +1643,3 @@ function boton(texto: string, alPulsar: () => void): HTMLButtonElement {
   return b;
 }
 
-/** Desplegable con un primer elemento que hace de título y vuelve a él tras elegir. */
-function desplegable(titulo: string, opciones: string[], alElegir: (indice: number) => void): HTMLSelectElement {
-  const s = document.createElement("select");
-  s.className = "desplegable";
-  s.append(new Option(titulo, ""), ...opciones.map((o, i) => new Option(o, String(i))));
-  s.addEventListener("change", () => {
-    if (s.value !== "") alElegir(Number(s.value));
-    s.value = "";
-  });
-  return s;
-}

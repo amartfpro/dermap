@@ -1228,9 +1228,10 @@ input[type="radio"] {
   background: var(--fondo);
 }
 
-.panel.presentando > .herramientas,
-.panel.presentando > .etiqueta-flotante,
-.panel.presentando > .ventana-cuerpo {
+.panel.presentando .herramientas,
+.panel.presentando .riel,
+.panel.presentando .etiqueta-flotante,
+.panel.presentando .ventana-cuerpo {
   display: none;
 }
 
@@ -1650,8 +1651,9 @@ input[type="radio"] {
   justify-content: flex-end;
 }
 
-.panel > .etiqueta-flotante {
-  bottom: 58px;
+.area-visor .etiqueta-flotante {
+  bottom: 10px;
+  right: 12px;
 }
 
 .zona-lienzo .etiqueta-flotante {
@@ -2127,4 +2129,382 @@ body.en-inicio > #espacio {
 
 .ventana-cuerpo .segmentado.sexo {
   display: flex;
+}
+
+
+/* ── Estilo Illustrator: iconos, tooltips, menús, barras de control ─────── */
+
+.boton-texto.acento {
+  background: var(--primario);
+  border-color: var(--primario);
+  color: var(--sobre-primario);
+}
+
+.boton-texto.acento:hover {
+  background: var(--primario-claro);
+  border-color: var(--primario-claro);
+}
+
+.boton-texto.acento:active {
+  background: var(--primario-oscuro);
+}
+
+.riel .boton-texto.solo-icono.acento {
+  background: var(--primario);
+  color: var(--sobre-primario);
+}
+
+.riel .boton-texto.solo-icono.acento:hover {
+  background: var(--primario-claro);
+  color: var(--sobre-primario);
+}
+
+/* Botón que abre un menú: triangulito en la esquina, como en Illustrator. */
+.boton-texto.con-menu {
+  position: relative;
+}
+
+.boton-texto.con-menu::after {
+  content: "";
+  position: absolute;
+  right: 3px;
+  bottom: 3px;
+  border-left: 4px solid transparent;
+  border-bottom: 4px solid currentColor;
+  opacity: 0.7;
+}
+
+.boton-texto.menu-abierto {
+  background: var(--superficie-3);
+  color: var(--texto);
+}
+
+.tooltip {
+  position: fixed;
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 280px;
+  padding: 5px 8px;
+  border-radius: var(--radio);
+  background: #f2eeea;
+  color: #1a1715;
+  font-size: 12px;
+  line-height: 1.35;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.08s ease;
+}
+
+.tooltip.visible {
+  opacity: 1;
+}
+
+.tooltip kbd {
+  flex: none;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.1);
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  color: #5a524c;
+}
+
+.menu {
+  position: fixed;
+  z-index: 1500;
+  min-width: 200px;
+  max-height: calc(100vh - 12px);
+  overflow: auto;
+  padding: 4px;
+  background: var(--superficie-2);
+  border: 1px solid var(--borde);
+  border-radius: var(--radio-panel);
+  box-shadow: var(--sombra);
+  animation: subir 0.1s ease;
+}
+
+.menu-opcion {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  height: 28px;
+  padding: 0 10px 0 6px;
+  border: none;
+  border-radius: var(--radio);
+  background: none;
+  color: var(--texto);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.menu-opcion:hover:not(:disabled) {
+  background: var(--primario);
+  color: var(--sobre-primario);
+}
+
+.menu-opcion:disabled {
+  color: var(--texto-tenue);
+  cursor: default;
+}
+
+.menu-ico {
+  display: inline-flex;
+  width: 18px;
+  justify-content: center;
+  flex: none;
+}
+
+.menu-texto {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.menu-atajo,
+.menu-detalle {
+  font-size: 11.5px;
+  color: var(--texto-tenue);
+  margin-left: 14px;
+}
+
+.menu-opcion:hover:not(:disabled) .menu-atajo,
+.menu-opcion:hover:not(:disabled) .menu-detalle {
+  color: inherit;
+  opacity: 0.8;
+}
+
+.menu-separador {
+  height: 1px;
+  margin: 4px 6px;
+  background: var(--borde);
+}
+
+.menu-titulo {
+  padding: 6px 10px 3px 30px;
+  font-size: 10.5px;
+  font-weight: 650;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--texto-tenue);
+}
+
+/* Barra de control: una sola fila, compacta (como la de Illustrator). */
+.herramientas.barra-control {
+  min-height: 38px;
+  padding: 5px 10px;
+  gap: 10px;
+  flex-wrap: wrap;
+  row-gap: 4px;
+  align-items: center;
+}
+
+.barra-control .control-etiquetado {
+  font-size: 12px;
+}
+
+.barra-control .desplegable {
+  height: 26px;
+}
+
+.barra-control .boton-texto.solo-icono {
+  width: 26px;
+  height: 26px;
+}
+
+.separador-control {
+  width: 1px;
+  height: 18px;
+  background: var(--borde);
+  flex: none;
+}
+
+.ayuda-control {
+  color: var(--texto-tenue);
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+  flex: 1;
+}
+
+.control-etiquetado[hidden] {
+  display: none;
+}
+
+/* Visor: barra de control arriba y riel a la izquierda. */
+.panel-visor {
+  display: flex;
+  flex-direction: column;
+}
+
+.cuerpo-visor {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+}
+
+.area-visor {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.area-visor > canvas:first-child {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.area-visor .ventana-cuerpo {
+  top: 10px;
+  right: 10px;
+  max-height: calc(100% - 20px);
+}
+
+.riel .hueco {
+  flex: 1;
+  min-height: 8px;
+}
+
+/* Panel de capas: botones abajo, solo iconos. */
+.pie-iconos {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 2px;
+  padding: 5px 6px;
+  border-top: 1px solid var(--borde-suave);
+  flex: none;
+}
+
+.pie-iconos .boton-texto.solo-icono {
+  width: 28px;
+  height: 28px;
+  background: transparent;
+  border-color: transparent;
+  color: var(--texto-suave);
+}
+
+.pie-iconos .boton-texto.solo-icono:hover {
+  background: var(--superficie-3);
+  color: var(--texto);
+}
+
+.pie-iconos .separador-control {
+  margin: 0 4px;
+}
+
+.panel-capas .propiedades-capa {
+  border-top: none;
+  border-bottom: 1px solid var(--borde-suave);
+}
+
+/* Barra superior */
+.grupo-barra {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin-right: 6px;
+}
+
+.barra .boton-texto.solo-icono {
+  width: 30px;
+  height: 30px;
+}
+
+.barra .boton-texto.fantasma {
+  color: var(--texto-suave);
+}
+
+.barra .boton-texto.fantasma:hover {
+  color: var(--texto);
+}
+
+.separador-barra {
+  width: 1px;
+  height: 18px;
+  background: var(--borde);
+}
+
+/* Campo compacto con deslizador desplegable */
+.campo-deslizante {
+  display: inline-flex;
+  align-items: center;
+  height: 26px;
+  border: 1px solid var(--borde);
+  border-radius: var(--radio);
+  background: var(--superficie-2);
+  overflow: hidden;
+}
+
+.nombre-campo {
+  padding: 0 6px 0 8px;
+  font-size: 11.5px;
+  color: var(--texto-suave);
+  cursor: ew-resize;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.nombre-campo:hover {
+  color: var(--texto);
+}
+
+.valor-campo {
+  height: 100%;
+  min-width: 52px;
+  padding: 0 8px;
+  border: none;
+  border-left: 1px solid var(--borde);
+  background: transparent;
+  color: var(--texto);
+  font: inherit;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  text-align: left;
+}
+
+.valor-campo:hover {
+  background: var(--superficie-3);
+}
+
+.popover-campo {
+  position: fixed;
+  z-index: 1500;
+  width: 200px;
+  padding: 10px 12px;
+  background: var(--superficie-2);
+  border: 1px solid var(--borde);
+  border-radius: var(--radio-panel);
+  box-shadow: var(--sombra);
+}
+
+.popover-campo .deslizador {
+  width: 100%;
+}
+
+.pie-iconos {
+  gap: 0;
+  flex-wrap: nowrap;
+  overflow: hidden;
+}
+
+.pie-iconos .boton-texto.solo-icono {
+  width: 26px;
+  flex: none;
+}
+
+.barra-opciones .selector-preset {
+  min-width: 0;
+  width: 130px;
 }

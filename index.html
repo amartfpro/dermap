@@ -10,16 +10,20 @@
   </head>
   <body>
     <header class="barra">
-      <button id="inicio" class="boton-texto fantasma solo-icono" title="Inicio"></button>
+      <button id="inicio" class="boton-texto fantasma solo-icono"></button>
       <span class="marca">Dermap</span>
+      <span class="separador-barra"></span>
       <span id="cliente" class="cliente"></span>
       <span id="estado-guardado" class="estado-guardado"></span>
       <span class="hueco"></span>
-      <button id="ficha" class="boton-texto">Ficha del cliente</button>
-      <button id="exportar-proyecto" class="boton-texto">Exportar .dermap</button>
-      <button id="presentar" class="boton-texto primario">Presentar</button>
-      <button id="ayuda" class="boton-texto solo-icono">?</button>
-      <button id="restablecer" class="boton-texto solo-icono fantasma"></button>
+      <div class="grupo-barra">
+        <button id="ficha" class="boton-texto fantasma solo-icono"></button>
+        <button id="exportar-proyecto" class="boton-texto fantasma solo-icono"></button>
+        <span id="hueco-idioma"></span>
+        <button id="ayuda" class="boton-texto fantasma solo-icono"></button>
+        <button id="restablecer" class="boton-texto fantasma solo-icono"></button>
+      </div>
+      <button id="presentar" class="boton-texto acento solo-icono"></button>
     </header>
     <main id="espacio"></main>
   </body>

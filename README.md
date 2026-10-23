@@ -43,6 +43,11 @@ el almacenamiento del navegador, no en disco).
 
 ## Cómo se usa
 
+La interfaz sigue el estilo de Illustrator: herramientas como iconos en rieles verticales (pasa
+el ratón para ver el nombre y el atajo), una barra de control arriba con las opciones de la
+herramienta activa y menús con un triangulito en la esquina del icono. Los tres paneles
+(Capas, Visor 3D y Lienzo) se redimensionan arrastrando la línea que aparece entre ellos.
+
 1. **Inicio**: al abrir la app aparecen los proyectos (uno por cliente, en
    `Documentos/Dermap/`) con su portada. **Nuevo proyecto** pide la ficha del cliente y su
    cuerpo (sexo, altura, complexión, musculatura, tono de piel y, si las tienes, sus medidas)

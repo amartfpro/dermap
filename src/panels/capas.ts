@@ -12,7 +12,9 @@ import { transferirDibujo } from "../lienzo/transferir";
 import { abrirDialogoTexto } from "./texto";
 import { abrirDialogoFiltro } from "./filtro";
 import { panelLienzoActual } from "./lienzo";
-import { botonIcono, icono, seccion, segmentado, type NombreIcono } from "../ui/iconos";
+import { botonIcono, icono, type NombreIcono } from "../ui/iconos";
+import { botonMenu, type ElementoMenu } from "../ui/menu";
+import { campoDeslizante } from "../ui/campo";
 
 /**
  * Capas del lienzo activo (RF-31): crear, duplicar, eliminar, reordenar, ocultar, bloquear,
@@ -43,7 +45,7 @@ export class PanelCapas implements IContentRenderer {
     this.element.className = "panel panel-capas";
 
     const barra = document.createElement("div");
-    barra.className = "herramientas envolver";
+    barra.className = "pie-iconos";
     const archivo = document.createElement("input");
     archivo.type = "file";
     archivo.accept = "image/png,image/jpeg";
@@ -53,39 +55,20 @@ export class PanelCapas implements IContentRenderer {
       archivo.value = "";
       if (f) void this.importar(f);
     });
-    const traer = this.selectorTraer();
+    const sep = () => Object.assign(document.createElement("span"), { className: "separador-control" });
+    const hueco = Object.assign(document.createElement("span"), { className: "hueco" });
     barra.append(
-      seccion(
-        t("Añadir"),
-        segmentado(
-          botonIcono("mas", t("Nueva capa (Ctrl+Mayús+N)"), () => this.nueva()),
-          botonIcono("imagen", t("Importar un PNG o JPG como capa nueva"), () => archivo.click()),
-          botonIcono("texto", t("Escribir un texto (lettering) con tipografía y tamaño real (T)"), () => abrirDialogoTexto()),
-        ),
-      ),
-      seccion(
-        t("Capa"),
-        segmentado(
-          botonIcono("duplicar", t("Duplicar la capa activa (Ctrl+J)"), () => this.duplicar()),
-          botonIcono("arriba", t("Subir la capa (Alt+↑)"), () => this.mover(1)),
-          botonIcono("abajo", t("Bajar la capa (Alt+↓)"), () => this.mover(-1)),
-          botonIcono("borrar", t("Eliminar la capa activa"), () => this.eliminar(), { clase: "peligro" }),
-        ),
-      ),
-      seccion(
-        t("Portapapeles"),
-        segmentado(
-          botonIcono("copiar", t("Copiar la capa activa (Ctrl+C)"), () => void panelLienzoActual()?.copiar()),
-          botonIcono("pegar", t("Pegar la capa copiada, en este u otro lienzo (Ctrl+V)"), () => panelLienzoActual()?.pegar()),
-        ),
-      ),
-      seccion(
-        t("Convertir"),
-        botonIcono("stencil", t("Convertir la capa activa (una foto o un boceto) en líneas o en blanco y negro"), () => abrirDialogoFiltro(), {
-          texto: t("A stencil…"),
-        }),
-        traer,
-      ),
+      botonIcono("imagen", t("Importar un PNG o JPG como capa nueva"), () => archivo.click()),
+      botonIcono("texto", t("Texto a tamaño real (T)"), () => abrirDialogoTexto()),
+      botonIcono("stencil", t("Convertir la capa activa (foto o boceto) en líneas o en blanco y negro"), () => abrirDialogoFiltro()),
+      botonMenu("traer", t("Traer el dibujo de otro lienzo (misma piel o en espejo)"), () => this.menuTraer()),
+      sep(),
+      botonIcono("copiar", t("Copiar la capa activa (Ctrl+C)"), () => void panelLienzoActual()?.copiar()),
+      botonIcono("pegar", t("Pegar la capa copiada, en este u otro lienzo (Ctrl+V)"), () => panelLienzoActual()?.pegar()),
+      hueco,
+      botonIcono("duplicar", t("Duplicar la capa activa (Ctrl+J)"), () => this.duplicar()),
+      botonIcono("mas", t("Nueva capa (Ctrl+Mayús+N)"), () => this.nueva()),
+      botonIcono("borrar", t("Eliminar la capa activa"), () => this.eliminar(), { clase: "peligro" }),
       archivo,
     );
 
@@ -95,7 +78,7 @@ export class PanelCapas implements IContentRenderer {
     this.lista = document.createElement("ul");
     this.lista.className = "lista-capas";
 
-    this.element.append(barra, this.lista, this.propiedades);
+    this.element.append(this.propiedades, this.lista, barra);
     app.addEventListener("activo", this.alCambiarActivo);
     app.addEventListener("proyecto", this.alCambiarProyecto);
     app.addEventListener("lienzos", this.alCambiarCapas);
@@ -146,15 +129,6 @@ export class PanelCapas implements IContentRenderer {
     this.conPaso("Eliminar capa", (l) => l.doc.eliminarCapa(l.doc.activa));
   }
 
-  private mover(sentido: 1 | -1): void {
-    const l = this.lienzo;
-    if (!l) return;
-    const i = l.doc.capas.indexOf(l.doc.activa);
-    const destino = i + sentido;
-    if (destino < 0 || destino >= l.doc.capas.length) return;
-    this.conPaso("Mover capa", (lz) => lz.doc.moverCapa(lz.doc.activa, destino));
-  }
-
   private cambiar(
     capa: Capa,
     cambios: Partial<Pick<Capa, "nombre" | "visible" | "bloqueada" | "opacidad" | "modo" | "enStencil">>,
@@ -178,62 +152,55 @@ export class PanelCapas implements IContentRenderer {
    * «Traer dibujo de…»: lista los demás lienzos del proyecto que comparten piel con el
    * activo y copia su dibujo a una capa nueva, recolocado a través del cuerpo (RF-29).
    */
-  private selectorTraer(): HTMLSelectElement {
-    const s = document.createElement("select");
-    s.className = "desplegable";
-    s.title = t("Copiar el dibujo de otro lienzo que cubra la misma piel (por ejemplo, al rehacer una zona con otro corte)");
-    const rellenar = () => {
-      s.replaceChildren(new Option(t("Traer dibujo de…"), ""));
-      const actual = this.lienzo;
-      if (!actual) return;
-      const propios = new Set(actual.zona.triangulos);
-      const sim = simetriaActual();
-      const reflejados = sim ? new Set(Array.from(actual.zona.triangulos, (tri) => sim.triangulos[tri])) : null;
-      const espejos: HTMLOptionElement[] = [];
-      for (const otro of app.lienzos) {
-        if (otro === actual) continue;
-        let comunes = 0, enEspejo = 0;
-        for (const tri of otro.zona.triangulos) {
-          if (propios.has(tri)) comunes++;
-          if (reflejados?.has(tri)) enEspejo++;
-        }
-        const pct = Math.round((100 * comunes) / propios.size);
-        const o = new Option(comunes ? t("{lienzo} ({pct} % común)", { lienzo: otro.nombre, pct }) : t("{lienzo} (no coincide)", { lienzo: otro.nombre }), otro.id);
-        o.disabled = comunes === 0;
-        s.append(o);
-        // La zona simétrica (el otro brazo, la otra pierna…) se ofrece en espejo.
-        if (enEspejo > propios.size * 0.05) {
-          const pe = Math.round((100 * enEspejo) / propios.size);
-          espejos.push(new Option(t("{lienzo} en espejo ({pct} %)", { lienzo: otro.nombre, pct: pe }), `espejo:${otro.id}`));
-        }
+  private menuTraer(): ElementoMenu[] {
+    const actual = this.lienzo;
+    if (!actual) return [{ texto: t("Sin lienzo abierto"), deshabilitado: true }];
+    const propios = new Set(actual.zona.triangulos);
+    const sim = simetriaActual();
+    const reflejados = sim ? new Set(Array.from(actual.zona.triangulos, (tri) => sim.triangulos[tri])) : null;
+    const directos: ElementoMenu[] = [];
+    const espejos: ElementoMenu[] = [];
+    for (const otro of app.lienzos) {
+      if (otro === actual) continue;
+      let comunes = 0, enEspejo = 0;
+      for (const tri of otro.zona.triangulos) {
+        if (propios.has(tri)) comunes++;
+        if (reflejados?.has(tri)) enEspejo++;
       }
-      if (espejos.length) {
-        const grupo = document.createElement("optgroup");
-        grupo.label = t("En espejo (lado contrario)");
-        grupo.append(...espejos);
-        s.append(grupo);
-      }
-      if (s.options.length === 1) s.append(Object.assign(new Option(t("No hay otros lienzos"), ""), { disabled: true }));
-    };
-    rellenar();
-    s.addEventListener("pointerdown", rellenar);
-    s.addEventListener("focus", rellenar);
-    s.addEventListener("change", () => {
-      const espejo = s.value.startsWith("espejo:");
-      const id = espejo ? s.value.slice(7) : s.value;
-      const origen = app.lienzos.find((l) => l.id === id);
-      s.value = "";
-      if (!origen || !this.lienzo) return;
-      const sim = espejo ? simetriaActual() : null;
-      if (espejo && !sim) return;
-      const { comunes, total } = transferirDibujo(origen, this.lienzo, sim ?? undefined);
-      const nombre = espejo ? t("{lienzo} (espejo)", { lienzo: origen.nombre }) : origen.nombre;
-      if (comunes < total) {
-        const fuera = Math.round((100 * (total - comunes)) / total);
-        this.aviso(t("Dibujo traído de «{lienzo}». El {pct} % de esta zona no estaba en el original y queda vacío.", { lienzo: nombre, pct: fuera }));
-      } else this.aviso(t("Dibujo traído de «{lienzo}».", { lienzo: nombre }));
-    });
-    return s;
+      const pct = Math.round((100 * comunes) / propios.size);
+      directos.push({
+        texto: otro.nombre,
+        detalle: comunes ? t("{pct} % común", { pct }) : t("no coincide"),
+        deshabilitado: comunes === 0,
+        accion: () => this.traer(otro, false),
+      });
+      // La zona simétrica (el otro brazo, la otra pierna…) se ofrece en espejo.
+      if (enEspejo > propios.size * 0.05)
+        espejos.push({
+          texto: otro.nombre,
+          icono: "espejo",
+          detalle: `${Math.round((100 * enEspejo) / propios.size)} %`,
+          accion: () => this.traer(otro, true),
+        });
+    }
+    if (!directos.length) return [{ texto: t("No hay otros lienzos"), deshabilitado: true }];
+    return [
+      { titulo: t("Misma piel") },
+      ...directos,
+      ...(espejos.length ? (["separador", { titulo: t("En espejo (lado contrario)") }, ...espejos] as ElementoMenu[]) : []),
+    ];
+  }
+
+  private traer(origen: Lienzo, espejo: boolean): void {
+    if (!this.lienzo) return;
+    const sim = espejo ? simetriaActual() : null;
+    if (espejo && !sim) return;
+    const { comunes, total } = transferirDibujo(origen, this.lienzo, sim ?? undefined);
+    const nombre = espejo ? t("{lienzo} (espejo)", { lienzo: origen.nombre }) : origen.nombre;
+    if (comunes < total) {
+      const fuera = Math.round((100 * (total - comunes)) / total);
+      this.aviso(t("Dibujo traído de «{lienzo}». El {pct} % de esta zona no estaba en el original y queda vacío.", { lienzo: nombre, pct: fuera }));
+    } else this.aviso(t("Dibujo traído de «{lienzo}».", { lienzo: nombre }));
   }
 
   private aviso(texto: string): void {
@@ -257,23 +224,16 @@ export class PanelCapas implements IContentRenderer {
     const activa = l.doc.activa;
 
     // Propiedades de la capa activa: opacidad, modo de fusión y si va al stencil.
-    const opacidad = document.createElement("input");
-    opacidad.type = "range";
-    opacidad.min = "0";
-    opacidad.max = "100";
-    opacidad.value = String(Math.round(activa.opacidad * 100));
-    opacidad.className = "deslizador";
-    const valor = document.createElement("span");
-    valor.className = "valor";
-    valor.textContent = `${opacidad.value} %`;
     let pasoRegistrado = false;
-    opacidad.addEventListener("input", () => {
-      // Un único paso de historial por arrastre del deslizador.
+    const opacidad = campoDeslizante(t("Opacidad"), t("Opacidad de la capa"), 0, 100, (v) => {
+      // Un único paso de historial por arrastre.
       if (!pasoRegistrado) l.historial.registrar(l.doc.instantaneaCapas("Opacidad de capa"));
       pasoRegistrado = true;
-      valor.textContent = `${opacidad.value} %`;
-      l.doc.cambiarCapa(activa, { opacidad: Number(opacidad.value) / 100 });
+      const valor = Math.round(v);
+      opacidad.fijar(v, `${valor} %`);
+      l.doc.cambiarCapa(activa, { opacidad: valor / 100 });
     });
+    opacidad.fijar(activa.opacidad * 100, `${Math.round(activa.opacidad * 100)} %`);
     const modo = document.createElement("select");
     modo.className = "desplegable";
     for (const m of MODOS_FUSION) modo.append(new Option(t(m.nombre), m.modo, false, m.modo === activa.modo));
@@ -286,10 +246,8 @@ export class PanelCapas implements IContentRenderer {
     casilla.checked = activa.enStencil;
     casilla.addEventListener("change", () => this.cambiar(activa, { enStencil: casilla.checked }, "Capa en stencil"));
     stencil.append(casilla, " " + t("Stencil"));
-    const filaOpacidad = document.createElement("label");
-    filaOpacidad.className = "control-etiquetado";
-    filaOpacidad.append(t("Opacidad"), opacidad, valor);
-    this.propiedades.append(filaOpacidad, modo, stencil);
+    modo.title = t("Modo de fusión");
+    this.propiedades.append(modo, opacidad.el, stencil);
 
   }
 

@@ -11,7 +11,9 @@ import { PanelCapas } from "./panels/capas";
 import { app } from "./estado";
 import { abrirArchivoInicial, exportarProyecto } from "./proyectos/gestor";
 import { inicioVisible, mostrarInicio, ocultarInicio, volverAlInicio } from "./inicio/inicio";
-import { icono } from "./ui/iconos";
+import { icono, type NombreIcono } from "./ui/iconos";
+import { botonMenu } from "./ui/menu";
+import { instalarTooltips } from "./ui/tooltip";
 import { enTauri, sistemaArchivos } from "./proyectos/sistema-archivos";
 
 const CLAVE_LAYOUT = "dermap.layout.v3";
@@ -85,36 +87,35 @@ restaurar();
 for (const panel of dock.panels) if (TITULOS[panel.id]) panel.api.setTitle(t(TITULOS[panel.id]));
 
 // Textos de la barra superior y selector de idioma (RNF-14).
-const textosBarra: [string, string, string][] = [
-  ["ficha", traducible("Ficha del cliente"), traducible("Datos del cliente y notas del proyecto")],
-  ["exportar-proyecto", traducible("Exportar .dermap"), traducible("Guardar todo el proyecto en un solo archivo .dermap (copia de seguridad o para otro ordenador)")],
-  ["presentar", traducible("Presentar"), traducible("Enseñar el diseño al cliente a pantalla completa (F5)")],
-  ["ayuda", "?", traducible("Flujo de trabajo y atajos de teclado (F1)")],
-  ["restablecer", "", traducible("Volver a la distribución inicial de paneles")],
-  ["inicio", "", traducible("Inicio: proyectos recientes y nuevo proyecto")],
+// Barra superior: solo iconos con tooltip (como Illustrator).
+const iconosBarra: [string, NombreIcono, string][] = [
+  ["inicio", "inicio", traducible("Inicio: proyectos y nuevo proyecto")],
+  ["ficha", "ficha", traducible("Ficha del cliente: datos, cita y notas")],
+  ["exportar-proyecto", "descargar", traducible("Exportar el proyecto a un archivo .dermap (copia de seguridad o para otro ordenador)")],
+  ["ayuda", "ayuda", traducible("Flujo de trabajo y atajos de teclado (F1)")],
+  ["restablecer", "distribucion", traducible("Restablecer la distribución de paneles")],
+  ["presentar", "presentar", traducible("Presentar al cliente a pantalla completa (F5)")],
 ];
-for (const [id, texto, titulo] of textosBarra) {
+for (const [id, nombre, titulo] of iconosBarra) {
   const b = document.getElementById(id)!;
-  if (texto) b.textContent = texto === "?" ? "?" : t(texto);
+  b.replaceChildren(icono(nombre));
   b.title = t(titulo);
+  b.setAttribute("aria-label", t(titulo));
 }
-document.getElementById("inicio")!.append(icono("inicio"));
-document.getElementById("restablecer")!.append(icono("encajar"));
-document.getElementById("presentar")!.prepend(icono("camara"));
-document.getElementById("presentar")!.classList.add("con-icono");
-document.getElementById("ficha")!.prepend(icono("cuerpo"));
-document.getElementById("ficha")!.classList.add("con-icono");
-document.getElementById("exportar-proyecto")!.prepend(icono("exportar"));
-document.getElementById("exportar-proyecto")!.classList.add("con-icono");
-const selectorIdioma = document.createElement("select");
-selectorIdioma.className = "desplegable idioma";
-selectorIdioma.title = t("Idioma");
-for (const [codigo, { nombre }] of Object.entries(IDIOMAS)) selectorIdioma.append(new Option(nombre, codigo, false, codigo === idiomaActual()));
-selectorIdioma.addEventListener("change", async () => {
-  await app.proyecto?.guardar();
-  cambiarIdioma(selectorIdioma.value);
-});
-document.getElementById("ayuda")!.before(selectorIdioma);
+const botonIdioma = botonMenu("idioma", t("Idioma"), () =>
+  Object.entries(IDIOMAS).map(([codigo, { nombre }]) => ({
+    texto: nombre,
+    marcado: codigo === idiomaActual(),
+    accion: async () => {
+      if (codigo === idiomaActual()) return;
+      await app.proyecto?.guardar();
+      cambiarIdioma(codigo);
+    },
+  })),
+);
+botonIdioma.classList.add("fantasma");
+document.getElementById("hueco-idioma")!.replaceWith(botonIdioma);
+instalarTooltips();
 
 dock.onDidLayoutChange(() => {
   try {

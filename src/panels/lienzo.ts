@@ -13,8 +13,9 @@ import type { Lienzo } from "../lienzo/lienzo";
 import type { Rect } from "../lienzo/teselas";
 import { abrirDialogoExportar } from "./exportar";
 import { abrirDialogoTexto } from "./texto";
-import { botonIcono, seccion, segmentado, type NombreIcono } from "../ui/iconos";
+import { botonIcono, segmentado, type NombreIcono } from "../ui/iconos";
 import { abrirSelectorColor, MAX_PALETA } from "../ui/selector-color";
+import { campoDeslizante, type CampoDeslizante } from "../ui/campo";
 
 type P = { x: number; y: number };
 type Arrastre =
@@ -113,7 +114,7 @@ export class PanelLienzo implements IContentRenderer {
   private riel!: HTMLElement;
   private accionesPestanas!: HTMLElement;
   private barraVista!: HTMLElement;
-  private valores!: Record<"tamano" | "opacidad" | "dureza", HTMLElement>;
+  private campos!: Record<"tamano" | "opacidad" | "dureza", CampoDeslizante>;
   private filaPaleta!: HTMLElement;
   private verDeformacion = false;
   private flotante: ImagenFlotante | null = null;
@@ -144,7 +145,7 @@ export class PanelLienzo implements IContentRenderer {
     this.pestanas.className = "pestanas";
 
     this.barra = document.createElement("div");
-    this.barra.className = "herramientas envolver barra-opciones";
+    this.barra.className = "herramientas barra-control barra-opciones";
     this.riel = document.createElement("div");
     this.riel.className = "riel";
     this.barraVista = document.createElement("div");
@@ -155,13 +156,15 @@ export class PanelLienzo implements IContentRenderer {
     this.barraImagen.className = "herramientas aviso-imagen";
     this.barraImagen.hidden = true;
     const textoImagen = document.createElement("span");
-    textoImagen.textContent = t("Coloca la imagen: arrastra para mover, esquinas para escalar, punto superior para girar (Mayús: de 15 en 15°).");
+    textoImagen.textContent = t("Arrastra para mover; esquinas: escalar; punto de arriba: girar (Mayús: 15°).");
     this.barraImagen.append(
       textoImagen,
-      botonIcono("voltearH", t("Voltear en horizontal (Mayús+H)"), () => this.voltearImagen(true), { texto: t("Voltear ↔") }),
-      botonIcono("voltearV", t("Voltear en vertical (Mayús+V)"), () => this.voltearImagen(false), { texto: t("Voltear ↕") }),
-      boton(t("Aplicar (Intro)"), () => this.fijarImagen(), "primario"),
-      boton(t("Cancelar (Esc)"), () => this.cancelarImagen()),
+      segmentado(
+        botonIcono("voltearH", t("Voltear en horizontal (Mayús+H)"), () => this.voltearImagen(true)),
+        botonIcono("voltearV", t("Voltear en vertical (Mayús+V)"), () => this.voltearImagen(false)),
+      ),
+      botonIcono("check", t("Aplicar (Intro)"), () => this.fijarImagen(), { clase: "acento" }),
+      botonIcono("cerrar", t("Cancelar (Esc)"), () => this.cancelarImagen()),
     );
 
     this.canvas = document.createElement("canvas");
@@ -285,7 +288,6 @@ export class PanelLienzo implements IContentRenderer {
   // ── Herramientas ──────────────────────────────────────────────────────────────
 
   private montarHerramientas(): void {
-    const a = app.ajustes;
     // ── Riel de herramientas (vertical, a la izquierda) ──
     const herramienta = (nombre: NombreIcono, h: Herramienta, titulo: string) => {
       const b = botonIcono(nombre, titulo, () => {
@@ -340,35 +342,34 @@ export class PanelLienzo implements IContentRenderer {
       if (p) app.cambiarAjustes(p.ajustes);
     });
     // Tamaño en escala logarítmica: de 0,2 a 40 mm.
-    const tamano = deslizador(0, 1000, tamanoADeslizador(a.tamano), t("Tamaño ([ y ])"));
-    tamano.addEventListener("input", () => app.cambiarAjustes({ tamano: deslizadorATamano(Number(tamano.value)) }));
-    const opacidad = deslizador(1, 100, a.opacidad * 100, t("Opacidad del trazo"));
-    opacidad.addEventListener("input", () => app.cambiarAjustes({ opacidad: Number(opacidad.value) / 100 }));
-    const dureza = deslizador(0, 100, a.dureza * 100, t("Dureza del borde: alta para líneas, baja para sombreado"));
-    dureza.addEventListener("input", () => app.cambiarAjustes({ dureza: Number(dureza.value) / 100 }));
-    this.valores = { tamano: valor(), opacidad: valor(), dureza: valor() };
-    const puntos = casilla(t("Puntillismo"), a.forma === "puntos", (v) => app.cambiarAjustes({ forma: v ? "puntos" : "redonda" }));
-    puntos.title = t("Puntillismo: la estampa es una nube de puntos de aguja");
-    const presion = casilla(t("Presión → intensidad"), a.presionOpacidad, (v) => app.cambiarAjustes({ presionOpacidad: v }));
-    presion.title = t("Con el lápiz, la presión también controla la intensidad (útil para sombrear)");
+    this.campos = {
+      tamano: campoDeslizante(t("Tamaño"), t("Tamaño de la punta en mm reales ([ y ])"), 0, 1000, (v) => app.cambiarAjustes({ tamano: deslizadorATamano(v) })),
+      opacidad: campoDeslizante(t("Opacidad"), t("Opacidad del trazo"), 1, 100, (v) => app.cambiarAjustes({ opacidad: Math.round(v) / 100 })),
+      dureza: campoDeslizante(t("Dureza"), t("Dureza del borde: alta para líneas, baja para sombreado"), 0, 100, (v) => app.cambiarAjustes({ dureza: Math.round(v) / 100 })),
+    };
+    const puntos = botonIcono("puntos", t("Puntillismo: la punta es una nube de puntos de aguja"), () =>
+      app.cambiarAjustes({ forma: app.ajustes.forma === "puntos" ? "redonda" : "puntos" }),
+    );
+    const presion = botonIcono("presion", t("Con el lápiz, la presión también controla la intensidad (útil para sombrear)"), () =>
+      app.cambiarAjustes({ presionOpacidad: !app.ajustes.presionOpacidad }),
+    );
 
     this.filaPaleta = document.createElement("div");
     this.filaPaleta.className = "paleta";
     this.pintarPaleta();
 
-    const exportar = botonIcono("exportar", t("Stencil a escala real en PDF (A4) o PNG"), () => this.lienzo && abrirDialogoExportar(this.lienzo), {
-      texto: t("Exportar stencil"),
-      clase: "primario",
+    const exportar = botonIcono("exportar", t("Exportar el stencil a escala real en PDF (A4) o PNG"), () => this.lienzo && abrirDialogoExportar(this.lienzo), {
+      clase: "acento",
     });
+    const sep = () => Object.assign(document.createElement("span"), { className: "separador-control" });
     this.barra.append(
-      seccion(t("Pincel"), preset),
-      seccion(
-        t("Trazo"),
-        etiqueta(t("Tamaño"), tamano, this.valores.tamano),
-        etiqueta(t("Opacidad"), opacidad, this.valores.opacidad),
-        etiqueta(t("Dureza"), dureza, this.valores.dureza),
-      ),
-      seccion(t("Punta"), puntos, presion),
+      preset,
+      sep(),
+      this.campos.tamano.el,
+      this.campos.opacidad.el,
+      this.campos.dureza.el,
+      sep(),
+      segmentado(puntos, presion),
     );
     // Exportar: a la derecha de las pestañas, siempre a mano.
     this.accionesPestanas = document.createElement("div");
@@ -414,15 +415,12 @@ export class PanelLienzo implements IContentRenderer {
       linea,
       rectangulo,
       elipse,
-      tamano,
-      opacidad,
-      dureza,
       deshacer,
       rehacer,
       cuadricula,
       deformacion,
-      presion: presion.querySelector("input")!,
-      puntos: puntos.querySelector("input")!,
+      presion,
+      puntos,
     };
   }
 
@@ -446,9 +444,9 @@ export class PanelLienzo implements IContentRenderer {
     (this.controles.color as HTMLButtonElement).style.background = a.color;
     this.controles.deformacion.classList.toggle("activo", this.verDeformacion);
     this.controles.cuadricula.classList.toggle("activo", !!this.lienzo?.cuadricula);
-    this.valores.tamano.textContent = `${a.tamano < 1 ? a.tamano.toFixed(2) : a.tamano.toFixed(1)} mm`;
-    this.valores.opacidad.textContent = `${Math.round(a.opacidad * 100)} %`;
-    this.valores.dureza.textContent = `${Math.round(a.dureza * 100)} %`;
+    this.campos.tamano.fijar(tamanoADeslizador(a.tamano), `${a.tamano < 1 ? a.tamano.toFixed(2) : a.tamano.toFixed(1)} mm`);
+    this.campos.opacidad.fijar(a.opacidad * 100, `${Math.round(a.opacidad * 100)} %`);
+    this.campos.dureza.fijar(a.dureza * 100, `${Math.round(a.dureza * 100)} %`);
     if (this.botonRecta) {
       this.botonRecta.classList.toggle("activo", !!this.recta);
       this.botonRecta.disabled = this.lienzo?.zona.aplanado.tipo !== "manga";
@@ -465,11 +463,8 @@ export class PanelLienzo implements IContentRenderer {
     // El selector muestra el pincel predefinido que coincide con los ajustes actuales, si lo hay.
     const i = PRESETS.findIndex((p) => Object.entries(p.ajustes).every(([k, v]) => a[k as keyof typeof a] === v));
     (this.controles.preset as HTMLSelectElement).value = i >= 0 ? String(i) : "";
-    (this.controles.puntos as HTMLInputElement).checked = a.forma === "puntos";
-    (this.controles.tamano as HTMLInputElement).value = String(tamanoADeslizador(a.tamano));
-    (this.controles.opacidad as HTMLInputElement).value = String(Math.round(a.opacidad * 100));
-    (this.controles.dureza as HTMLInputElement).value = String(Math.round(a.dureza * 100));
-    (this.controles.presion as HTMLInputElement).checked = a.presionOpacidad;
+    this.controles.puntos.classList.toggle("activo", a.forma === "puntos");
+    this.controles.presion.classList.toggle("activo", a.presionOpacidad);
     (this.controles.deshacer as HTMLButtonElement).disabled = !this.lienzo?.historial.puedeDeshacer;
     (this.controles.rehacer as HTMLButtonElement).disabled = !this.lienzo?.historial.puedeRehacer;
     this.actualizarInfo();
@@ -1344,41 +1339,6 @@ export function boton(texto: string, alPulsar: () => void, clase = ""): HTMLButt
   b.textContent = texto;
   b.addEventListener("click", alPulsar);
   return b;
-}
-
-function deslizador(min: number, max: number, valor: number, titulo: string): HTMLInputElement {
-  const d = document.createElement("input");
-  d.type = "range";
-  d.min = String(min);
-  d.max = String(max);
-  d.value = String(valor);
-  d.title = titulo;
-  d.className = "deslizador";
-  return d;
-}
-
-function casilla(texto: string, inicial: boolean, alCambiar: (v: boolean) => void): HTMLLabelElement {
-  const etiqueta = document.createElement("label");
-  etiqueta.className = "interruptor";
-  const c = document.createElement("input");
-  c.type = "checkbox";
-  c.checked = inicial;
-  c.addEventListener("change", () => alCambiar(c.checked));
-  etiqueta.append(c, ` ${texto}`);
-  return etiqueta;
-}
-
-function etiqueta(texto: string, ...controles: HTMLElement[]): HTMLLabelElement {
-  const l = document.createElement("label");
-  l.className = "control-etiquetado";
-  l.append(texto, ...controles);
-  return l;
-}
-
-function valor(): HTMLElement {
-  const v = document.createElement("span");
-  v.className = "valor";
-  return v;
 }
 
 /** Mensaje de por qué no se puede dibujar en una capa. */
