@@ -50,19 +50,18 @@ herramienta activa y menús con un triangulito en la esquina del icono. Los tres
 
 1. **Inicio**: al abrir la app aparecen los proyectos (uno por cliente, en
    `Documentos/Dermap/`) con su portada. **Nuevo proyecto** pide la ficha del cliente y su
-   cuerpo (sexo, altura, complexión, musculatura, tono de piel y, si las tienes, sus medidas)
+   cuerpo (sexo, altura, complexión, musculatura, y tono de piel)
    antes de entrar. El botón de la casa (arriba a la izquierda) guarda y vuelve al inicio.
    **Ficha del cliente** (arriba) guarda nombre, contacto, fecha de la cita y notas.
    **Exportar .dermap** guarda el proyecto entero en un archivo (copia de seguridad o para otro
    ordenador) y **Abrir archivo .dermap…** lo abre como proyecto nuevo (con la aplicación
    instalada, también basta con hacer doble clic en el archivo).
 2. **Cuerpo** (visor 3D → **Cuerpo**): altura real, hombre o mujer, complexión, musculatura y
-   tono de piel. El modelo se ve suavizado (teselado de Phong) con un material y una luz de piel. Los lienzos siguen al cuerpo al cambiarlo. Con las **medidas del cliente** (contornos
-   de brazo, antebrazo, muñeca, muslo, gemelo y tobillo tomados con cinta) los lienzos nuevos
-   salen a su escala real. **Postura** mueve el esqueleto de MakeHuman (163
+   tono de piel. El modelo se ve suavizado (teselado de Phong) con un material y una luz de piel. Los lienzos siguen al cuerpo al cambiarlo.
+   **Postura** mueve el esqueleto de MakeHuman (163
    huesos, con sus pesos y skinning de cuaterniones duales): hombros (de brazos al costado a «en
    T»), brazos adelante/atrás, codos (hasta ~160° estirados), muñecas, dedos, caderas, piernas adelante/atrás, rodillas y
-   giro de la cabeza, con atajos «Natural», «Base» y «En T» y la casilla «Simetría». Se puede seleccionar zonas en cualquier postura; el lienzo se
+   giro de la cabeza, con atajos «Natural», «Base» y «En T» y la casilla «Simetría»; se guarda en el proyecto y por defecto es la natural. Se puede seleccionar zonas en cualquier postura; el lienzo se
    aplana siempre en la postura base.
 3. **Zona** (visor 3D): una «Zona rápida», **Seleccionar** (pincel) o **Lazo** (rodear lo que
    se ve); Mayús quita. En mangas, la línea azul es el corte: va por la cara que no estás

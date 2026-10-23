@@ -1181,32 +1181,6 @@ input[type="radio"] {
   align-self: flex-start;
 }
 
-.medidas {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 6px;
-}
-
-.fila-medida {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 12px;
-}
-
-.fila-medida span {
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  color: var(--texto-suave);
-}
-
-.fila-medida .numero {
-  width: 68px;
-}
-
 /* Lazo del visor */
 .capa-lazo {
   position: absolute;

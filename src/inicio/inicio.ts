@@ -3,7 +3,6 @@ import { botonMenu } from "../ui/menu";
 import { app } from "../estado";
 import { confirmar } from "../dialogos";
 import { ALTURA_MAXIMA, ALTURA_MINIMA } from "../modelos/formas";
-import type { Medida, Medidas } from "../modelos/medidas";
 import {
   abrirProyecto,
   cerrarProyecto,
@@ -325,28 +324,6 @@ function pintarNuevo(): void {
     filaCampo(t("Tono de piel"), tonos),
   );
 
-  // Medidas (opcionales)
-  const NOMBRES: [Medida, string][] = [
-    ["brazo", t("Brazo (bíceps)")],
-    ["antebrazo", t("Antebrazo")],
-    ["muneca", t("Muñeca")],
-    ["muslo", t("Muslo")],
-    ["gemelo", t("Gemelo")],
-    ["tobillo", t("Tobillo")],
-  ];
-  const camposMedida = NOMBRES.map(([clave, texto]) => {
-    const c = campoTexto(`${texto} (cm)`, "number", "");
-    c.input.min = "5";
-    c.input.max = "120";
-    c.input.step = "0.5";
-    return { clave, input: c.input, el: c.el };
-  });
-  const notaMedidas = document.createElement("p");
-  notaMedidas.className = "nota";
-  notaMedidas.textContent = t("Contornos con cinta métrica. Con ellos el cuerpo se ajusta y los lienzos salen a la escala real del cliente.");
-  const tarjetaMedidas = bloque(t("Medidas (opcional)"), notaMedidas, rejilla(...camposMedida.map((c) => c.el)));
-  tarjetaMedidas.classList.add("plegable");
-
   const crear = document.createElement("button");
   crear.type = "submit";
   crear.className = "boton-texto primario grande";
@@ -365,7 +342,7 @@ function pintarNuevo(): void {
   const columnas = document.createElement("div");
   columnas.className = "inicio-columnas";
   const izq = document.createElement("div");
-  izq.append(tarjetaCliente, tarjetaMedidas);
+  izq.append(tarjetaCliente);
   const der = document.createElement("div");
   der.append(tarjetaCuerpo);
   columnas.append(izq, der);
@@ -386,11 +363,6 @@ function pintarNuevo(): void {
     if (!n) return;
     crear.disabled = true;
     estado.textContent = t("Creando proyecto…");
-    const medidas: Medidas = {};
-    for (const c of camposMedida) {
-      const v = Number(c.input.value);
-      if (c.input.value !== "" && v > 0) medidas[c.clave] = Math.min(120, Math.max(5, v));
-    }
     try {
       await crearProyectoCompleto(
         n,
@@ -401,7 +373,6 @@ function pintarNuevo(): void {
           complexion: complexion.valor() / 100,
           musculatura: musculatura.valor() / 100,
           tonoPiel: tono,
-          ...(Object.keys(medidas).length ? { medidas } : {}),
         },
       );
       ocultarInicio();

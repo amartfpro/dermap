@@ -5,7 +5,6 @@ import { ALTURA_MAXIMA, ALTURA_MINIMA, COMPLEXION_INICIAL } from "../modelos/for
 import { asegurarProyecto } from "../proyectos/gestor";
 import type { ModeloCuerpo } from "../proyectos/modelo";
 import { LIMITES_POSE, POSE_NATURAL, POSE_RECTA, poseDe, type Pose } from "../modelos/pose";
-import { LIMITES_MEDIDAS, type Medida, type Medidas } from "../modelos/medidas";
 
 /** Tonos de piel de partida (RF-14); el selector de color permite cualquier otro. */
 export const TONOS = ["#f3d6c4", "#e8bfa0", "#d8a98a", "#c08a64", "#8f5f3f", "#5e3d29", "#3f281b", "#2a1a12"];
@@ -29,11 +28,8 @@ export class PanelCuerpo {
   private deslizadoresPose: Partial<Record<keyof Pose, HTMLInputElement>> = {};
   private valoresPose: Partial<Record<keyof Pose, HTMLElement>> = {};
 
-  private camposMedida: Partial<Record<Medida, HTMLInputElement>> = {};
 
-  constructor(
-    private readonly contornosModelo: () => Required<Medidas> | null = () => null,
-  ) {
+  constructor() {
     this.element = document.createElement("div");
     this.element.className = "ventana-cuerpo";
     this.element.hidden = true;
@@ -123,13 +119,12 @@ export class PanelCuerpo {
         sexo: (app.proyecto?.datos.modelo.sexo ?? 0) >= 0.5 ? 1 : 0,
         complexion: COMPLEXION_INICIAL.peso,
         musculatura: COMPLEXION_INICIAL.musculatura,
-        medidas: {},
       }),
     );
     const nota = document.createElement("p");
     nota.className = "nota";
     nota.textContent =
-      t("Sin medidas del cliente, el cuerpo es una aproximación para ver el diseño en proporción. La medida del stencil es siempre la del lienzo, en centímetros.");
+      t("El cuerpo es una aproximación para ver el diseño en proporción. La medida del stencil es siempre la del lienzo, en centímetros.");
 
     // Postura (RF-13): para ver el diseño en una postura natural y para seleccionar mejor las
     // zonas. No se guarda ni cambia los lienzos (se aplanan siempre en la postura base).
@@ -233,75 +228,6 @@ export class PanelCuerpo {
       fila(t("Cabeza"), "cabeza", "cabeza", t("giro a la derecha"), t("giro a la izquierda")),
     );
 
-    // Medidas reales del cliente: con ellas los lienzos nuevos salen a su escala real.
-    const medidas = document.createElement("div");
-    medidas.className = "medidas";
-    const NOMBRES: [Medida, string][] = [
-      ["brazo", t("Brazo (bíceps)")],
-      ["antebrazo", t("Antebrazo")],
-      ["muneca", t("Muñeca")],
-      ["muslo", t("Muslo")],
-      ["gemelo", t("Gemelo")],
-      ["tobillo", t("Tobillo")],
-    ];
-    for (const [clave, nombre] of NOMBRES) {
-      const [min, max] = LIMITES_MEDIDAS[clave];
-      const entrada = document.createElement("input");
-      entrada.type = "number";
-      entrada.min = String(min);
-      entrada.max = String(max);
-      entrada.step = "0.5";
-      entrada.className = "numero";
-      entrada.title = t("Entre {min} y {max} cm. Vacío: la del modelo.", { min, max });
-      // Con el campo vacío, las flechas parten de la medida del modelo (en gris), no del mínimo.
-      let prellenado = false;
-      const partirDelModelo = () => {
-        if (entrada.value !== "" || !entrada.placeholder) return;
-        entrada.value = String(Math.round(Number(entrada.placeholder) * 2) / 2);
-        prellenado = true;
-      };
-      // Si al final no se cambió nada, el campo vuelve a quedar vacío (sin medida).
-      entrada.addEventListener("blur", () => {
-        if (prellenado) entrada.value = "";
-        prellenado = false;
-      });
-      // Solo al pulsar las flechas (el borde derecho), no al hacer clic para escribir.
-      entrada.addEventListener("pointerdown", (e) => {
-        if (e.offsetX > entrada.clientWidth - 28) partirDelModelo();
-      });
-      entrada.addEventListener("keydown", (e) => {
-        if (e.key === "ArrowUp" || e.key === "ArrowDown") partirDelModelo();
-      });
-      entrada.addEventListener("change", () => {
-        prellenado = false;
-        const actuales = { ...(app.proyecto?.datos.modelo.medidas ?? {}) };
-        const valor = Number(entrada.value);
-        if (entrada.value === "" || !(valor > 0)) {
-          delete actuales[clave];
-          entrada.value = "";
-        } else {
-          const limpio = Math.min(max, Math.max(min, Math.round(valor * 2) / 2));
-          actuales[clave] = limpio;
-          entrada.value = String(limpio);
-        }
-        this.cambiar({ medidas: actuales });
-      });
-      this.camposMedida[clave] = entrada;
-      const fila = document.createElement("label");
-      fila.className = "fila-medida";
-      const texto = document.createElement("span");
-      texto.textContent = nombre;
-      const cm = document.createElement("small");
-      cm.textContent = "cm";
-      fila.append(texto, entrada, cm);
-      medidas.append(fila);
-    }
-    const notaMedidas = document.createElement("p");
-    notaMedidas.className = "nota";
-    notaMedidas.textContent = t(
-      "Contornos con cinta métrica, iguales en los dos lados. Con ellos, los lienzos que crees después salen a la escala real del cliente; los ya creados conservan su tamaño. En gris, la medida actual del modelo.",
-    );
-
     this.element.append(
       cabecera,
       campo(t("Altura"), alturaFila),
@@ -311,8 +237,6 @@ export class PanelCuerpo {
       campo(t("Tono de piel"), tonos),
       nota,
       restablecer,
-      campo(t("Medidas del cliente"), medidas),
-      notaMedidas,
       campo(t("Postura"), postura),
     );
     this.sincronizar();
@@ -379,12 +303,6 @@ export class PanelCuerpo {
     const simetrica = (Object.keys(this.pose) as (keyof Pose)[]).every((k) => !k.endsWith("L") || this.pose[k] === this.pose[k.replace(/L$/, "R") as keyof Pose]);
     this.casillaSimetrica.checked = simetrica;
     this.casillaSimetrica.closest(".postura")?.classList.toggle("simetrica", simetrica);
-    const modelo = this.contornosModelo();
-    for (const [clave, entrada] of Object.entries(this.camposMedida) as [Medida, HTMLInputElement][]) {
-      const valor = m?.medidas?.[clave];
-      entrada.value = valor ? String(valor) : "";
-      entrada.placeholder = modelo ? modelo[clave].toFixed(1) : "";
-    }
   }
 
   private cambiar(cambios: Partial<ModeloCuerpo>): void {

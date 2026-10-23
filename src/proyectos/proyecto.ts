@@ -563,6 +563,11 @@ function migrar(datos: Proyecto): Proyecto {
       );
     datos = { ...datos, version: 2, arbol: recorrer(datos.arbol ?? []) };
   }
+  // Las medidas del cliente (contornos con cinta) se quitaron: deformaban demasiado el modelo.
+  if (datos.modelo && "medidas" in datos.modelo) {
+    const { medidas: _quitadas, ...modelo } = datos.modelo as Proyecto["modelo"] & { medidas?: unknown };
+    datos = { ...datos, modelo };
+  }
   if (datos.version > VERSION_FORMATO)
     throw new Error(t("Este proyecto se guardó con una versión más reciente de Dermap. Actualiza la aplicación."));
   return datos;

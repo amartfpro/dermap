@@ -17,7 +17,6 @@ import type { ProyectoAbierto } from "../proyectos/proyecto";
 import { enTauri } from "../proyectos/sistema-archivos";
 import { PanelCuerpo } from "./cuerpo";
 import { aplicarPose, esRecta, poseDe, type Pose } from "../modelos/pose";
-import { aplicarMedidas, medirContornos, type Medidas } from "../modelos/medidas";
 import { app } from "../estado";
 import { añadirLienzo } from "../proyectos/gestor";
 import { guardarExportacion } from "../exportar/guardar";
@@ -219,7 +218,7 @@ export class Visor3D implements IContentRenderer {
       vistas,
       botonIcono("encuadrar", t("Encuadrar la zona del lienzo activo (F)"), () => app.activo && this.encuadrarZona(app.activo)),
       botonIcono("camara", t("Guardar la vista en PNG para enseñarla al cliente"), () => void this.exportarImagen()),
-      botonIcono("cuerpo", t("Cuerpo del cliente: complexión, medidas, postura y tono de piel"), () => this.panelCuerpo.alternar()),
+      botonIcono("cuerpo", t("Cuerpo del cliente: complexión, postura y tono de piel"), () => this.panelCuerpo.alternar()),
     );
 
     // ── Barra de control (arriba): opciones de la herramienta activa ──
@@ -255,9 +254,7 @@ export class Visor3D implements IContentRenderer {
     this.capaLazo = document.createElement("canvas");
     this.capaLazo.className = "capa-lazo";
     this.area.append(this.capaLazo);
-    this.panelCuerpo = new PanelCuerpo(
-      () => this.contornosDelModelo(),
-    );
+    this.panelCuerpo = new PanelCuerpo();
     this.barraPresentacion = this.montarBarraPresentacion();
     this.area.append(this.estadoTexto, this.panelCuerpo.element);
     this.element.append(this.barraPresentacion);
@@ -553,18 +550,9 @@ export class Visor3D implements IContentRenderer {
     return aplicarPose(cuerpo, this.pose);
   }
 
-  /** Cuerpo con complexión y medidas del cliente, en postura recta. */
+  /** Cuerpo con la complexión del proyecto, en postura recta. */
   private cuerpoSinPostura(): Cuerpo {
-    const conForma = this.formas ? aplicarComplexion(this.base!, this.formas, this.complexionDelProyecto()) : this.base!;
-    const medidas = app.proyecto?.datos.modelo.medidas;
-    return medidas ? aplicarMedidas(conForma, medidas) : conForma;
-  }
-
-  /** Contornos del modelo sin las medidas del cliente (para orientar al introducirlas). */
-  private contornosDelModelo(): Required<Medidas> | null {
-    if (!this.base) return null;
-    const conForma = this.formas ? aplicarComplexion(this.base, this.formas, this.complexionDelProyecto()) : this.base;
-    return medirContornos(conForma);
+    return this.formas ? aplicarComplexion(this.base!, this.formas, this.complexionDelProyecto()) : this.base!;
   }
 
   private suscribirProyecto(): void {

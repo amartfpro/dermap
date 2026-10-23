@@ -15,7 +15,7 @@ interface Hueso {
 
 /**
  * Esqueleto de MakeHuman (rig «default» de MPFB, CC0) con sus pesos por vértice. Las
- * posiciones de los huesos se calculan del cuerpo actual (complexión y medidas incluidas), así
+ * posiciones de los huesos se calculan del cuerpo actual (complexión incluida), así
  * que el esqueleto siempre encaja con el cliente.
  */
 export const HUESOS: Hueso[] = datos.huesos as Hueso[];
