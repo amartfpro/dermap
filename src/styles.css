@@ -73,7 +73,6 @@ body {
   /* Fondo de marca (src/marca/fondo.svg) detrás del inicio y de los paneles. */
   background:
     url("./marca/fondo.svg") center bottom / 100% auto no-repeat,
-    radial-gradient(1100px 600px at 85% -10%, rgba(255, 70, 0, 0.1), transparent 60%),
     var(--fondo);
 }
 
@@ -1681,7 +1680,6 @@ body.en-inicio > #espacio {
   display: flex;
   background:
     url("./marca/fondo.svg") center bottom / 100% auto no-repeat,
-    radial-gradient(1100px 600px at 85% -10%, rgba(255, 70, 0, 0.1), transparent 60%),
     var(--fondo);
   animation: aparecer 0.2s ease;
 }
