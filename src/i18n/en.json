@@ -563,5 +563,6 @@
   "Brazos bajados junto al cuerpo, codos casi rectos, manos relajadas y piernas juntas": "Arms down by the body, elbows almost straight, relaxed hands and legs together",
   "Dedos": "Fingers",
   "abiertos": "open",
-  "cerrados": "closed"
+  "cerrados": "closed",
+  "Entre {min} y {max} cm. Vacío: la del modelo.": "Between {min} and {max} cm. Empty: the model's own."
 }

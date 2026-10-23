@@ -5,7 +5,7 @@ import { ALTURA_MAXIMA, ALTURA_MINIMA, COMPLEXION_INICIAL } from "../modelos/for
 import { asegurarProyecto } from "../proyectos/gestor";
 import type { ModeloCuerpo } from "../proyectos/modelo";
 import { LIMITES_POSE, POSE_NATURAL, POSE_RECTA, poseDe, type Pose } from "../modelos/pose";
-import type { Medida, Medidas } from "../modelos/medidas";
+import { LIMITES_MEDIDAS, type Medida, type Medidas } from "../modelos/medidas";
 
 /** Tonos de piel de partida (RF-14); el selector de color permite cualquier otro. */
 export const TONOS = ["#f3d6c4", "#e8bfa0", "#d8a98a", "#c08a64", "#8f5f3f", "#5e3d29", "#3f281b", "#2a1a12"];
@@ -245,17 +245,45 @@ export class PanelCuerpo {
       ["tobillo", t("Tobillo")],
     ];
     for (const [clave, nombre] of NOMBRES) {
+      const [min, max] = LIMITES_MEDIDAS[clave];
       const entrada = document.createElement("input");
       entrada.type = "number";
-      entrada.min = "5";
-      entrada.max = "120";
+      entrada.min = String(min);
+      entrada.max = String(max);
       entrada.step = "0.5";
       entrada.className = "numero";
+      entrada.title = t("Entre {min} y {max} cm. Vacío: la del modelo.", { min, max });
+      // Con el campo vacío, las flechas parten de la medida del modelo (en gris), no del mínimo.
+      let prellenado = false;
+      const partirDelModelo = () => {
+        if (entrada.value !== "" || !entrada.placeholder) return;
+        entrada.value = String(Math.round(Number(entrada.placeholder) * 2) / 2);
+        prellenado = true;
+      };
+      // Si al final no se cambió nada, el campo vuelve a quedar vacío (sin medida).
+      entrada.addEventListener("blur", () => {
+        if (prellenado) entrada.value = "";
+        prellenado = false;
+      });
+      // Solo al pulsar las flechas (el borde derecho), no al hacer clic para escribir.
+      entrada.addEventListener("pointerdown", (e) => {
+        if (e.offsetX > entrada.clientWidth - 28) partirDelModelo();
+      });
+      entrada.addEventListener("keydown", (e) => {
+        if (e.key === "ArrowUp" || e.key === "ArrowDown") partirDelModelo();
+      });
       entrada.addEventListener("change", () => {
-        const valor = Number(entrada.value);
+        prellenado = false;
         const actuales = { ...(app.proyecto?.datos.modelo.medidas ?? {}) };
-        if (entrada.value === "" || !(valor > 0)) delete actuales[clave];
-        else actuales[clave] = Math.min(120, Math.max(5, valor));
+        const valor = Number(entrada.value);
+        if (entrada.value === "" || !(valor > 0)) {
+          delete actuales[clave];
+          entrada.value = "";
+        } else {
+          const limpio = Math.min(max, Math.max(min, Math.round(valor * 2) / 2));
+          actuales[clave] = limpio;
+          entrada.value = String(limpio);
+        }
         this.cambiar({ medidas: actuales });
       });
       this.camposMedida[clave] = entrada;

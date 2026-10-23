@@ -71,36 +71,67 @@ export function medirContornos(cuerpo: Cuerpo): Required<Medidas> {
   return r;
 }
 
-/**
- * Cuerpo con los contornos pedidos: cada sección del miembro se escala alrededor de su eje,
- * con el factor interpolado entre las estaciones medidas y una rampa suave desde el hombro o
- * la cadera. Lo que no se ha medido no cambia.
- */
-export function aplicarMedidas(cuerpo: Cuerpo, medidas: Medidas): Cuerpo {
-  // Dos pasadas: la segunda corrige lo que la interpolación entre estaciones deja (≈ 1 %).
-  return ajustar(ajustar(cuerpo, medidas), medidas);
+/** Límites razonables de cada contorno (cm) para un adulto: fuera de ellos, casi seguro es un error. */
+export const LIMITES_MEDIDAS: Record<Medida, [number, number]> = {
+  brazo: [18, 60],
+  antebrazo: [15, 45],
+  muneca: [11, 25],
+  muslo: [30, 80],
+  gemelo: [22, 60],
+  tobillo: [15, 40],
+};
+
+/** Medidas válidas: dentro de los límites y redondeadas a medio centímetro. */
+export function limpiarMedidas(medidas: Medidas): Medidas {
+  const r: Medidas = {};
+  for (const [k, v] of Object.entries(medidas) as [Medida, number | undefined][]) {
+    if (typeof v !== "number" || !(v > 0) || !LIMITES_MEDIDAS[k]) continue;
+    const [min, max] = LIMITES_MEDIDAS[k];
+    r[k] = Math.min(max, Math.max(min, Math.round(v * 2) / 2));
+  }
+  return r;
 }
 
-function ajustar(cuerpo: Cuerpo, medidas: Medidas): Cuerpo {
-  const pedidas = Object.entries(medidas).filter(([, v]) => typeof v === "number" && v > 0);
-  if (!pedidas.length) return cuerpo;
-  const v = Float64Array.from(cuerpo.vertices);
-  for (const m of MIEMBROS) {
-    if (!m.estaciones.some((e) => (medidas[e.medida] ?? 0) > 0)) continue;
+/**
+ * Cuerpo con los contornos pedidos: cada sección del miembro se escala alrededor de su eje,
+ * con el factor interpolado entre las estaciones y una rampa suave desde el hombro o la
+ * cadera. Las estaciones sin medida conservan el contorno del modelo (el que se ve en gris):
+ * medir solo el bíceps no engorda también la muñeca.
+ */
+export function aplicarMedidas(cuerpo: Cuerpo, medidas: Medidas): Cuerpo {
+  medidas = limpiarMedidas(medidas);
+  // Objetivo de cada estación, por miembro y lado: la medida pedida o el contorno actual.
+  const objetivos = new Map<string, number[]>();
+  MIEMBROS.forEach((m, k) => {
+    if (!m.estaciones.some((e) => medidas[e.medida])) return;
     for (const lado of ["l", "r"] as Lado[]) {
+      const actuales = analizar(cuerpo, m, lado).contornos;
+      objetivos.set(k + lado, m.estaciones.map((e, i) => medidas[e.medida] ?? actuales[i]));
+    }
+  });
+  if (!objetivos.size) return cuerpo;
+  // Dos pasadas: la segunda corrige lo que la interpolación entre estaciones deja (≈ 1 %).
+  return ajustar(ajustar(cuerpo, objetivos), objetivos);
+}
+
+function ajustar(cuerpo: Cuerpo, objetivos: Map<string, number[]>): Cuerpo {
+  const v = Float64Array.from(cuerpo.vertices);
+  MIEMBROS.forEach((m, k) => {
+    for (const lado of ["l", "r"] as Lado[]) {
+      const objetivo = objetivos.get(k + lado);
+      if (!objetivo) continue;
       const datos = analizar(cuerpo, m, lado);
-      // Puntos de control (s, factor): la raíz no cambia; cada estación medida, su factor.
+      // Puntos de control (s, factor): la raíz no cambia; cada estación, su factor.
       const control: [number, number][] = [[m.raiz, 1]];
-      m.estaciones.forEach((e, i) => {
-        const objetivo = medidas[e.medida];
-        if (objetivo && objetivo > 0 && datos.contornos[i] > 0) control.push([datos.posiciones[i], objetivo / datos.contornos[i]]);
+      m.estaciones.forEach((_, i) => {
+        if (objetivo[i] > 0 && datos.contornos[i] > 0) control.push([datos.posiciones[i], objetivo[i] / datos.contornos[i]]);
       });
       if (control.length === 1) continue;
       const factor = (s: number) => {
         if (s <= control[0][0]) return 1;
-        for (let k = 1; k < control.length; k++)
-          if (s <= control[k][0]) {
-            const [s0, f0] = control[k - 1], [s1, f1] = control[k];
+        for (let c = 1; c < control.length; c++)
+          if (s <= control[c][0]) {
+            const [s0, f0] = control[c - 1], [s1, f1] = control[c];
             return f0 + ((f1 - f0) * (s - s0)) / (s1 - s0 || 1);
           }
         return control[control.length - 1][1];
@@ -111,7 +142,7 @@ function ajustar(cuerpo: Cuerpo, medidas: Medidas): Cuerpo {
         for (let c = 0; c < 3; c++) v[3 * i + c] = pie[c] + (cuerpo.vertices[3 * i + c] - pie[c]) * f;
       }
     }
-  }
+  });
   return { ...cuerpo, vertices: v };
 }
 

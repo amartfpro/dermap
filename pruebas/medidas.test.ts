@@ -25,13 +25,26 @@ describe("medidas reales del cliente", () => {
       const ajustado = aplicarMedidas(c, objetivo);
       const m = medirContornos(ajustado);
       for (const [k, v] of Object.entries(objetivo)) expect(Math.abs(m[k as keyof typeof m] / v - 1)).toBeLessThan(0.01);
-      // El muslo no se ha pedido: se queda como estaba (salvo la rampa hacia el gemelo).
-      expect(Math.abs(m.muslo / medirContornos(c).muslo - 1)).toBeLessThan(0.03);
+      // El muslo y el tobillo no se han pedido: se quedan como estaban.
+      const antes = medirContornos(c);
+      expect(Math.abs(m.muslo / antes.muslo - 1)).toBeLessThan(0.01);
+      expect(Math.abs(m.tobillo / antes.tobillo - 1)).toBeLessThan(0.01);
       // La cabeza no se mueve.
       const cabeza = c.vertices.length / 3 - 1;
       let maxY = 0, iMax = 0;
       for (let i = 0; i <= cabeza; i++) if (c.vertices[3 * i + 1] > maxY) { maxY = c.vertices[3 * i + 1]; iMax = i; }
       expect(ajustado.vertices[3 * iMax + 1]).toBe(c.vertices[3 * iMax + 1]);
     }
+  });
+
+  it("medir solo el bíceps no cambia el antebrazo ni la muñeca; los valores se limitan", async () => {
+    const { limpiarMedidas } = await import("../src/modelos/medidas");
+    const c = aplicarComplexion(cuerpoBase(), await formasBase(), COMPLEXION_INICIAL);
+    const antes = medirContornos(c);
+    const m = medirContornos(aplicarMedidas(c, { brazo: 38 }));
+    expect(Math.abs(m.brazo / 38 - 1)).toBeLessThan(0.01);
+    expect(Math.abs(m.antebrazo / antes.antebrazo - 1)).toBeLessThan(0.01);
+    expect(Math.abs(m.muneca / antes.muneca - 1)).toBeLessThan(0.01);
+    expect(limpiarMedidas({ brazo: 200, muneca: 14.3, tobillo: 0 })).toEqual({ brazo: 60, muneca: 14.5 });
   });
 });
