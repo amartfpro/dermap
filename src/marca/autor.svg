@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 24">
+  <!-- Marcador de posición de la firma del desarrollador: sustituir por el logo definitivo con el mismo nombre. -->
+  <rect x="1" y="1" width="22" height="22" rx="6" fill="none" stroke="#a39c95" stroke-width="2"/>
+  <path d="M7 17l5-10 5 10" fill="none" stroke="#a39c95" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="30" y="9" width="62" height="6" rx="3" fill="#4a4541"/>
+</svg>

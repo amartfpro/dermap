@@ -70,7 +70,8 @@ body {
 body {
   display: flex;
   flex-direction: column;
-  background: var(--fondo);
+  /* Fondo de marca (src/marca/fondo.svg) detrás del inicio y de los paneles. */
+  background: var(--fondo) url("./marca/fondo.svg") center / cover no-repeat fixed;
 }
 
 ::selection {
@@ -125,9 +126,7 @@ body {
   content: "";
   width: 18px;
   height: 18px;
-  border-radius: 5px;
-  background: linear-gradient(135deg, var(--primario-claro), var(--primario-oscuro));
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08) inset;
+  background: url("./marca/logo.svg") center / contain no-repeat;
 }
 
 .barra .hueco {
@@ -395,7 +394,7 @@ input[type="radio"] {
   width: 100%;
   height: 100%;
   overflow: hidden;
-  background: var(--superficie);
+  background: transparent;
   position: relative;
 }
 
@@ -1677,9 +1676,7 @@ body.en-inicio > #espacio {
   inset: 0;
   z-index: 800;
   display: flex;
-  background:
-    radial-gradient(1200px 600px at 85% -10%, rgba(255, 70, 0, 0.1), transparent 60%),
-    var(--fondo);
+  background: var(--fondo) url("./marca/fondo.svg") center / cover no-repeat;
   animation: aparecer 0.2s ease;
 }
 
@@ -1700,16 +1697,31 @@ body.en-inicio > #espacio {
 }
 
 .inicio-marca::before {
-  width: 26px;
-  height: 26px;
-  border-radius: 8px;
+  width: 28px;
+  height: 28px;
 }
 
 .inicio-lema {
-  margin: 0 0 18px;
-  color: var(--texto-suave);
-  line-height: 1.5;
-  font-size: 12.5px;
+  margin: -2px 0 26px 36px;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  background: linear-gradient(90deg, var(--texto) 30%, var(--primario-suave));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.inicio-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.inicio-nav .boton-texto.activo {
+  border-color: var(--borde-fuerte);
+  background: var(--superficie-3);
+  box-shadow: inset 2px 0 0 var(--primario);
 }
 
 .boton-texto.grande {
@@ -1721,16 +1733,29 @@ body.en-inicio > #espacio {
   border-radius: 8px;
 }
 
-.inicio-lateral .boton-texto.fantasma {
-  margin-top: 6px;
-}
 
 .inicio-pie {
   margin: auto 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
   font-size: 11.5px;
   color: var(--texto-tenue);
   line-height: 1.45;
   word-break: break-word;
+}
+
+.inicio-pie p {
+  margin: 0;
+}
+
+.inicio-principal.centrado {
+  display: flex;
+}
+
+.inicio-principal.centrado > .inicio-nuevo {
+  margin: auto;
+  width: 100%;
 }
 
 .inicio-principal {
@@ -1815,7 +1840,50 @@ body.en-inicio > #espacio {
 .tarjeta-portada img {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  min-width: 0;
+  min-height: 0;
+  object-fit: contain;
+  background: rgba(244, 239, 233, 0.04);
+}
+
+/* Varias miniaturas: en mosaico. */
+.tarjeta-portada[data-n] {
+  display: grid;
+  gap: 3px;
+  padding: 3px;
+}
+
+.tarjeta-portada[data-n="1"] {
+  grid-template-columns: 1fr;
+}
+
+.tarjeta-portada[data-n="2"] {
+  grid-template-columns: 1fr 1fr;
+}
+
+.tarjeta-portada[data-n="3"],
+.tarjeta-portada[data-n="4"] {
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+}
+
+.tarjeta-portada[data-n="3"] img:first-child {
+  grid-row: span 2;
+}
+
+.inicio-lateral {
+  background: rgba(20, 18, 17, 0.72) !important;
+  backdrop-filter: blur(14px);
+}
+
+.tarjeta-proyecto {
+  background: var(--cristal);
+  backdrop-filter: blur(10px);
+}
+
+.inicio-bloque {
+  background: var(--cristal);
+  backdrop-filter: blur(10px);
 }
 
 .tarjeta-nombre {
@@ -2507,4 +2575,65 @@ body.en-inicio > #espacio {
 .barra-opciones .selector-preset {
   min-width: 0;
   width: 130px;
+}
+
+
+/* Paneles como cristal sobre el fondo de marca. */
+:root {
+  --cristal: rgba(24, 22, 21, 0.84);
+}
+
+.dockview-theme-dermap .dv-groupview {
+  background: var(--cristal) !important;
+  backdrop-filter: blur(14px) saturate(1.1);
+}
+
+.dockview-theme-dermap .dv-groupview .dv-content-container,
+.dockview-theme-dermap .dv-groupview .dv-tabs-and-actions-container {
+  background: transparent !important;
+}
+
+.herramientas {
+  background: transparent;
+}
+
+/* Barra de estado (como en VS Code): guardado a la izquierda, firma a la derecha. */
+.barra-estado {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 26px;
+  padding: 0 14px 4px;
+  font-size: 11.5px;
+  color: var(--texto-tenue);
+  flex: none;
+}
+
+body.en-inicio > .barra-estado {
+  visibility: hidden;
+}
+
+.firma {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--texto-tenue);
+  font-size: 11px;
+  letter-spacing: 0.02em;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.firma img {
+  height: 16px;
+  width: auto;
+  opacity: 0.85;
+}
+
+.firma:hover img {
+  opacity: 1;
+}
+
+#espacio {
+  padding-bottom: 0;
 }

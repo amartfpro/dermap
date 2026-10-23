@@ -9,16 +9,15 @@ import {
   crearProyectoCompleto,
   eliminarProyecto,
   exportarProyectoDe,
-  guardarPortada,
   importarProyecto,
   proyectos,
   urlImagen,
 } from "../proyectos/gestor";
 import type { ResumenProyecto } from "../proyectos/proyecto";
 import { sistemaArchivos } from "../proyectos/sistema-archivos";
-import { visorActual } from "../panels/visor3d";
 import { TONOS } from "../panels/cuerpo";
 import { icono } from "../ui/iconos";
+import { firma } from "../ui/firma";
 
 /**
  * Pantalla de inicio (como en Illustrator): proyectos recientes y «Nuevo proyecto», donde se
@@ -34,11 +33,7 @@ export function inicioVisible(): boolean {
 
 /** Cierra el proyecto (guardando su portada) y muestra la pantalla de inicio. */
 export async function volverAlInicio(): Promise<void> {
-  if (app.proyecto) {
-    const portada = visorActual()?.capturaPortada();
-    if (portada && app.proyecto.nodosLienzo().length) await guardarPortada(portada).catch(() => {});
-    await cerrarProyecto();
-  }
+  if (app.proyecto) await cerrarProyecto();
   mostrarInicio();
 }
 
@@ -60,7 +55,7 @@ export function ocultarInicio(): void {
   for (const u of urls.splice(0)) URL.revokeObjectURL(u);
 }
 
-function marco(contenido: HTMLElement): void {
+function marco(contenido: HTMLElement, vista: "recientes" | "nuevo" = "recientes"): void {
   if (!raiz) return;
   for (const u of urls.splice(0)) URL.revokeObjectURL(u);
   const lateral = document.createElement("aside");
@@ -68,21 +63,26 @@ function marco(contenido: HTMLElement): void {
   const marca = document.createElement("div");
   marca.className = "marca inicio-marca";
   marca.textContent = "Dermap";
+  // Lema de marca: igual en todos los idiomas.
   const lema = document.createElement("p");
   lema.className = "inicio-lema";
-  lema.textContent = t("Diseña sobre el cuerpo del cliente y saca el stencil a tamaño real.");
+  lema.textContent = "Plan on the skin.";
   const nuevo = boton("mas", t("Nuevo proyecto"), () => mostrarInicio("nuevo"), "primario grande");
-  const importar = boton("imagen", t("Abrir archivo .dermap…"), () => void importar_(), "grande");
-  importar.querySelector(".ico")?.replaceWith(icono("exportar"));
-  const recientes = boton("inicio", t("Proyectos"), () => mostrarInicio("recientes"), "fantasma grande");
-  const pie = document.createElement("p");
+  const importar = boton("abrir", t("Abrir archivo .dermap…"), () => void importar_(), "grande");
+  const recientes = boton("capas", t("Proyectos"), () => mostrarInicio("recientes"), "grande" + (vista === "recientes" ? " activo" : ""));
+  const nav = document.createElement("nav");
+  nav.className = "inicio-nav";
+  nav.append(nuevo, recientes, importar);
+  const pie = document.createElement("div");
   pie.className = "inicio-pie";
+  const donde = document.createElement("p");
   void sistemaArchivos()
     .then((fs) => fs.descripcion())
-    .then((d) => (pie.textContent = t("Los proyectos se guardan en {donde}.", { donde: d })));
-  lateral.append(marca, lema, nuevo, importar, recientes, pie);
+    .then((d) => (donde.textContent = t("Los proyectos se guardan en {donde}.", { donde: d })));
+  pie.append(donde, firma());
+  lateral.append(marca, lema, nav, pie);
   const principal = document.createElement("main");
-  principal.className = "inicio-principal";
+  principal.className = "inicio-principal" + (vista === "nuevo" ? " centrado" : "");
   principal.append(contenido);
   raiz.replaceChildren(lateral, principal);
 }
@@ -151,15 +151,22 @@ function tarjeta(p: ResumenProyecto, alCambiar: () => void): HTMLElement {
   el.tabIndex = 0;
   const portada = document.createElement("div");
   portada.className = "tarjeta-portada";
-  portada.append(icono("cuerpo", 34));
-  if (p.portada)
-    void urlImagen(p.portada).then((u) => {
-      if (!u) return;
-      urls.push(u);
-      const img = document.createElement("img");
-      img.src = u;
-      img.alt = "";
-      portada.replaceChildren(img);
+  portada.append(icono("capas", 30));
+  // Vista previa de los lienzos (hasta cuatro): el diseño, más que el cuerpo.
+  if (p.miniaturas.length)
+    void Promise.all(p.miniaturas.map(urlImagen)).then((lista) => {
+      const imgs = lista.filter((u): u is string => !!u);
+      if (!imgs.length) return;
+      urls.push(...imgs);
+      portada.replaceChildren(
+        ...imgs.map((u) => {
+          const img = document.createElement("img");
+          img.src = u;
+          img.alt = "";
+          return img;
+        }),
+      );
+      portada.dataset.n = String(imgs.length);
     });
   const nombre = document.createElement("span");
   nombre.className = "tarjeta-nombre";
@@ -342,7 +349,7 @@ function pintarNuevo(): void {
   der.append(tarjetaCuerpo);
   columnas.append(izq, der);
   form.append(titulo, intro, columnas, pie);
-  marco(form);
+  marco(form, "nuevo");
   nombre.input.focus();
 
   // El cliente se rellena con el nombre del proyecto mientras no se escriba otro.

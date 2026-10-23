@@ -1,7 +1,7 @@
 import { t } from "../i18n";
 import { app } from "../estado";
 import type { Lienzo } from "../lienzo/lienzo";
-import { ARCHIVO_PORTADA, listarProyectos, ProyectoAbierto } from "./proyecto";
+import { listarProyectos, ProyectoAbierto } from "./proyecto";
 import type { FichaCliente, ModeloCuerpo } from "./modelo";
 import { enTauri, sistemaArchivos } from "./sistema-archivos";
 import { empaquetarProyecto, EXTENSION, importarPaquete } from "./paquete";
@@ -46,13 +46,6 @@ export async function crearProyectoCompleto(
   await p.guardar();
   activar(p);
   return p;
-}
-
-/** Guarda la imagen de portada (vista 3D) del proyecto abierto. */
-export async function guardarPortada(bytes: Uint8Array): Promise<void> {
-  const p = app.proyecto;
-  if (!p) return;
-  await p.fs.escribirBinario(`${p.carpeta}/${ARCHIVO_PORTADA}`, bytes);
 }
 
 /** Lee una imagen del almacén de proyectos como URL para un <img> (o null si no existe). */

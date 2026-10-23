@@ -18,8 +18,6 @@ import {
 import { escribirTextoSeguro, type SistemaArchivos } from "./sistema-archivos";
 
 const ARCHIVO_PROYECTO = "proyecto.json";
-/** Vista 3D del proyecto guardada al cerrarlo, para la pantalla de inicio. */
-export const ARCHIVO_PORTADA = "portada.png";
 /** Guardado automático: tras unos segundos sin cambios, y como mucho cada 2 minutos (RNF-11). */
 const ESPERA_GUARDADO_MS = 10_000;
 const MAXIMO_SIN_GUARDAR_MS = 120_000;
@@ -33,8 +31,8 @@ export interface ResumenProyecto {
   /** Fecha ISO de la última modificación. */
   modificado: string;
   lienzos: number;
-  /** Imagen de portada (vista 3D al cerrar) o, si no hay, miniatura del primer lienzo. */
-  portada: string | null;
+  /** Miniaturas de los primeros lienzos con dibujo (hasta cuatro), para la pantalla de inicio. */
+  miniaturas: string[];
 }
 
 /** Proyectos (carpetas con proyecto.json) de la raíz, ordenados por nombre. */
@@ -47,15 +45,19 @@ export async function listarProyectos(fs: SistemaArchivos): Promise<ResumenProye
       const lienzos: NodoLienzo[] = [];
       const recorrer = (l: NodoArbol[]) => l.forEach((n) => (n.tipo === "lienzo" ? lienzos.push(n) : recorrer(n.hijos)));
       recorrer(datos.arbol ?? []);
-      let portada: string | null = `${e.nombre}/${ARCHIVO_PORTADA}`;
-      if (!(await fs.existe(portada))) portada = lienzos.length ? `${e.nombre}/${lienzos[0].carpeta}/miniatura.png` : null;
+      const miniaturas: string[] = [];
+      for (const l of lienzos) {
+        if (miniaturas.length >= 4) break;
+        const ruta = `${e.nombre}/${l.carpeta}/miniatura.png`;
+        if (await fs.existe(ruta)) miniaturas.push(ruta);
+      }
       resultado.push({
         carpeta: e.nombre,
         nombre: datos.nombre ?? e.nombre,
         cliente: datos.ficha?.cliente ?? "",
         modificado: datos.ficha?.modificado ?? "",
         lienzos: lienzos.length,
-        portada,
+        miniaturas,
       });
     } catch {
       // Carpeta sin proyecto.json o con el archivo dañado: no es un proyecto.

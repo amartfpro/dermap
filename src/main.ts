@@ -14,6 +14,7 @@ import { inicioVisible, mostrarInicio, ocultarInicio, volverAlInicio } from "./i
 import { icono, type NombreIcono } from "./ui/iconos";
 import { botonMenu } from "./ui/menu";
 import { instalarTooltips } from "./ui/tooltip";
+import { firma } from "./ui/firma";
 import { enTauri, sistemaArchivos } from "./proyectos/sistema-archivos";
 
 const CLAVE_LAYOUT = "dermap.layout.v3";
@@ -116,6 +117,7 @@ const botonIdioma = botonMenu("idioma", t("Idioma"), () =>
 botonIdioma.classList.add("fantasma");
 document.getElementById("hueco-idioma")!.replaceWith(botonIdioma);
 instalarTooltips();
+document.getElementById("firma")!.replaceWith(firma());
 
 dock.onDidLayoutChange(() => {
   try {
