@@ -2656,3 +2656,41 @@ body.en-inicio > .barra-estado {
   display: block;
   margin-bottom: 0;
 }
+
+/* Firma pegada al borde inferior de la ventana: el palo de la T toca el borde y el texto
+   queda a la altura de las letras. */
+.barra-estado {
+  padding-bottom: 0;
+  align-items: stretch;
+}
+
+.barra-estado > .estado-guardado {
+  align-self: center;
+}
+
+.firma {
+  align-self: flex-end;
+  align-items: flex-end;
+  gap: 7px;
+}
+
+.firma img {
+  height: 22px;
+}
+
+.texto-firma {
+  margin-bottom: 7px;
+  line-height: 1;
+}
+
+.inicio-lateral {
+  padding-bottom: 0;
+}
+
+.inicio-pie {
+  padding-bottom: 0;
+}
+
+.inicio-pie .firma {
+  align-self: flex-start;
+}

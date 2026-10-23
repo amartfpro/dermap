@@ -7,6 +7,9 @@ export function firma(): HTMLElement {
   const img = document.createElement("img");
   img.src = urlAutor;
   img.alt = "";
-  el.append("Built by", img);
+  const texto = document.createElement("span");
+  texto.className = "texto-firma";
+  texto.textContent = "Built by";
+  el.append(texto, img);
   return el;
 }
