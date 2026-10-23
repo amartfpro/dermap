@@ -254,7 +254,7 @@
   --dv-tab-border-radius: var(--radio);
   --dv-tab-close-icon-size: 8px;
   --dv-sash-border-radius: 2px;
-  background: var(--fondo);
+  background: transparent;
 }
 
 .dockview-theme-dermap .dv-groupview {
@@ -302,4 +302,10 @@
 .dockview-theme-dermap .dv-sash.dv-enabled:hover::after,
 .dockview-theme-dermap .dv-sash.dv-enabled:active::after {
   opacity: 1;
+}
+
+/* El fondo de marca se ve en los huecos y, tenue, a través de los paneles de cristal. */
+.dockview-theme-dermap .dv-dockview,
+.dockview-theme-dermap .dv-grid-view {
+  background: transparent !important;
 }

@@ -71,7 +71,10 @@ body {
   display: flex;
   flex-direction: column;
   /* Fondo de marca (src/marca/fondo.svg) detrás del inicio y de los paneles. */
-  background: var(--fondo) url("./marca/fondo.svg") center / cover no-repeat fixed;
+  background:
+    url("./marca/fondo.svg") center bottom / 100% auto no-repeat,
+    radial-gradient(1100px 600px at 85% -10%, rgba(255, 70, 0, 0.1), transparent 60%),
+    var(--fondo);
 }
 
 ::selection {
@@ -1676,7 +1679,10 @@ body.en-inicio > #espacio {
   inset: 0;
   z-index: 800;
   display: flex;
-  background: var(--fondo) url("./marca/fondo.svg") center / cover no-repeat;
+  background:
+    url("./marca/fondo.svg") center bottom / 100% auto no-repeat,
+    radial-gradient(1100px 600px at 85% -10%, rgba(255, 70, 0, 0.1), transparent 60%),
+    var(--fondo);
   animation: aparecer 0.2s ease;
 }
 
@@ -2586,12 +2592,12 @@ body.en-inicio > #espacio {
 
 /* Paneles como cristal sobre el fondo de marca. */
 :root {
-  --cristal: rgba(24, 22, 21, 0.84);
+  --cristal: rgba(22, 20, 19, 0.72);
 }
 
 .dockview-theme-dermap .dv-groupview {
   background: var(--cristal) !important;
-  backdrop-filter: blur(14px) saturate(1.1);
+  backdrop-filter: blur(3px);
 }
 
 .dockview-theme-dermap .dv-groupview .dv-content-container,
@@ -2642,4 +2648,8 @@ body.en-inicio > .barra-estado {
 
 #espacio {
   padding-bottom: 0;
+}
+
+.firma img {
+  height: 15px;
 }

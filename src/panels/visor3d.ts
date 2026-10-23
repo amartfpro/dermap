@@ -164,9 +164,9 @@ export class Visor3D implements IContentRenderer {
     this.element = document.createElement("div");
     this.element.className = "panel panel-visor";
 
-    this.renderer = new THREE.WebGLRenderer({ antialias: true });
+    this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     this.renderer.setPixelRatio(window.devicePixelRatio);
-    this.renderer.setClearColor(0x141211);
+    this.renderer.setClearColor(0x000000, 0);
     // Zona del 3D (a la derecha del riel de herramientas).
     this.area = document.createElement("div");
     this.area.className = "area-visor";

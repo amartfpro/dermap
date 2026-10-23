@@ -1141,8 +1141,8 @@ export class PanelLienzo implements IContentRenderer {
   private pintar(): void {
     const ctx = this.ctx;
     ctx.setTransform(1, 0, 0, 1, 0, 0);
-    ctx.fillStyle = "#141211";
-    ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+    // Transparente: detrás se ve el fondo de la aplicación a través del panel de cristal.
+    ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
     const l = this.lienzo;
     if (!l) return;
     const { geo } = l;
