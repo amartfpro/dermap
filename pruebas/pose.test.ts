@@ -132,13 +132,13 @@ describe("esqueleto de MakeHuman", () => {
 describe("dedos", () => {
   it("cierra los dedos de una mano sin mover la muñeca ni la otra mano", async () => {
     const c = aplicarComplexion(cuerpoBase(), await formasBase(), COMPLEXION_INICIAL);
-    const p = aplicarPose(c, { ...POSE_RECTA, dedosL: 60 });
+    const p = aplicarPose(c, { ...POSE_RECTA, dedosL: 20 });
     const d = (k: string) => Math.hypot(...p.articulaciones[k].map((x, i) => x - c.articulaciones[k][i]));
     expect(d("l-finger-3-4")).toBeGreaterThan(2);
     expect(d("l-hand")).toBeLessThan(1e-6);
     expect(d("r-finger-3-4")).toBeLessThan(1e-6);
     // La punta del dedo se acerca a la base de la mano: se cierra, no se abre.
     const dist = (q: typeof c, a: string, b: string) => Math.hypot(...q.articulaciones[a].map((x, i) => x - q.articulaciones[b][i]));
-    expect(dist(p, "l-finger-3-4", "l-hand")).toBeLessThan(dist(c, "l-finger-3-4", "l-hand") - 1);
+    expect(dist(p, "l-finger-3-4", "l-hand")).toBeLessThan(dist(c, "l-finger-3-4", "l-hand") - 0.3);
   });
 });

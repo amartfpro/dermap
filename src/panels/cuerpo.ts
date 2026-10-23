@@ -211,7 +211,7 @@ export class PanelCuerpo {
     natural.textContent = t("Natural");
     natural.title = t("Brazos bajados junto al cuerpo, codos casi rectos, manos relajadas y piernas juntas");
     natural.addEventListener("click", () => {
-      this.fijarPose({ ...POSE_RECTA, hombroL: -32, hombroR: -32, codoL: -27, codoR: -27, dedosL: 35, dedosR: 35, caderaL: -6, caderaR: -6 });
+      this.fijarPose({ ...POSE_RECTA, hombroL: -32, hombroR: -32, codoL: -27, codoR: -27, dedosL: 20, dedosR: 20, caderaL: -6, caderaR: -6 });
     });
     const enT = document.createElement("button");
     enT.className = "boton-texto";
