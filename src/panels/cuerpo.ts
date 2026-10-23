@@ -7,7 +7,7 @@ import { LIMITES_POSE, POSE_RECTA, type Pose } from "../modelos/pose";
 import type { Medida, Medidas } from "../modelos/medidas";
 
 /** Tonos de piel de partida (RF-14); el selector de color permite cualquier otro. */
-export const TONOS = ["#f3d6c4", "#e8bfa0", "#d8a98a", "#c08a64", "#8f5f3f", "#5e3d29"];
+export const TONOS = ["#f3d6c4", "#e8bfa0", "#d8a98a", "#c08a64", "#8f5f3f", "#5e3d29", "#3f281b", "#2a1a12"];
 
 /**
  * Ajustes del cuerpo del proyecto (RF-12, RF-14): altura real, sexo, complexión,
