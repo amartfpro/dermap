@@ -313,7 +313,7 @@ input[type="range"]::-webkit-slider-thumb {
   margin-top: -5px;
   border-radius: 50%;
   /* «Cristal» naranja como el botón activo de un segmentado, pero opaco: la pista no se ve a través. */
-  background: color-mix(in srgb, var(--primario) 22%, var(--superficie));
+  background: color-mix(in srgb, var(--primario) 22%, var(--fondo-tirador, var(--superficie)));
   border: 1.5px solid var(--primario);
   box-sizing: border-box;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
@@ -340,7 +340,7 @@ input[type="range"]::-moz-range-thumb {
   height: 14px;
   box-sizing: border-box;
   border-radius: 50%;
-  background: color-mix(in srgb, var(--primario) 22%, var(--superficie));
+  background: color-mix(in srgb, var(--primario) 22%, var(--fondo-tirador, var(--superficie)));
   border: 1.5px solid var(--primario);
 }
 
@@ -2556,6 +2556,7 @@ body.en-inicio > #espacio {
 }
 
 .popover-campo {
+  --fondo-tirador: var(--superficie-2);
   position: fixed;
   z-index: 1500;
   width: 200px;
