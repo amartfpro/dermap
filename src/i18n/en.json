@@ -548,5 +548,15 @@
   "Se guarda en {donde}. Puedes cambiarlo todo después.": "Saved in {donde}. You can change everything later.",
   "Planifica directamente sobre la piel. Ficha, cuerpo y diseños de cada cliente, en un solo proyecto.": "Plan right on the skin. Each client's details, body and designs, in one project.",
   "Planifica tus proyectos sobre la piel.": "Plan your projects on the skin.",
-  "Construido por": "Built by"
+  "Construido por": "Built by",
+  "Brazos": "Arms",
+  "atrás": "back",
+  "delante": "forward",
+  "Muñecas": "Wrists",
+  "hacia fuera": "outward",
+  "hacia la palma": "toward the palm",
+  "Piernas": "Legs",
+  "giro a la derecha": "turn right",
+  "giro a la izquierda": "turn left",
+  "Cabeza": "Head"
 }

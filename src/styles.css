@@ -2715,3 +2715,11 @@ body.en-inicio > .barra-estado {
   border-radius: var(--radio-panel);
   overflow: hidden;
 }
+
+.lados-postura.unico {
+  grid-template-columns: 1fr;
+}
+
+.lados-postura.unico small {
+  display: none;
+}

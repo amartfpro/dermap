@@ -173,7 +173,11 @@ export class PanelCuerpo {
         l.append(s, r);
         return l;
       };
-      lados.append(deslizador(izq, der, t("izq.")), deslizador(der, izq, t("der.")));
+      // Torso y cabeza: un solo deslizador.
+      if (izq === der) {
+        lados.classList.add("unico");
+        lados.append(deslizador(izq, izq, ""));
+      } else lados.append(deslizador(izq, der, t("izq.")), deslizador(der, izq, t("der.")));
       this.valoresPose[izq] = valor;
       const cab = document.createElement("div");
       cab.className = "cabecera-postura";
@@ -206,9 +210,14 @@ export class PanelCuerpo {
     postura.append(
       atajos,
       fila(t("Hombros"), "hombroL", "hombroR", t("abajo"), t("en T")),
+      fila(t("Brazos"), "brazoL", "brazoR", t("atrás"), t("delante")),
       fila(t("Codos"), "codoL", "codoR", t("recto"), t("doblado")),
+      fila(t("Muñecas"), "munecaL", "munecaR", t("hacia fuera"), t("hacia la palma")),
       fila(t("Caderas"), "caderaL", "caderaR", t("juntas"), t("abiertas")),
+      fila(t("Piernas"), "piernaL", "piernaR", t("atrás"), t("delante")),
       fila(t("Rodillas"), "rodillaL", "rodillaR", t("recta"), t("doblada")),
+      fila(t("Torso"), "torso", "torso", t("giro a la derecha"), t("giro a la izquierda")),
+      fila(t("Cabeza"), "cabeza", "cabeza", t("giro a la derecha"), t("giro a la izquierda")),
       simetrica,
     );
 
@@ -286,9 +295,14 @@ export class PanelCuerpo {
   private mostrarValoresPose(): void {
     const pares: [keyof Pose, keyof Pose][] = [
       ["hombroL", "hombroR"],
+      ["brazoL", "brazoR"],
       ["codoL", "codoR"],
+      ["munecaL", "munecaR"],
       ["caderaL", "caderaR"],
+      ["piernaL", "piernaR"],
       ["rodillaL", "rodillaR"],
+      ["torso", "torso"],
+      ["cabeza", "cabeza"],
     ];
     for (const [a, b] of pares) {
       const el = this.valoresPose[a];
