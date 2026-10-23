@@ -560,5 +560,8 @@
   "Base": "Base",
   "La postura de la malla base, sin girar nada": "The base mesh pose, nothing rotated",
   "Natural": "Natural",
-  "Brazos bajados junto al cuerpo, codos casi rectos y piernas juntas": "Arms down by the body, elbows almost straight and legs together"
+  "Brazos bajados junto al cuerpo, codos casi rectos, manos relajadas y piernas juntas": "Arms down by the body, elbows almost straight, relaxed hands and legs together",
+  "Dedos": "Fingers",
+  "abiertos": "open",
+  "cerrados": "closed"
 }

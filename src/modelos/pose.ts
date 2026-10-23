@@ -20,9 +20,10 @@ type P3 = [number, number, number];
  *  - codo: flexión desde la postura base (que ya lo dobla unos 45°); − lo estira, hasta ~160°.
  *  - rodilla: flexión (0 = recta).
  *  - muneca: + dobla la mano hacia la palma.
+ *  - dedos: + los cierra hacia la palma (0 = como en la malla base, casi estirados).
  *  - cadera: + abre la pierna, − la cierra.
  *  - pierna: + levanta la pierna hacia delante, − hacia atrás.
- *  - torso / cabeza: giro a la izquierda (+) o a la derecha (−).
+ *  - cabeza: giro a la izquierda (+) o a la derecha (−).
  * Se aplica con el esqueleto de MakeHuman (esqueleto.ts). Solo cambia lo que se ve: los
  * lienzos se aplanan siempre en la postura base.
  */
@@ -35,13 +36,14 @@ export interface Pose {
   codoR: number;
   munecaL: number;
   munecaR: number;
+  dedosL: number;
+  dedosR: number;
   caderaL: number;
   caderaR: number;
   piernaL: number;
   piernaR: number;
   rodillaL: number;
   rodillaR: number;
-  torso: number;
   cabeza: number;
 }
 
@@ -54,13 +56,14 @@ export const POSE_RECTA: Pose = {
   codoR: 0,
   munecaL: 0,
   munecaR: 0,
+  dedosL: 0,
+  dedosR: 0,
   caderaL: 0,
   caderaR: 0,
   piernaL: 0,
   piernaR: 0,
   rodillaL: 0,
   rodillaR: 0,
-  torso: 0,
   cabeza: 0,
 };
 
@@ -70,17 +73,18 @@ export const LIMITES_POSE: Record<keyof Pose, [number, number]> = {
   hombroR: [-45, 50],
   brazoL: [-30, 80],
   brazoR: [-30, 80],
-  codoL: [-30, 145],
-  codoR: [-30, 145],
+  codoL: [-30, 90],
+  codoR: [-30, 90],
   munecaL: [-60, 60],
   munecaR: [-60, 60],
-  caderaL: [-15, 45],
-  caderaR: [-15, 45],
+  dedosL: [-10, 90],
+  dedosR: [-10, 90],
+  caderaL: [-10, 45],
+  caderaR: [-10, 45],
   piernaL: [-30, 110],
   piernaR: [-30, 110],
   rodillaL: [0, 145],
   rodillaR: [0, 145],
-  torso: [-45, 45],
   cabeza: [-70, 70],
 };
 
@@ -116,9 +120,41 @@ export function girosDePose(cuerpo: Cuerpo, pose: Pose): GiroHueso[] {
     // Codo: perpendicular al brazo y a «delante», en la postura base.
     const brazo = dir(hueso(`upperarm02${s}`));
     g(`lowerarm01${s}`, normalizar(cruz(brazo, [0, 0, 1])), v("codo"));
-    // Muñeca: hacia la palma (la palma mira hacia el cuerpo y algo hacia atrás en la «A»).
+    // Normal de la palma, sacada de la propia mano: perpendicular al eje de la mano y a la línea de
+    // nudillos (índice → meñique), hacia el lado al que ya se curvan los dedos en la malla base.
+    const cab = (n: string) => cabezas[hueso(n + s)];
+    const ejeMano = normalizar(restar(cab("finger3-1"), cab("wrist")));
+    const nudillos = restar(cab("finger2-1"), cab("finger5-1"));
+    let palma = normalizar(cruz(ejeMano, nudillos));
+    const curva = restar(normalizar(restar(colas[hueso(`finger3-3${s}`)], cab("finger3-1"))), ejeMano);
+    if (punto(palma, curva) < 0) palma = [-palma[0], -palma[1], -palma[2]];
+    // Muñeca: hacia la palma.
     const antebrazo = dir(hueso(`lowerarm02${s}`));
-    g(`wrist${s}`, normalizar(cruz(antebrazo, [signo, 0, 0])), v("muneca"));
+    g(`wrist${s}`, normalizar(cruz(antebrazo, palma)), v("muneca"));
+    // Dedos: cada falange gira hacia la palma; la del medio algo más, como al relajar la mano.
+    const dedos = v("dedos");
+    if (dedos) {
+      // Los dedos también se juntan un poco (en la malla base están muy separados).
+      const corazon = dir(hueso(`finger3-1${s}`));
+      for (const f of [2, 4, 5]) {
+        const d = dir(hueso(`finger${f}-1${s}`));
+        const separacion = (Math.acos(Math.min(1, punto(d, corazon))) * 180) / Math.PI;
+        if (dedos > 0) g(`finger${f}-1${s}`, normalizar(cruz(d, corazon)), Math.min(separacion * 0.7, dedos * 0.3));
+      }
+      for (const f of [2, 3, 4, 5])
+        for (const [k, parte] of [[1, 0.8], [2, 1], [3, 0.7]] as const) {
+          const b = hueso(`finger${f}-${k}${s}`);
+          g(`finger${f}-${k}${s}`, normalizar(cruz(dir(b), palma)), dedos * parte);
+        }
+      // Pulgar: se acerca al índice (en la malla base está muy abierto) y se curva un poco.
+      const pulgar = hueso(`finger1-1${s}`);
+      const haciaIndice = restar(cab("finger2-1"), cab("finger1-1"));
+      g(`finger1-1${s}`, normalizar(cruz(dir(pulgar), haciaIndice)), Math.max(-10, dedos) * 1.1);
+      for (const k of [2, 3]) {
+        const b = hueso(`finger1-${k}${s}`);
+        g(`finger1-${k}${s}`, normalizar(cruz(dir(b), palma)), dedos * 0.4);
+      }
+    }
     // Cadera.
     g(`upperleg01${s}`, [0, 0, signo], v("cadera"));
     g(`upperleg01${s}`, [1, 0, 0], -v("pierna"));
@@ -126,8 +162,7 @@ export function girosDePose(cuerpo: Cuerpo, pose: Pose): GiroHueso[] {
     const muslo = dir(hueso(`upperleg02${s}`));
     g(`lowerleg01${s}`, normalizar(cruz(muslo, [0, 0, -1])), v("rodilla"));
   }
-  // Torso y cabeza: el giro se reparte entre las vértebras para que no se pliegue.
-  for (const n of ["spine04", "spine03", "spine02", "spine01"]) g(n, [0, 1, 0], pose.torso / 4);
+  // Cabeza: el giro se reparte entre las vértebras para que no se pliegue.
   for (const n of ["neck01", "neck02", "neck03"]) g(n, [0, 1, 0], pose.cabeza / 3);
   return giros;
 }
@@ -148,6 +183,7 @@ export function aplicarPose(cuerpo: Cuerpo, pose: Pose): Cuerpo {
 }
 
 const restar = (a: P3, b: P3): P3 => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
+const punto = (a: P3, b: P3) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
 const cruz = (a: P3, b: P3): P3 => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
 function normalizar(a: P3): P3 {
   const l = Math.hypot(...a) || 1;

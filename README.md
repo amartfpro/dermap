@@ -61,8 +61,8 @@ herramienta activa y menús con un triangulito en la esquina del icono. Los tres
    de brazo, antebrazo, muñeca, muslo, gemelo y tobillo tomados con cinta) los lienzos nuevos
    salen a su escala real. **Postura** mueve el esqueleto de MakeHuman (163
    huesos, con sus pesos y skinning de cuaterniones duales): hombros (de brazos al costado a «en
-   T»), brazos adelante/atrás, codos, muñecas, caderas, piernas adelante/atrás, rodillas, giro
-   del torso y de la cabeza, con atajos «Postura natural» y «En T». Se puede seleccionar zonas en cualquier postura; el lienzo se
+   T»), brazos adelante/atrás, codos (hasta ~160° estirados), muñecas, dedos, caderas, piernas adelante/atrás, rodillas y
+   giro de la cabeza, con atajos «Natural», «Base» y «En T» y la casilla «Simetría». Se puede seleccionar zonas en cualquier postura; el lienzo se
    aplana siempre en la postura base.
 3. **Zona** (visor 3D): una «Zona rápida», **Seleccionar** (pincel) o **Lazo** (rodear lo que
    se ve); Mayús quita. En mangas, la línea azul es el corte: va por la cara que no estás

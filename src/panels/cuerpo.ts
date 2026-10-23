@@ -209,9 +209,9 @@ export class PanelCuerpo {
     const natural = document.createElement("button");
     natural.className = "boton-texto";
     natural.textContent = t("Natural");
-    natural.title = t("Brazos bajados junto al cuerpo, codos casi rectos y piernas juntas");
+    natural.title = t("Brazos bajados junto al cuerpo, codos casi rectos, manos relajadas y piernas juntas");
     natural.addEventListener("click", () => {
-      this.fijarPose({ ...POSE_RECTA, hombroL: -32, hombroR: -32, codoL: -27, codoR: -27, caderaL: -6, caderaR: -6 });
+      this.fijarPose({ ...POSE_RECTA, hombroL: -32, hombroR: -32, codoL: -27, codoR: -27, dedosL: 35, dedosR: 35, caderaL: -6, caderaR: -6 });
     });
     const enT = document.createElement("button");
     enT.className = "boton-texto";
@@ -227,10 +227,10 @@ export class PanelCuerpo {
       fila(t("Brazos"), "brazoL", "brazoR", t("atrás"), t("delante")),
       fila(t("Codos"), "codoL", "codoR", t("recto"), t("doblado")),
       fila(t("Muñecas"), "munecaL", "munecaR", t("hacia fuera"), t("hacia la palma")),
+      fila(t("Dedos"), "dedosL", "dedosR", t("abiertos"), t("cerrados")),
       fila(t("Caderas"), "caderaL", "caderaR", t("juntas"), t("abiertas")),
       fila(t("Piernas"), "piernaL", "piernaR", t("atrás"), t("delante")),
       fila(t("Rodillas"), "rodillaL", "rodillaR", t("recta"), t("doblada")),
-      fila(t("Torso"), "torso", "torso", t("giro a la derecha"), t("giro a la izquierda")),
       fila(t("Cabeza"), "cabeza", "cabeza", t("giro a la derecha"), t("giro a la izquierda")),
     );
 
@@ -311,10 +311,10 @@ export class PanelCuerpo {
       ["brazoL", "brazoR"],
       ["codoL", "codoR"],
       ["munecaL", "munecaR"],
+      ["dedosL", "dedosR"],
       ["caderaL", "caderaR"],
       ["piernaL", "piernaR"],
       ["rodillaL", "rodillaR"],
-      ["torso", "torso"],
       ["cabeza", "cabeza"],
     ];
     for (const [a, b] of pares) {
