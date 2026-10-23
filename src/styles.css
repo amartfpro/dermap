@@ -308,12 +308,12 @@ input[type="range"]::-webkit-slider-runnable-track {
 
 input[type="range"]::-webkit-slider-thumb {
   -webkit-appearance: none;
-  width: 14px;
-  height: 14px;
-  margin-top: -5px;
+  width: 12px;
+  height: 12px;
+  margin-top: -4px;
   border-radius: 50%;
-  background: var(--texto);
-  border: 3px solid var(--primario);
+  background: var(--primario);
+  border: none;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
   transition: transform var(--transicion);
 }
@@ -334,11 +334,11 @@ input[type="range"]::-moz-range-track {
 }
 
 input[type="range"]::-moz-range-thumb {
-  width: 10px;
-  height: 10px;
+  width: 12px;
+  height: 12px;
   border-radius: 50%;
-  background: var(--texto);
-  border: 3px solid var(--primario);
+  background: var(--primario);
+  border: none;
 }
 
 /* Casillas y radios */
@@ -2751,6 +2751,51 @@ body.en-inicio > .barra-estado {
   overflow-x: hidden;
 }
 
-.atajos-postura .casilla {
-  margin-left: auto;
+/* Conmutador (switch): una casilla con forma de interruptor. */
+input[type="checkbox"].conmutador {
+  -webkit-appearance: none;
+  appearance: none;
+  position: relative;
+  flex: none;
+  width: 28px;
+  height: 16px;
+  border-radius: 8px;
+  background: var(--superficie-4);
+  transition: background var(--transicion);
+}
+
+input[type="checkbox"].conmutador::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--texto-suave);
+  transition: transform var(--transicion), background var(--transicion);
+}
+
+input[type="checkbox"].conmutador:checked {
+  background: var(--primario);
+}
+
+input[type="checkbox"].conmutador:checked::after {
+  transform: translateX(12px);
+  background: #fff;
+}
+
+input[type="checkbox"].conmutador:focus {
+  outline: none;
+  box-shadow: none;
+}
+
+input[type="checkbox"].conmutador:focus-visible {
+  outline: 2px solid var(--primario);
+  outline-offset: 2px;
+}
+
+.casilla.con-conmutador {
+  gap: 8px;
+  align-self: flex-start;
 }

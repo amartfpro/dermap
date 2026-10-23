@@ -110,17 +110,6 @@ export class PanelCuerpo {
     cm.textContent = t("cm");
     alturaFila.append(this.altura, this.alturaNumero, cm);
 
-    const restablecer = document.createElement("button");
-    restablecer.className = "boton-texto";
-    restablecer.textContent = t("Restablecer");
-    restablecer.addEventListener("click", () =>
-      this.cambiar({
-        altura: COMPLEXION_INICIAL.altura,
-        sexo: (app.proyecto?.datos.modelo.sexo ?? 0) >= 0.5 ? 1 : 0,
-        complexion: COMPLEXION_INICIAL.peso,
-        musculatura: COMPLEXION_INICIAL.musculatura,
-      }),
-    );
     const nota = document.createElement("p");
     nota.className = "nota";
     nota.textContent =
@@ -131,9 +120,11 @@ export class PanelCuerpo {
     const postura = document.createElement("div");
     postura.className = "postura";
     const simetrica = document.createElement("label");
-    simetrica.className = "casilla";
+    simetrica.className = "casilla con-conmutador";
     const casillaSimetrica = (this.casillaSimetrica = document.createElement("input"));
     casillaSimetrica.type = "checkbox";
+    casillaSimetrica.className = "conmutador";
+    casillaSimetrica.setAttribute("role", "switch");
     casillaSimetrica.checked = true;
     simetrica.append(casillaSimetrica, " " + t("Simetría"));
     simetrica.title = t("Mover igual los dos lados; desmárcala para ajustar cada lado por separado");
@@ -214,9 +205,10 @@ export class PanelCuerpo {
     enT.addEventListener("click", () => this.fijarPose({ ...POSE_RECTA, hombroL: 48, hombroR: 48 }));
     const atajos = document.createElement("div");
     atajos.className = "atajos-postura";
-    atajos.append(natural, recta, enT, simetrica);
+    atajos.append(natural, recta, enT);
     postura.append(
       atajos,
+      simetrica,
       fila(t("Hombros"), "hombroL", "hombroR", t("abajo"), t("en T")),
       fila(t("Brazos"), "brazoL", "brazoR", t("atrás"), t("delante")),
       fila(t("Codos"), "codoL", "codoR", t("recto"), t("doblado")),
@@ -236,7 +228,6 @@ export class PanelCuerpo {
       campo(t("Musculatura"), extremos(t("Poca"), this.musculatura, t("Mucha"))),
       campo(t("Tono de piel"), tonos),
       nota,
-      restablecer,
       campo(t("Postura"), postura),
     );
     this.sincronizar();
@@ -309,7 +300,7 @@ export class PanelCuerpo {
     void (async () => {
       const proyecto = app.proyecto ?? (await asegurarProyecto());
       proyecto.cambiarModelo(cambios);
-      // Tras elegir un tono o restablecer, los controles deben reflejar los valores nuevos.
+      // Tras elegir un tono, los controles deben reflejar los valores nuevos.
       if (cambios.tonoPiel || Object.keys(cambios).length > 1) this.sincronizar();
     })();
   }
