@@ -142,12 +142,6 @@ async function pintarRecientes(): Promise<void> {
       if (q && !`${p.nombre} ${p.cliente}`.toLowerCase().includes(q)) continue;
       rejilla.append(tarjeta(p, () => void pintarRecientes()));
     }
-    if (!lista.length) {
-      const vacio = document.createElement("p");
-      vacio.className = "inicio-vacio";
-      vacio.textContent = t("Aún no hay proyectos. Crea uno por cliente: su ficha, su cuerpo y todos sus diseños quedan juntos.");
-      rejilla.append(vacio);
-    }
   };
   buscar.addEventListener("input", pintar);
   pintar();
