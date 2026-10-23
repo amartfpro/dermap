@@ -1,3 +1,4 @@
+import { t } from "../i18n";
 import urlAutor from "../marca/autor.svg";
 
 /** Firma del desarrollador («Built by» + logo), común a todas sus aplicaciones. */
@@ -9,7 +10,7 @@ export function firma(): HTMLElement {
   img.alt = "";
   const texto = document.createElement("span");
   texto.className = "texto-firma";
-  texto.textContent = "Built by";
+  texto.textContent = t("Hecho por");
   el.append(texto, img);
   return el;
 }

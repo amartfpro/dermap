@@ -63,10 +63,9 @@ function marco(contenido: HTMLElement, vista: "recientes" | "nuevo" = "recientes
   const marca = document.createElement("div");
   marca.className = "marca inicio-marca";
   marca.textContent = "Dermap";
-  // Lema de marca: igual en todos los idiomas.
   const lema = document.createElement("p");
   lema.className = "inicio-lema";
-  lema.textContent = "Plan on the skin.";
+  lema.textContent = t("Planifica sobre la piel.");
   const nuevo = boton("mas", t("Nuevo proyecto"), () => mostrarInicio("nuevo"), "primario grande");
   const importar = boton("abrir", t("Abrir archivo .dermap…"), () => void importar_(), "grande");
   const recientes = boton("capas", t("Proyectos"), () => mostrarInicio("recientes"), "grande" + (vista === "recientes" ? " activo" : ""));
@@ -245,7 +244,7 @@ function pintarNuevo(): void {
   titulo.textContent = t("Nuevo proyecto");
   const intro = document.createElement("p");
   intro.className = "nota";
-  intro.textContent = t("La ficha, el cuerpo y todos los diseños de un cliente, juntos en un solo proyecto.");
+  intro.textContent = t("Planifica directamente sobre la piel: la ficha, el cuerpo y los diseños de cada cliente, en un solo lugar.");
   // Dónde se guardará, en una segunda línea más discreta.
   const donde = document.createElement("p");
   donde.className = "nota tenue";

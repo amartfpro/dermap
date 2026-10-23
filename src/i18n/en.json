@@ -546,6 +546,8 @@
   "Haz clic dentro de la zona donde debe terminar el corte extra.": "Click inside the zone where the extra cut should end.",
   "Dibuja sobre el modelo con el pincel del lienzo; botón derecho para girar.": "Draw on the model with the canvas brush; right button to rotate.",
   "Selecciona una zona con las herramientas de la izquierda, ajusta el corte y pulsa Aplanar.": "Select a zone with the tools on the left, adjust the cut and press Flatten.",
-  "La ficha, el cuerpo y todos los diseños de un cliente, juntos en un solo proyecto.": "A client's details, body and every design, together in one project.",
-  "Se guarda en {donde}. Puedes cambiarlo todo después.": "Saved in {donde}. You can change everything later."
+  "Se guarda en {donde}. Puedes cambiarlo todo después.": "Saved in {donde}. You can change everything later.",
+  "Planifica sobre la piel.": "Plan on the skin.",
+  "Hecho por": "Built by",
+  "Planifica directamente sobre la piel: la ficha, el cuerpo y los diseños de cada cliente, en un solo lugar.": "Plan right on the skin: each client's details, body and designs, all in one place."
 }
