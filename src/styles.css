@@ -2708,3 +2708,11 @@ body.en-inicio > .barra-estado {
   border-radius: 8px !important;
   color: var(--texto-suave);
 }
+
+/* Menú lateral del inicio como tarjeta: pequeños márgenes y esquinas redondeadas. */
+.inicio-lateral {
+  margin: 8px 0 8px 8px;
+  border: 1px solid var(--borde-suave);
+  border-radius: var(--radio-panel);
+  overflow: hidden;
+}
