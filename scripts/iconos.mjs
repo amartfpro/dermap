@@ -1,0 +1,86 @@
+// Genera src/ui/iconos-datos.ts con los iconos de Lucide (licencia ISC) que usa la interfaz.
+// Así la aplicación no depende del paquete en tiempo de ejecución: basta `node scripts/iconos.mjs`
+// (con `lucide` instalado como dependencia de desarrollo) al añadir un icono a la lista.
+import { writeFileSync } from "node:fs";
+import { createRequire } from "node:module";
+
+const lucide = createRequire(import.meta.url)("lucide");
+const ICONOS = {
+  abajo: "ArrowDown",
+  arriba: "ArrowUp",
+  caja: "Box",
+  pincel: "Brush",
+  camara: "Camera",
+  elipse: "Circle",
+  copiar: "ClipboardCopy",
+  pegar: "ClipboardPaste",
+  duplicar: "Copy",
+  goma: "Eraser",
+  ojo: "Eye",
+  ojoCerrado: "EyeOff",
+  exportar: "FileDown",
+  voltearH: "FlipHorizontal2",
+  voltearV: "FlipVertical2",
+  espejo: "FlipHorizontal",
+  cuadricula: "Grid3x3",
+  inicio: "House",
+  imagen: "ImagePlus",
+  lazo: "Lasso",
+  candado: "Lock",
+  candadoAbierto: "LockOpen",
+  encajar: "Maximize",
+  seleccionar: "MousePointer2",
+  relleno: "PaintBucket",
+  pintar3d: "Paintbrush",
+  cuerpo: "PersonStanding",
+  gotero: "Pipette",
+  mas: "Plus",
+  menos: "Minus",
+  rehacer: "Redo2",
+  deshacer: "Undo2",
+  girarIzquierda: "RotateCcw",
+  girarDerecha: "RotateCw",
+  recta: "ScanLine",
+  corte: "Scissors",
+  linea: "Slash",
+  curva: "Spline",
+  rectangulo: "Square",
+  zona: "SquareDashed",
+  borrar: "Trash2",
+  texto: "Type",
+  stencil: "WandSparkles",
+  cerrar: "X",
+  plegar: "ChevronDown",
+  desplegar: "ChevronRight",
+  check: "Check",
+  presentar: "Play",
+  ficha: "IdCard",
+  descargar: "Download",
+  idioma: "Globe",
+  ayuda: "CircleHelp",
+  distribucion: "LayoutPanelLeft",
+  mas3: "Ellipsis",
+  traer: "Import",
+  encuadrar: "Focus",
+  vistas: "Rotate3d",
+  zonaRapida: "Zap",
+  paleta: "Palette",
+  puntos: "Grip",
+  presion: "PenLine",
+  ajustes: "SlidersHorizontal",
+  capas: "Layers",
+  deformacion: "Waves",
+  mano: "Hand",
+  abrir: "FolderOpen",
+  aplanar: "Sparkles",
+};
+
+const datos = Object.fromEntries(Object.entries(ICONOS).map(([k, nombre]) => [k, lucide[nombre]]));
+for (const [k, v] of Object.entries(datos)) if (!v) throw new Error(`Icono desconocido: ${ICONOS[k]}`);
+writeFileSync(
+  new URL("../src/ui/iconos-datos.ts", import.meta.url),
+  `// Generado por scripts/iconos.mjs a partir de Lucide (https://lucide.dev, licencia ISC). No editar a mano.\n` +
+    `export type NodoIcono = [string, Record<string, string>][];\n` +
+    `export const DATOS_ICONOS = ${JSON.stringify(datos)} satisfies Record<string, NodoIcono>;\n`,
+);
+console.log(`${Object.keys(datos).length} iconos`);

@@ -1,107 +1,30 @@
-import {
-  ArrowDown,
-  ArrowUp,
-  ChevronDown,
-  ChevronRight,
-  Box,
-  Brush,
-  Camera,
-  Circle,
-  ClipboardCopy,
-  ClipboardPaste,
-  Copy,
-  createElement,
-  Eraser,
-  Eye,
-  EyeOff,
-  FileDown,
-  FlipHorizontal2,
-  FlipVertical2,
-  Grid3x3,
-  House,
-  ImagePlus,
-  Lasso,
-  Lock,
-  LockOpen,
-  Maximize,
-  MousePointer2,
-  PaintBucket,
-  Paintbrush,
-  PersonStanding,
-  Pipette,
-  Plus,
-  Redo2,
-  RotateCcw,
-  RotateCw,
-  ScanLine,
-  Scissors,
-  Slash,
-  Spline,
-  Square,
-  SquareDashed,
-  Trash2,
-  Type,
-  Undo2,
-  WandSparkles,
-  X,
-  type IconNode,
-} from "lucide";
+import { DATOS_ICONOS } from "./iconos-datos";
 
-/** Iconos de Lucide (licencia ISC) usados en la interfaz. */
-export const ICONOS = {
-  abajo: ArrowDown,
-  arriba: ArrowUp,
-  caja: Box,
-  pincel: Brush,
-  camara: Camera,
-  elipse: Circle,
-  copiar: ClipboardCopy,
-  pegar: ClipboardPaste,
-  duplicar: Copy,
-  goma: Eraser,
-  ojo: Eye,
-  ojoCerrado: EyeOff,
-  exportar: FileDown,
-  voltearH: FlipHorizontal2,
-  voltearV: FlipVertical2,
-  cuadricula: Grid3x3,
-  inicio: House,
-  imagen: ImagePlus,
-  lazo: Lasso,
-  candado: Lock,
-  candadoAbierto: LockOpen,
-  encajar: Maximize,
-  seleccionar: MousePointer2,
-  relleno: PaintBucket,
-  pintar3d: Paintbrush,
-  cuerpo: PersonStanding,
-  gotero: Pipette,
-  mas: Plus,
-  rehacer: Redo2,
-  girarIzquierda: RotateCcw,
-  girarDerecha: RotateCw,
-  recta: ScanLine,
-  corte: Scissors,
-  linea: Slash,
-  curva: Spline,
-  rectangulo: Square,
-  zona: SquareDashed,
-  borrar: Trash2,
-  texto: Type,
-  deshacer: Undo2,
-  stencil: WandSparkles,
-  cerrar: X,
-  plegar: ChevronDown,
-  desplegar: ChevronRight,
-} satisfies Record<string, IconNode>;
+/** Iconos de Lucide (licencia ISC) usados en la interfaz, incluidos en el código (sin dependencia). */
+export const ICONOS = DATOS_ICONOS;
 
 export type NombreIcono = keyof typeof ICONOS;
 
+const SVG = "http://www.w3.org/2000/svg";
+
 export function icono(nombre: NombreIcono, tamano = 16): SVGElement {
-  const svg = createElement(ICONOS[nombre]);
-  svg.setAttribute("width", String(tamano));
-  svg.setAttribute("height", String(tamano));
-  svg.setAttribute("stroke-width", "1.75");
+  const svg = document.createElementNS(SVG, "svg");
+  for (const [k, v] of Object.entries({
+    width: String(tamano),
+    height: String(tamano),
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    "stroke-width": "1.75",
+    "stroke-linecap": "round",
+    "stroke-linejoin": "round",
+  }))
+    svg.setAttribute(k, v);
+  for (const [etiqueta, atributos] of ICONOS[nombre]) {
+    const el = document.createElementNS(SVG, etiqueta);
+    for (const [k, v] of Object.entries(atributos)) el.setAttribute(k, v);
+    svg.append(el);
+  }
   svg.classList.add("ico");
   return svg;
 }

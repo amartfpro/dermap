@@ -2,7 +2,7 @@ import { cambiarIdioma, IDIOMAS, idiomaActual, t, traducible } from "./i18n";
 import { createDockview, type DockviewApi, type DockviewTheme, type IContentRenderer } from "dockview-core";
 import "./vendor/dockview-8.6.1.css"; // hoja de estilos de dockview (MIT), copiada del paquete «dockview»
 import "./estilos/dock.css";
-import "@fontsource-variable/inter";
+import "./estilos/fuentes.css";
 import { Visor3D, visorActual } from "./panels/visor3d";
 import { abrirFicha } from "./panels/ficha";
 import { abrirAyuda } from "./panels/ayuda";
