@@ -16,7 +16,7 @@ import { aplicarComplexion, cargarFormas, COMPLEXION_INICIAL, type Complexion, t
 import type { ProyectoAbierto } from "../proyectos/proyecto";
 import { enTauri } from "../proyectos/sistema-archivos";
 import { PanelCuerpo } from "./cuerpo";
-import { aplicarPose, esRecta, POSE_RECTA, type Pose } from "../modelos/pose";
+import { aplicarPose, esRecta, poseDe, type Pose } from "../modelos/pose";
 import { aplicarMedidas, medirContornos, type Medidas } from "../modelos/medidas";
 import { app } from "../estado";
 import { añadirLienzo } from "../proyectos/gestor";
@@ -60,7 +60,10 @@ export class Visor3D implements IContentRenderer {
   private proyectoSuscrito: ProyectoAbierto | null = null;
   private cuerpoPendiente = false;
   /** Postura solo para ver (RF-13); con el cuerpo doblado no se seleccionan zonas. */
-  private pose: Pose = { ...POSE_RECTA };
+  /** Postura guardada en el proyecto (la natural si no hay ninguna). */
+  private get pose(): Pose {
+    return poseDe(app.proyecto?.datos.modelo.pose);
+  }
   private panelCuerpo!: PanelCuerpo;
   private alCambiarProyecto = () => this.suscribirProyecto();
   private barraPresentacion: HTMLElement;
@@ -253,10 +256,6 @@ export class Visor3D implements IContentRenderer {
     this.capaLazo.className = "capa-lazo";
     this.area.append(this.capaLazo);
     this.panelCuerpo = new PanelCuerpo(
-      (pose) => {
-        this.pose = pose;
-        this.programarCuerpo();
-      },
       () => this.contornosDelModelo(),
     );
     this.barraPresentacion = this.montarBarraPresentacion();
@@ -571,8 +570,6 @@ export class Visor3D implements IContentRenderer {
   private suscribirProyecto(): void {
     this.panelCuerpo.sincronizar();
     if (this.proyectoSuscrito === app.proyecto) return;
-    this.pose = { ...POSE_RECTA };
-    this.panelCuerpo.posturaRecta();
     this.proyectoSuscrito?.removeEventListener("modelo", this.alCambiarModelo);
     this.proyectoSuscrito = app.proyecto;
     this.proyectoSuscrito?.addEventListener("modelo", this.alCambiarModelo);

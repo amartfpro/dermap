@@ -142,3 +142,15 @@ describe("dedos", () => {
     expect(dist(p, "l-finger-3-4", "l-hand")).toBeLessThan(dist(c, "l-finger-3-4", "l-hand") - 0.3);
   });
 });
+
+describe("postura guardada", () => {
+  it("usa la natural si el proyecto no tiene postura y recorta valores fuera de límites", async () => {
+    const { poseDe, POSE_NATURAL } = await import("../src/modelos/pose");
+    expect(poseDe(undefined)).toEqual(POSE_NATURAL);
+    const p = poseDe({ codoL: 200, dedosR: 15, cabeza: Number.NaN });
+    expect(p.codoL).toBe(90);
+    expect(p.dedosR).toBe(15);
+    expect(p.cabeza).toBe(0);
+    expect(p.hombroL).toBe(0);
+  });
+});

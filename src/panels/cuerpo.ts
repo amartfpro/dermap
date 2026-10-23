@@ -4,7 +4,7 @@ import { app } from "../estado";
 import { ALTURA_MAXIMA, ALTURA_MINIMA, COMPLEXION_INICIAL } from "../modelos/formas";
 import { asegurarProyecto } from "../proyectos/gestor";
 import type { ModeloCuerpo } from "../proyectos/modelo";
-import { LIMITES_POSE, POSE_RECTA, type Pose } from "../modelos/pose";
+import { LIMITES_POSE, POSE_NATURAL, POSE_RECTA, poseDe, type Pose } from "../modelos/pose";
 import type { Medida, Medidas } from "../modelos/medidas";
 
 /** Tonos de piel de partida (RF-14); el selector de color permite cualquier otro. */
@@ -24,14 +24,14 @@ export class PanelCuerpo {
   private musculatura: HTMLInputElement;
   private color: ReturnType<typeof botonColorLibre>;
   private muestras: HTMLButtonElement[] = [];
-  private pose: Pose = { ...POSE_RECTA };
+  private pose: Pose = { ...POSE_NATURAL };
+  private casillaSimetrica!: HTMLInputElement;
   private deslizadoresPose: Partial<Record<keyof Pose, HTMLInputElement>> = {};
   private valoresPose: Partial<Record<keyof Pose, HTMLElement>> = {};
 
   private camposMedida: Partial<Record<Medida, HTMLInputElement>> = {};
 
   constructor(
-    private readonly alCambiarPose: (pose: Pose) => void = () => {},
     private readonly contornosModelo: () => Required<Medidas> | null = () => null,
   ) {
     this.element = document.createElement("div");
@@ -137,7 +137,7 @@ export class PanelCuerpo {
     postura.className = "postura";
     const simetrica = document.createElement("label");
     simetrica.className = "casilla";
-    const casillaSimetrica = document.createElement("input");
+    const casillaSimetrica = (this.casillaSimetrica = document.createElement("input"));
     casillaSimetrica.type = "checkbox";
     casillaSimetrica.checked = true;
     simetrica.append(casillaSimetrica, " " + t("Simetría"));
@@ -176,7 +176,7 @@ export class PanelCuerpo {
             if (o) o.value = String(v);
           }
           this.mostrarValoresPose();
-          this.alCambiarPose({ ...this.pose });
+          this.guardarPose();
         });
         this.deslizadoresPose[clave] = r;
         const l = document.createElement("label");
@@ -203,15 +203,14 @@ export class PanelCuerpo {
     recta.textContent = t("Base");
     recta.title = t("La postura de la malla base, sin girar nada");
     recta.addEventListener("click", () => {
-      this.posturaRecta();
-      this.alCambiarPose({ ...this.pose });
+      this.fijarPose(POSE_RECTA);
     });
     const natural = document.createElement("button");
     natural.className = "boton-texto";
     natural.textContent = t("Natural");
     natural.title = t("Brazos bajados junto al cuerpo, codos casi rectos, manos relajadas y piernas juntas");
     natural.addEventListener("click", () => {
-      this.fijarPose({ ...POSE_RECTA, hombroL: -32, hombroR: -32, codoL: -27, codoR: -27, dedosL: 20, dedosR: 20, caderaL: -6, caderaR: -6 });
+      this.fijarPose(POSE_NATURAL);
     });
     const enT = document.createElement("button");
     enT.className = "boton-texto";
@@ -291,18 +290,21 @@ export class PanelCuerpo {
     this.sincronizar();
   }
 
-  /** Vuelve a la postura base (sin avisar). */
-  posturaRecta(): void {
-    this.pose = { ...POSE_RECTA };
-    for (const r of Object.values(this.deslizadoresPose)) if (r) r.value = "0";
-    this.mostrarValoresPose();
+  private fijarPose(pose: Pose): void {
+    this.mostrarPose(pose);
+    this.guardarPose();
   }
 
-  private fijarPose(pose: Pose): void {
+  /** Pone los deslizadores en una postura, sin guardarla. */
+  private mostrarPose(pose: Pose): void {
     this.pose = { ...pose };
     for (const [k, r] of Object.entries(this.deslizadoresPose) as [keyof Pose, HTMLInputElement][]) r.value = String(pose[k]);
     this.mostrarValoresPose();
-    this.alCambiarPose({ ...this.pose });
+  }
+
+  /** La postura se guarda en el proyecto, con el resto del cuerpo. */
+  private guardarPose(): void {
+    this.cambiar({ pose: { ...this.pose } });
   }
 
   private mostrarValoresPose(): void {
@@ -344,6 +346,11 @@ export class PanelCuerpo {
     const tono = m?.tonoPiel ?? "#d8a98a";
     for (const b of this.muestras) b.classList.toggle("activo", b.title === tono);
     this.color.refrescar();
+    // Postura del proyecto; «Simetría» queda marcada si los dos lados están igual.
+    this.mostrarPose(poseDe(m?.pose));
+    const simetrica = (Object.keys(this.pose) as (keyof Pose)[]).every((k) => !k.endsWith("L") || this.pose[k] === this.pose[k.replace(/L$/, "R") as keyof Pose]);
+    this.casillaSimetrica.checked = simetrica;
+    this.casillaSimetrica.closest(".postura")?.classList.toggle("simetrica", simetrica);
     const modelo = this.contornosModelo();
     for (const [clave, entrada] of Object.entries(this.camposMedida) as [Medida, HTMLInputElement][]) {
       const valor = m?.medidas?.[clave];

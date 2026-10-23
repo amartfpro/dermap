@@ -46,6 +46,8 @@ export interface ModeloCuerpo {
   /** Contornos reales del cliente en cm (opcionales): ver modelos/medidas.ts. */
   medidas?: import("../modelos/medidas").Medidas;
   versionMalla: string; // versión de la malla base
+  /** Postura en grados (ver modelos/pose.ts). Si falta, la natural. Solo cambia lo que se ve. */
+  pose?: Partial<import("../modelos/pose").Pose>;
 }
 
 /**

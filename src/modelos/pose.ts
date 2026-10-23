@@ -67,6 +67,19 @@ export const POSE_RECTA: Pose = {
   cabeza: 0,
 };
 
+/** Postura por defecto de los proyectos: brazos junto al cuerpo, codos casi rectos y manos relajadas. */
+export const POSE_NATURAL: Pose = {
+  ...POSE_RECTA,
+  hombroL: -32,
+  hombroR: -32,
+  codoL: -27,
+  codoR: -27,
+  dedosL: 20,
+  dedosR: 20,
+  caderaL: -6,
+  caderaR: -6,
+};
+
 /** Límites de cada articulación (grados). */
 export const LIMITES_POSE: Record<keyof Pose, [number, number]> = {
   hombroL: [-45, 50],
@@ -87,6 +100,21 @@ export const LIMITES_POSE: Record<keyof Pose, [number, number]> = {
   rodillaR: [0, 145],
   cabeza: [-70, 70],
 };
+
+/**
+ * Postura guardada en un proyecto, completa y dentro de los límites. Los proyectos que no la
+ * guardan (los anteriores a ella, o los nuevos) usan la natural.
+ */
+export function poseDe(guardada: Partial<Pose> | undefined): Pose {
+  if (!guardada) return { ...POSE_NATURAL };
+  const p = { ...POSE_RECTA };
+  for (const k of Object.keys(POSE_RECTA) as (keyof Pose)[]) {
+    const v = Number(guardada[k]);
+    const [min, max] = LIMITES_POSE[k];
+    p[k] = Number.isFinite(v) ? Math.min(max, Math.max(min, Math.round(v))) : 0;
+  }
+  return p;
+}
 
 export const esRecta = (p: Pose) => (Object.keys(POSE_RECTA) as (keyof Pose)[]).every((k) => !p[k]);
 
