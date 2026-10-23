@@ -2724,33 +2724,6 @@ body.en-inicio > .barra-estado {
   display: none;
 }
 
-/* «Otro tono»: muestra circular con el círculo cromático (o el color elegido). */
-.muestra.muestra-libre {
-  position: relative;
-  background: conic-gradient(#ff4d4d, #ffd24d, #6bff4d, #4dfff0, #4d6bff, #d24dff, #ff4d4d);
-}
-
-.muestra.muestra-libre::after {
-  content: "+";
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #fff;
-  font-weight: 700;
-  font-size: 14px;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
-}
-
-.muestra.muestra-libre.con-color {
-  background: var(--color-libre);
-}
-
-.muestra.muestra-libre.con-color::after {
-  content: "";
-}
-
 .tonos {
   flex-wrap: wrap;
 }
@@ -2760,6 +2733,15 @@ body.en-inicio > .barra-estado {
 }
 
 .ventana-cuerpo .tonos .muestra {
-  width: 24px;
-  height: 24px;
+  width: 22px;
+  height: 22px;
+}
+
+.ventana-cuerpo .tonos {
+  flex-wrap: nowrap;
+}
+
+/* El botón de color libre va separado de las muestras fijas, como en el lienzo. */
+.tonos .muestra-actual {
+  margin-left: 4px;
 }

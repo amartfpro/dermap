@@ -332,7 +332,7 @@ export class PanelCuerpo {
     this.musculatura.value = String(Math.round((m?.musculatura ?? COMPLEXION_INICIAL.musculatura) * 100));
     const tono = m?.tonoPiel ?? "#d8a98a";
     for (const b of this.muestras) b.classList.toggle("activo", b.title === tono);
-    this.color.refrescar(TONOS);
+    this.color.refrescar();
     const modelo = this.contornosModelo();
     for (const [clave, entrada] of Object.entries(this.camposMedida) as [Medida, HTMLInputElement][]) {
       const valor = m?.medidas?.[clave];

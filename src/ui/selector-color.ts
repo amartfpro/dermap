@@ -281,13 +281,13 @@ export function paletaGuardada(clave: string): { leer: () => string[]; guardar: 
 }
 
 /**
- * Muestra circular «otro color» que abre el selector propio (el mismo que el del lienzo). Si
- * el color actual no es una de las muestras fijas, la muestra lo enseña y queda marcada.
+ * Botón de color igual que el «Color del pincel» del lienzo: un cuadrado con el color actual
+ * que abre el selector propio. Se usa, por ejemplo, para elegir cualquier tono de piel.
  */
-export function botonColorLibre(titulo: string, color: () => string, alCambiar: (c: string) => void, claveP: string): HTMLButtonElement & { refrescar: (fijos: string[]) => void } {
-  const b = document.createElement("button") as HTMLButtonElement & { refrescar: (fijos: string[]) => void };
+export function botonColorLibre(titulo: string, color: () => string, alCambiar: (c: string) => void, claveP: string): HTMLButtonElement & { refrescar: () => void } {
+  const b = document.createElement("button") as HTMLButtonElement & { refrescar: () => void };
   b.type = "button";
-  b.className = "muestra muestra-libre";
+  b.className = "muestra-actual";
   b.title = titulo;
   const paleta = paletaGuardada(claveP);
   // Mientras se arrastra en el selector, el cambio se aplica como mucho cada 120 ms.
@@ -298,8 +298,7 @@ export function botonColorLibre(titulo: string, color: () => string, alCambiar: 
       color: color(),
       alCambiar: (c) => {
         ultimo = c;
-        b.style.setProperty("--color-libre", c);
-        b.classList.add("con-color", "activo");
+        b.style.background = c;
         pendiente ??= setTimeout(() => {
           pendiente = null;
           alCambiar(ultimo);
@@ -309,12 +308,9 @@ export function botonColorLibre(titulo: string, color: () => string, alCambiar: 
       guardarPaleta: paleta.guardar,
     }),
   );
-  b.refrescar = (fijos) => {
-    const c = color();
-    const propio = !fijos.includes(c);
-    b.classList.toggle("con-color", propio);
-    b.classList.toggle("activo", propio);
-    if (propio) b.style.setProperty("--color-libre", c);
+  b.refrescar = () => {
+    b.style.background = color();
   };
+  b.refrescar();
   return b;
 }

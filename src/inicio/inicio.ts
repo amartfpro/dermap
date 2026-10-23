@@ -301,7 +301,7 @@ function pintarNuevo(): void {
     m.addEventListener("click", () => {
       tono = c;
       for (const x of tonos.children) x.classList.toggle("activo", x === m);
-      libre.refrescar(TONOS);
+      libre.refrescar();
     });
     tonos.append(m);
   }
@@ -311,7 +311,7 @@ function pintarNuevo(): void {
     (c) => {
       tono = c;
       for (const x of tonos.children) if (x !== libre) x.classList.remove("activo");
-      libre.refrescar(TONOS);
+      libre.refrescar();
     },
     "dermap.tonos-piel",
   );
