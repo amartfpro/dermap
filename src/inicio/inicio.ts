@@ -75,11 +75,7 @@ function marco(contenido: HTMLElement, vista: "recientes" | "nuevo" = "recientes
   nav.append(nuevo, recientes, importar);
   const pie = document.createElement("div");
   pie.className = "inicio-pie";
-  const donde = document.createElement("p");
-  void sistemaArchivos()
-    .then((fs) => fs.descripcion())
-    .then((d) => (donde.textContent = t("Los proyectos se guardan en {donde}.", { donde: d })));
-  pie.append(donde, firma());
+  pie.append(firma());
   lateral.append(marca, lema, nav, pie);
   const principal = document.createElement("main");
   principal.className = "inicio-principal" + (vista === "nuevo" ? " centrado" : "");
@@ -249,10 +245,16 @@ function pintarNuevo(): void {
   titulo.textContent = t("Nuevo proyecto");
   const intro = document.createElement("p");
   intro.className = "nota";
-  intro.textContent = t("Un proyecto por cliente. Todo se puede cambiar después desde la ficha y el panel Cuerpo.");
+  intro.textContent = t("La ficha, el cuerpo y todos los diseños de un cliente, juntos en un solo proyecto.");
+  // Dónde se guardará, en una segunda línea más discreta.
+  const donde = document.createElement("p");
+  donde.className = "nota tenue";
+  void sistemaArchivos()
+    .then((fs) => fs.descripcion())
+    .then((d) => (donde.textContent = t("Se guarda en {donde}. Puedes cambiarlo todo después.", { donde: d })));
 
   // Cliente
-  const nombre = campoTexto(t("Nombre del proyecto"), "text", t("p. ej. Laura — manga japonesa"));
+  const nombre = campoTexto(t("Nombre del proyecto"), "text", "");
   nombre.input.required = true;
   const cliente = campoTexto(t("Cliente"), "text", "");
   const telefono = campoTexto(t("Teléfono"), "tel", "");
@@ -348,7 +350,7 @@ function pintarNuevo(): void {
   const der = document.createElement("div");
   der.append(tarjetaCuerpo);
   columnas.append(izq, der);
-  form.append(titulo, intro, columnas, pie);
+  form.append(titulo, intro, donde, columnas, pie);
   marco(form, "nuevo");
   nombre.input.focus();
 

@@ -1946,7 +1946,13 @@ body.en-inicio > #espacio {
 }
 
 .inicio-nuevo > .nota {
+  font-size: 13px;
+}
+
+.inicio-nuevo > .nota.tenue {
   margin-bottom: 14px;
+  font-size: 12px;
+  color: var(--texto-tenue);
 }
 
 .inicio-columnas {
