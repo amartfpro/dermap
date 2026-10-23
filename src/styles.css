@@ -2627,7 +2627,8 @@ body.en-inicio > .barra-estado {
 
 .firma {
   display: inline-flex;
-  align-items: center;
+  /* El logo apoya en la línea base del texto, sin hueco por debajo. */
+  align-items: baseline;
   gap: 6px;
   color: var(--texto-tenue);
   font-size: 11px;
@@ -2652,4 +2653,6 @@ body.en-inicio > .barra-estado {
 
 .firma img {
   height: 15px;
+  display: block;
+  margin-bottom: 0;
 }
