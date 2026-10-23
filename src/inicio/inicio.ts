@@ -66,7 +66,7 @@ function marco(contenido: HTMLElement, vista: "recientes" | "nuevo" = "recientes
   marca.textContent = "Dermap";
   const lema = document.createElement("p");
   lema.className = "inicio-lema";
-  lema.textContent = t("Planifica sobre la piel.");
+  lema.textContent = t("Planifica tus proyectos sobre la piel.");
   const nuevo = boton("mas", t("Nuevo proyecto"), () => mostrarInicio("nuevo"), "primario grande");
   const importar = boton("abrir", t("Abrir archivo .dermap…"), () => void importar_(), "grande");
   const recientes = boton("capas", t("Proyectos"), () => mostrarInicio("recientes"), "grande" + (vista === "recientes" ? " activo" : ""));

@@ -1706,11 +1706,10 @@ body.en-inicio > #espacio {
 }
 
 .inicio-lema {
-  margin: -2px 0 26px 36px;
-  font-size: 15px;
-  font-weight: 600;
-  letter-spacing: -0.01em;
-  color: var(--texto);
+  margin: 2px 0 26px;
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--texto-suave);
 }
 
 .inicio-nav {

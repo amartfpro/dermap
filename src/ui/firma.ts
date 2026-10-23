@@ -10,7 +10,7 @@ export function firma(): HTMLElement {
   img.alt = "";
   const texto = document.createElement("span");
   texto.className = "texto-firma";
-  texto.textContent = t("Hecho por");
+  texto.textContent = t("Construido por");
   el.append(texto, img);
   return el;
 }
