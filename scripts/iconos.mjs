@@ -72,7 +72,7 @@ const ICONOS = {
   deformacion: "Waves",
   mano: "Hand",
   abrir: "FolderOpen",
-  aplanar: "Sparkles",
+  aplanar: "MapPlus",
 };
 
 const datos = Object.fromEntries(Object.entries(ICONOS).map(([k, nombre]) => [k, lucide[nombre]]));
