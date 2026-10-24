@@ -1,4 +1,5 @@
 import type { Capa } from "./capa";
+import type { Seleccion } from "./herramientas";
 import { PasoCompuesto, type Paso } from "./historial";
 import type { Lienzo } from "./lienzo";
 import { contexto, desdeClave, TESELA, type Rect } from "./teselas";
@@ -77,10 +78,35 @@ export async function levantar(lienzo: Lienzo, capas: Capa[]): Promise<Levantado
 }
 
 /**
+ * Levanta lo que hay dentro de una selección con lazo en la capa activa (para moverlo,
+ * escalarlo o girarlo en su misma capa) y lo borra de ella. null si dentro no hay dibujo.
+ */
+export async function levantarSeleccion(lienzo: Lienzo, sel: Seleccion): Promise<Levantado | null> {
+  const capa = lienzo.doc.activa;
+  if (capa.bloqueadaTotal || !capa.seVe) return null;
+  const lamina = sel.extraer(lienzo);
+  if (!lamina) return null;
+  const imagen = await createImageBitmap(lamina);
+  const borrado = lienzo.doc.editar(
+    capa,
+    sel.rect,
+    "Mover selección",
+    (ctx) => {
+      ctx.globalCompositeOperation = "destination-out";
+      ctx.fill(sel.camino);
+    },
+    false,
+  );
+  if (!borrado) return null;
+  lienzo.actualizarFantasma();
+  return { rect: sel.rect, piezas: [{ capa, imagen }], vista: imagen, borrado };
+}
+
+/**
  * Pinta las piezas en sus capas con `matriz` (de px de la pieza a px del documento) y registra
  * todo (borrado + pintado) como un solo paso.
  */
-export function aplicar(lienzo: Lienzo, levantado: Levantado, matriz: DOMMatrix): void {
+export function aplicar(lienzo: Lienzo, levantado: Levantado, matriz: DOMMatrix, descripcion = "Transformar"): void {
   const doc = lienzo.doc;
   const { width: w, height: h } = levantado.vista;
   const p = [
@@ -105,7 +131,7 @@ export function aplicar(lienzo: Lienzo, levantado: Levantado, matriz: DOMMatrix)
       });
       if (paso) pasos.push(paso);
     }
-  lienzo.historial.registrar(new PasoCompuesto("Transformar", pasos));
+  lienzo.historial.registrar(new PasoCompuesto(descripcion, pasos));
   lienzo.actualizarFantasma();
 }
 

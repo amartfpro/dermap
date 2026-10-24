@@ -4,7 +4,7 @@ import type { IContentRenderer } from "dockview-core";
 import { app } from "../estado";
 import { PX_POR_MM } from "../lienzo/geometria-zona";
 import { ImagenFlotante } from "../lienzo/imagen";
-import { aplicar as aplicarTransformacion, cancelar as cancelarTransformacion, levantar, type Levantado } from "../lienzo/transformar";
+import { aplicar as aplicarTransformacion, cancelar as cancelarTransformacion, levantar, levantarSeleccion, type Levantado } from "../lienzo/transformar";
 import { PRESETS } from "../lienzo/pincel";
 import { nuevoId } from "../lienzo/capa";
 import { copiarCapa, obtenerCopia } from "../lienzo/portapapeles";
@@ -119,7 +119,7 @@ export class PanelLienzo implements IContentRenderer {
   private verDeformacion = false;
   private flotante: ImagenFlotante | null = null;
   /** Si la imagen flotante es dibujo levantado de capas para transformarlo en su sitio. */
-  private transformacion: { lienzo: Lienzo; levantado: Levantado } | null = null;
+  private transformacion: { lienzo: Lienzo; levantado: Levantado; descripcion: string } | null = null;
   private repintar = false;
 
   private controles: Record<string, HTMLInputElement | HTMLButtonElement | HTMLSelectElement> = {};
@@ -337,8 +337,8 @@ export class PanelLienzo implements IContentRenderer {
     this.riel.append(Object.assign(document.createElement("span"), { className: "hueco" }), exportar);
 
     // ── Barra de vista (flotante, abajo a la derecha) ──
-    const deshacer = botonIcono("deshacer", t("Deshacer (Ctrl+Z)"), () => void this.lienzo?.deshacer());
-    const rehacer = botonIcono("rehacer", t("Rehacer (Ctrl+Mayús+Z)"), () => void this.lienzo?.rehacer());
+    const deshacer = botonIcono("deshacer", t("Deshacer (Ctrl+Z)"), () => this.deshacer());
+    const rehacer = botonIcono("rehacer", t("Rehacer (Ctrl+Mayús+Z)"), () => this.rehacer());
     const girarI = botonIcono("girarIzquierda", t("Girar el lienzo 15° a la izquierda (también R + arrastrar o Mayús + rueda)"), () => this.girarVista(-15));
     const girarD = botonIcono("girarDerecha", t("Girar el lienzo 15° a la derecha"), () => this.girarVista(15));
     this.botonAngulo = document.createElement("button");
@@ -849,10 +849,11 @@ export class PanelLienzo implements IContentRenderer {
     const tecla = e.key.toLowerCase();
     if (ctrl && tecla === "z") {
       e.preventDefault();
-      void (e.shiftKey ? this.lienzo?.rehacer() : this.lienzo?.deshacer());
+      if (e.shiftKey) this.rehacer();
+      else this.deshacer();
     } else if (ctrl && tecla === "y") {
       e.preventDefault();
-      void this.lienzo?.rehacer();
+      this.rehacer();
     } else if (ctrl && tecla === "c") {
       e.preventDefault();
       void this.copiar();
@@ -986,24 +987,22 @@ export class PanelLienzo implements IContentRenderer {
   }
 
   /**
-   * Mover una selección: se corta de la capa y queda como imagen flotante para moverla,
-   * girarla o escalarla; al aplicar se fija en una capa nueva.
+   * Mover una selección: lo que hay dentro se levanta de la capa activa y queda flotando para
+   * moverlo, girarlo o escalarlo; al aplicar vuelve a la misma capa (un solo paso de deshacer).
    */
   private async moverSeleccion(c: P, d: P): Promise<void> {
+    void c;
     const l = this.lienzo;
     const sel = this.seleccion;
-    if (!l || !sel) return;
-    const lamina = sel.extraer(l);
-    if (!lamina) {
-      this.info.textContent = t("No hay dibujo dentro de la selección.");
-      return;
-    }
-    const imagen = await createImageBitmap(lamina);
-    sel.borrar(l, "Mover selección");
+    if (!l || !sel || this.flotante) return;
+    if (l.doc.activa.bloqueadaTotal || !l.doc.activa.seVe) return this.avisar(capaNoEditable(l.doc.activa));
+    const levantado = await levantarSeleccion(l, sel);
+    if (!levantado) return this.avisar(t("No hay dibujo dentro de la selección."));
     this.seleccion = null;
-    this.colocarImagen(imagen, t("{nombre} (movido)", { nombre: l.doc.activa.nombre }), new DOMMatrix().translate(sel.rect.x0, sel.rect.y0));
+    if (this.lienzo !== l) return void cancelarTransformacion(l, levantado);
+    this.colocarImagen(levantado.vista, l.doc.activa.nombre, new DOMMatrix().translate(sel.rect.x0, sel.rect.y0));
+    this.transformacion = { lienzo: l, levantado, descripcion: "Mover selección" };
     this.arrastre = { tipo: "imagen-mover", ultimo: d };
-    void c;
   }
 
   // ── Imagen importada ──────────────────────────────────────────────────────────
@@ -1039,6 +1038,21 @@ export class PanelLienzo implements IContentRenderer {
     this.colocarImagen(copia.imagen, t("{nombre} (copia)", { nombre: copia.nombre }), matriz);
   }
 
+  /**
+   * Deshacer con algo flotando (transformación, selección movida, imagen o pegado sin aplicar)
+   * solo cancela eso: el historial no se toca hasta aplicar.
+   */
+  private deshacer(): void {
+    if (this.flotante) return this.cancelarImagen();
+    if (this.arrastre) return;
+    void this.lienzo?.deshacer();
+  }
+
+  private rehacer(): void {
+    if (this.flotante || this.arrastre) return;
+    void this.lienzo?.rehacer();
+  }
+
   /** Coloca una imagen sobre el lienzo para moverla, escalarla y girarla antes de fijarla. */
   private voltearImagen(horizontal: boolean): void {
     if (!this.flotante) return;
@@ -1054,6 +1068,13 @@ export class PanelLienzo implements IContentRenderer {
     const l = this.lienzo;
     if (!l || this.flotante) return;
     if (this.recta) this.alternarRecta();
+    // Con una selección hecha, se transforma solo lo seleccionado.
+    if (this.seleccion) {
+      const r = this.seleccion.rect;
+      return this.moverSeleccion({ x: 0, y: 0 }, { x: (r.x0 + r.x1) / 2, y: (r.y0 + r.y1) / 2 }).then(() => {
+        if (this.arrastre?.tipo === "imagen-mover") this.arrastre = null;
+      });
+    }
     const grupo = l.doc.grupoSeleccionado;
     const capas = grupo ? l.doc.capasDe(grupo) : [l.doc.activa];
     const nombre = grupo ? grupo.nombre : l.doc.activa.nombre;
@@ -1073,7 +1094,7 @@ export class PanelLienzo implements IContentRenderer {
     }
     if (this.lienzo !== l) return void cancelarTransformacion(l, levantado);
     this.colocarImagen(levantado.vista, nombre, new DOMMatrix().translate(levantado.rect.x0, levantado.rect.y0));
-    this.transformacion = { lienzo: l, levantado };
+    this.transformacion = { lienzo: l, levantado, descripcion: "Transformar" };
   }
 
   colocarImagen(imagen: ImageBitmap, nombre: string, matriz?: DOMMatrix): void {
@@ -1087,7 +1108,7 @@ export class PanelLienzo implements IContentRenderer {
   private fijarImagen(): void {
     if (!this.flotante || !this.lienzo) return;
     if (this.transformacion) {
-      aplicarTransformacion(this.transformacion.lienzo, this.transformacion.levantado, this.flotante.matriz);
+      aplicarTransformacion(this.transformacion.lienzo, this.transformacion.levantado, this.flotante.matriz, this.transformacion.descripcion);
       this.transformacion = null;
     } else this.flotante.fijar(this.lienzo);
     this.cancelarImagen();
