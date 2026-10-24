@@ -1,3 +1,4 @@
+import { desplegable } from "../ui/desplegable";
 import { app } from "../estado";
 import { t } from "../i18n";
 import { filtrar, type ModoFiltro, type OpcionesFiltro } from "../lienzo/filtros";
@@ -48,9 +49,10 @@ export function abrirDialogoFiltro(): void {
   const titulo = document.createElement("h2");
   titulo.textContent = t("Convertir a stencil · {capa}", { capa: capa.nombre });
 
-  const modo = document.createElement("select");
-  modo.className = "desplegable";
-  modo.append(new Option(t("Contornos (dibujo de líneas)"), "contornos"), new Option(t("Blanco y negro (umbral)"), "umbral"));
+  const modo = desplegable([
+    { valor: "contornos", texto: t("Contornos (dibujo de líneas)") },
+    { valor: "umbral", texto: t("Blanco y negro (umbral)") },
+  ]);
   const umbral = rango(0, 255, 140);
   const suavizado = rango(0, 6, 1);
   const grosor = rango(0, 4, 1);

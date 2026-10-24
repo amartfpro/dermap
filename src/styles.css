@@ -239,6 +239,9 @@ textarea {
 }
 
 .desplegable {
+  display: inline-flex;
+  align-items: center;
+  text-align: left;
   height: var(--alto-control);
   padding: 0 26px 0 9px;
   cursor: pointer;
@@ -249,8 +252,17 @@ textarea {
   min-width: 0;
 }
 
-.desplegable:hover {
+.desplegable:hover,
+.desplegable.menu-abierto {
   border-color: var(--borde-fuerte);
+}
+
+.desplegable-texto {
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .desplegable option,
@@ -278,7 +290,7 @@ textarea {
 .numero:focus,
 input:focus,
 textarea:focus,
-.desplegable:focus {
+.desplegable:focus-visible {
   outline: none;
   border-color: var(--primario);
   box-shadow: 0 0 0 3px var(--primario-tinte);
@@ -549,52 +561,6 @@ input[type="radio"] {
 
 .panel-lienzo canvas.modo-gotero {
   cursor: crosshair;
-}
-
-/* Pestañas de lienzos abiertos */
-.pestanas {
-  display: flex;
-  gap: 2px;
-  padding: 5px 6px 0;
-  background: var(--superficie);
-  border-bottom: 1px solid var(--borde-suave);
-  overflow-x: auto;
-  flex: none;
-}
-
-.pestanas[hidden] {
-  display: none;
-}
-
-.pestana {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  height: 28px;
-  padding: 0 4px 0 12px;
-  color: var(--texto-suave);
-  background: transparent;
-  cursor: pointer;
-  white-space: nowrap;
-  max-width: 180px;
-  border-radius: var(--radio) var(--radio) 0 0;
-  box-shadow: inset 0 -2px 0 transparent;
-}
-
-.pestana:hover {
-  background: var(--superficie-2);
-  color: var(--texto);
-}
-
-.pestana span {
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.pestana.activa {
-  color: var(--texto);
-  background: var(--superficie-2);
-  box-shadow: inset 0 -2px 0 var(--primario);
 }
 
 /* Paleta */
@@ -1626,17 +1592,6 @@ input[type="radio"] {
 
 .muestra-paleta.vacia:hover {
   transform: none;
-}
-
-.acciones-pestanas {
-  display: flex;
-  align-items: center;
-  padding: 0 0 5px 8px;
-  flex: none;
-}
-
-.acciones-pestanas .boton-texto {
-  height: 26px;
 }
 
 .barra-vista-3d {

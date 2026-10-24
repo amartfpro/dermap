@@ -1,3 +1,4 @@
+import { desplegable, type Desplegable } from "../ui/desplegable";
 import { t, traducible } from "../i18n";
 import type { IContentRenderer } from "dockview-core";
 import { app } from "../estado";
@@ -85,7 +86,6 @@ export class PanelLienzo implements IContentRenderer {
   private aviso: HTMLElement;
   private info: HTMLElement;
   private barra: HTMLElement;
-  private pestanas: HTMLElement;
   private barraImagen: HTMLElement;
   private observador: ResizeObserver;
 
@@ -112,7 +112,6 @@ export class PanelLienzo implements IContentRenderer {
   private botonRecta!: HTMLButtonElement;
   private botonAngulo!: HTMLButtonElement;
   private riel!: HTMLElement;
-  private accionesPestanas!: HTMLElement;
   private barraVista!: HTMLElement;
   private campos!: Record<"tamano" | "opacidad" | "dureza", CampoDeslizante>;
   private filaPaleta!: HTMLElement;
@@ -122,11 +121,7 @@ export class PanelLienzo implements IContentRenderer {
 
   private controles: Record<string, HTMLInputElement | HTMLButtonElement | HTMLSelectElement> = {};
 
-  private alCambiarActivo = () => {
-    this.mostrar(app.activo);
-    this.pintarPestanas();
-  };
-  private alCambiarAbiertos = () => this.pintarPestanas();
+  private alCambiarActivo = () => this.mostrar(app.activo);
   private alCambiarAjustes = () => this.sincronizarControles();
   private alCambiarPrevia = () => {
     if (this.recta) this.programarRecta();
@@ -141,8 +136,6 @@ export class PanelLienzo implements IContentRenderer {
     this.element.className = "panel panel-lienzo";
     this.element.tabIndex = -1;
 
-    this.pestanas = document.createElement("div");
-    this.pestanas.className = "pestanas";
 
     this.barra = document.createElement("div");
     this.barra.className = "herramientas barra-control barra-opciones";
@@ -184,7 +177,7 @@ export class PanelLienzo implements IContentRenderer {
     const cuerpo = document.createElement("div");
     cuerpo.className = "cuerpo-lienzo";
     cuerpo.append(this.riel, zona);
-    this.element.append(this.pestanas, this.barra, this.barraImagen, cuerpo);
+    this.element.append(this.barra, this.barraImagen, cuerpo);
 
     this.canvas.addEventListener("pointerdown", (e) => this.punteroAbajo(e));
     this.canvas.addEventListener("pointermove", (e) => this.punteroMovido(e));
@@ -197,8 +190,6 @@ export class PanelLienzo implements IContentRenderer {
     this.canvas.addEventListener("wheel", (e) => this.rueda(e), { passive: false });
     this.canvas.addEventListener("contextmenu", (e) => e.preventDefault());
     app.addEventListener("activo", this.alCambiarActivo);
-    app.addEventListener("abiertos", this.alCambiarAbiertos);
-    app.addEventListener("lienzos", this.alCambiarAbiertos);
     app.addEventListener("ajustes", this.alCambiarAjustes);
     window.addEventListener("keydown", this.alTeclaAbajo);
     window.addEventListener("keyup", this.alTeclaArriba);
@@ -207,37 +198,6 @@ export class PanelLienzo implements IContentRenderer {
     this.observador.observe(this.canvas);
     instancias.push(this);
     this.mostrar(app.activo);
-    this.pintarPestanas();
-  }
-
-  /** Pestañas de los lienzos abiertos (RF-42), como los documentos de un editor. */
-  private pintarPestanas(): void {
-    this.pestanas.replaceChildren();
-    this.pestanas.hidden = app.abiertos.length === 0;
-    for (const l of app.abiertos) {
-      const p = document.createElement("div");
-      p.className = "pestana" + (l === app.activo ? " activa" : "");
-      p.title = l.nombre;
-      const nombre = document.createElement("span");
-      nombre.textContent = l.nombre;
-      const cerrar = document.createElement("button");
-      cerrar.className = "icono";
-      cerrar.textContent = t("×");
-      cerrar.title = t("Cerrar pestaña (el lienzo sigue en el proyecto y en el 3D)");
-      cerrar.addEventListener("click", (e) => {
-        e.stopPropagation();
-        app.cerrar(l);
-      });
-      p.append(nombre, cerrar);
-      p.addEventListener("click", () => app.activar(l));
-      p.addEventListener("auxclick", (e) => {
-        if (e.button === 1) app.cerrar(l);
-      });
-      this.pestanas.append(p);
-    }
-    const hueco = document.createElement("span");
-    hueco.className = "hueco";
-    this.pestanas.append(hueco, this.accionesPestanas);
   }
 
   init(): void {}
@@ -245,8 +205,6 @@ export class PanelLienzo implements IContentRenderer {
   dispose(): void {
     this.observador.disconnect();
     app.removeEventListener("activo", this.alCambiarActivo);
-    app.removeEventListener("abiertos", this.alCambiarAbiertos);
-    app.removeEventListener("lienzos", this.alCambiarAbiertos);
     app.removeEventListener("ajustes", this.alCambiarAjustes);
     window.removeEventListener("keydown", this.alTeclaAbajo);
     window.removeEventListener("keyup", this.alTeclaArriba);
@@ -267,7 +225,6 @@ export class PanelLienzo implements IContentRenderer {
     if (lienzo) {
       lienzo.addEventListener("previa", this.alCambiarPrevia);
       lienzo.addEventListener("propiedades", this.alCambiarPrevia);
-      lienzo.addEventListener("propiedades", this.alCambiarAbiertos);
       lienzo.addEventListener("historial", this.alCambiarHistorial);
       lienzo.addEventListener("capas", this.alCambiarHistorial);
     }
@@ -280,7 +237,6 @@ export class PanelLienzo implements IContentRenderer {
     if (!this.lienzo) return;
     this.lienzo.removeEventListener("previa", this.alCambiarPrevia);
     this.lienzo.removeEventListener("propiedades", this.alCambiarPrevia);
-    this.lienzo.removeEventListener("propiedades", this.alCambiarAbiertos);
     this.lienzo.removeEventListener("historial", this.alCambiarHistorial);
     this.lienzo.removeEventListener("capas", this.alCambiarHistorial);
   }
@@ -333,10 +289,12 @@ export class PanelLienzo implements IContentRenderer {
     this.riel.append(pincel, goma, gotero, separador(), relleno, lazo, separador(), linea, rectangulo, elipse, texto, separador(), color);
 
     // ── Barra de opciones del trazo (arriba) ──
-    const preset = document.createElement("select");
-    preset.title = t("Pinceles para tatuaje");
-    preset.className = "desplegable selector-preset";
-    preset.append(new Option(t("Personalizado"), ""), ...PRESETS.map((p, i) => new Option(t(p.nombre), String(i))));
+    const preset = desplegable(
+      [{ valor: "", texto: t("Personalizado") }, ...PRESETS.map((p, i) => ({ valor: String(i), texto: t(p.nombre) }))],
+      "",
+      t("Pinceles para tatuaje"),
+    );
+    preset.classList.add("selector-preset");
     preset.addEventListener("change", () => {
       const p = PRESETS[Number(preset.value)];
       if (p) app.cambiarAjustes(p.ajustes);
@@ -371,10 +329,8 @@ export class PanelLienzo implements IContentRenderer {
       sep(),
       segmentado(puntos, presion),
     );
-    // Exportar: a la derecha de las pestañas, siempre a mano.
-    this.accionesPestanas = document.createElement("div");
-    this.accionesPestanas.className = "acciones-pestanas";
-    this.accionesPestanas.append(exportar);
+    // Exportar el stencil: abajo del todo del riel, como «Mapear zona» en la columna Modelo.
+    this.riel.append(Object.assign(document.createElement("span"), { className: "hueco" }), exportar);
 
     // ── Barra de vista (flotante, abajo a la derecha) ──
     const deshacer = botonIcono("deshacer", t("Deshacer (Ctrl+Z)"), () => void this.lienzo?.deshacer());
@@ -462,7 +418,7 @@ export class PanelLienzo implements IContentRenderer {
     this.canvas.classList.toggle("modo-gotero", this.cuentagotas);
     // El selector muestra el pincel predefinido que coincide con los ajustes actuales, si lo hay.
     const i = PRESETS.findIndex((p) => Object.entries(p.ajustes).every(([k, v]) => a[k as keyof typeof a] === v));
-    (this.controles.preset as HTMLSelectElement).value = i >= 0 ? String(i) : "";
+    (this.controles.preset as Desplegable).value = i >= 0 ? String(i) : "";
     this.controles.puntos.classList.toggle("activo", a.forma === "puntos");
     this.controles.presion.classList.toggle("activo", a.presionOpacidad);
     (this.controles.deshacer as HTMLButtonElement).disabled = !this.lienzo?.historial.puedeDeshacer;

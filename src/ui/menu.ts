@@ -8,6 +8,8 @@ export interface OpcionMenu {
   deshabilitado?: boolean;
   /** Texto pequeño a la derecha (p. ej. «80 % común»). */
   detalle?: string;
+  /** Tipografía con la que se muestra el texto. */
+  fuente?: string;
   accion?: () => void;
 }
 export type ElementoMenu = OpcionMenu | "separador" | { titulo: string };
@@ -15,7 +17,7 @@ export type ElementoMenu = OpcionMenu | "separador" | { titulo: string };
 let cerrarAbierto: (() => void) | null = null;
 
 /** Menú desplegable junto a un botón (como los menús de los paneles de Illustrator). */
-export function abrirMenu(ancla: HTMLElement, elementos: ElementoMenu[], opciones: { lado?: "abajo" | "derecha" } = {}): void {
+export function abrirMenu(ancla: HTMLElement, elementos: ElementoMenu[], opciones: { lado?: "abajo" | "derecha"; anchoMinimo?: number } = {}): void {
   if (cerrarAbierto) {
     const yaEraEste = ancla.classList.contains("menu-abierto");
     cerrarAbierto();
@@ -44,6 +46,7 @@ export function abrirMenu(ancla: HTMLElement, elementos: ElementoMenu[], opcione
     const texto = document.createElement("span");
     texto.className = "menu-texto";
     texto.textContent = el.texto;
+    if (el.fuente) texto.style.fontFamily = el.fuente;
     b.append(ico, texto);
     if (el.detalle || el.atajo) {
       const d = document.createElement("span");
@@ -57,6 +60,7 @@ export function abrirMenu(ancla: HTMLElement, elementos: ElementoMenu[], opcione
     });
     menu.append(b);
   }
+  if (opciones.anchoMinimo) menu.style.minWidth = `${Math.round(opciones.anchoMinimo)}px`;
   document.body.append(menu);
   ancla.classList.add("menu-abierto");
   const r = ancla.getBoundingClientRect();

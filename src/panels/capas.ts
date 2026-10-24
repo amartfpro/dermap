@@ -1,3 +1,4 @@
+import { desplegable } from "../ui/desplegable";
 import { plural, t } from "../i18n";
 import type { IContentRenderer } from "dockview-core";
 import { app } from "../estado";
@@ -234,9 +235,10 @@ export class PanelCapas implements IContentRenderer {
       l.doc.cambiarCapa(activa, { opacidad: valor / 100 });
     });
     opacidad.fijar(activa.opacidad * 100, `${Math.round(activa.opacidad * 100)} %`);
-    const modo = document.createElement("select");
-    modo.className = "desplegable";
-    for (const m of MODOS_FUSION) modo.append(new Option(t(m.nombre), m.modo, false, m.modo === activa.modo));
+    const modo = desplegable(
+      MODOS_FUSION.map((m) => ({ valor: m.modo, texto: t(m.nombre) })),
+      activa.modo,
+    );
     modo.addEventListener("change", () => this.cambiar(activa, { modo: modo.value as ModoFusion }, "Modo de fusión"));
     const stencil = document.createElement("label");
     stencil.className = "interruptor";

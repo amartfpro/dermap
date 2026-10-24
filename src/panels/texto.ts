@@ -1,3 +1,4 @@
+import { desplegable } from "../ui/desplegable";
 import { app } from "../estado";
 import { t } from "../i18n";
 import { PX_POR_MM } from "../lienzo/geometria-zona";
@@ -125,14 +126,10 @@ export function abrirDialogoTexto(): void {
   area.value = sessionStorageLeer() ?? "";
 
   const disponibles = TIPOGRAFIAS.filter(instalada);
-  const tipografia = document.createElement("select");
-  tipografia.className = "desplegable";
-  for (const f of disponibles) {
-    const o = new Option(f, f);
-    o.style.fontFamily = `"${f}"`;
-    tipografia.append(o);
-  }
-  tipografia.append(new Option(t("Otra…"), "__otra__"));
+  const tipografia = desplegable([
+    ...disponibles.map((f) => ({ valor: f, texto: f, fuente: `"${f}"` })),
+    { valor: "__otra__", texto: t("Otra…") },
+  ]);
   const otra = document.createElement("input");
   otra.type = "text";
   otra.placeholder = t("Nombre de la tipografía instalada");
@@ -142,9 +139,14 @@ export function abrirDialogoTexto(): void {
   const interlineado = numero(1.2, 0.6, 3, 0.05);
   const negrita = casilla(t("Negrita"));
   const cursiva = casilla(t("Cursiva"));
-  const alineacion = document.createElement("select");
-  alineacion.className = "desplegable";
-  alineacion.append(new Option(t("Izquierda"), "left"), new Option(t("Centro"), "center", true, true), new Option(t("Derecha"), "right"));
+  const alineacion = desplegable(
+    [
+      { valor: "left", texto: t("Izquierda") },
+      { valor: "center", texto: t("Centro") },
+      { valor: "right", texto: t("Derecha") },
+    ],
+    "center",
+  );
 
   const previa = document.createElement("canvas");
   previa.className = "previa-texto";
