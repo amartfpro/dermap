@@ -17,7 +17,7 @@ import { instalarTooltips } from "./ui/tooltip";
 import { firma } from "./ui/firma";
 import { enTauri, sistemaArchivos } from "./proyectos/sistema-archivos";
 
-const CLAVE_LAYOUT = "dermap.layout.v3";
+const CLAVE_LAYOUT = "dermap.layout.v4";
 /** Proyecto que reabrir tras recargar la interfaz al cambiar de idioma. */
 const CLAVE_REABRIR = "dermap.reabrir";
 
@@ -60,6 +60,7 @@ const TITULOS: Record<string, string> = {
 };
 
 function layoutInicial(api: DockviewApi): void {
+  // En el orden del trabajo: Modelo (elegir la zona) → Lienzo (dibujar) → Capas, junto al lienzo.
   api.clear();
   api.addPanel({ id: "visor3d", component: "visor3d", title: t(TITULOS.visor3d) });
   api.addPanel({
@@ -72,8 +73,26 @@ function layoutInicial(api: DockviewApi): void {
     id: "capas",
     component: "capas",
     title: t(TITULOS.capas),
-    position: { referencePanel: "visor3d", direction: "left" },
+    position: { referencePanel: "lienzo", direction: "right" },
     initialWidth: 290,
+  });
+  // Modelo algo más de un tercio, Capas estrecha y el resto para el lienzo. Al arrancar el espacio
+  // de trabajo puede estar oculto (pantalla de inicio): se ajusta cuando tenga tamaño.
+  const ajustar = () => {
+    const ancho = contenedor.clientWidth;
+    if (!ancho) return false;
+    // En este orden: cada cambio lo absorbe la columna vecina (la del lienzo al final).
+    api.getPanel("visor3d")?.group.api.setSize({ width: Math.round(ancho * 0.36) });
+    api.getPanel("capas")?.group.api.setSize({ width: 290 });
+    return true;
+  };
+  // Dockview reparte el espacio en el siguiente fotograma: se ajusta después.
+  requestAnimationFrame(() => {
+    if (ajustar()) return;
+    const observador = new ResizeObserver(() => {
+      if (ajustar()) observador.disconnect();
+    });
+    observador.observe(contenedor);
   });
 }
 
@@ -243,7 +262,7 @@ if (enTauri()) {
 // Acceso para las pruebas automáticas en navegador (solo con ?prueba en la URL).
 if (new URLSearchParams(location.search).has("prueba")) {
   void Promise.all([import("./proyectos/paquete"), import("./lienzo/vista-recta")]).then(([paquete, { VistaRecta }]) => {
-    (window as unknown as { dermap: unknown }).dermap = { app, sistemaArchivos, paquete, VistaRecta, visorActual };
+    (window as unknown as { dermap: unknown }).dermap = { app, sistemaArchivos, paquete, VistaRecta, visorActual, dock };
   });
   (window as unknown as { dermap: unknown }).dermap = { app, sistemaArchivos };
 }
