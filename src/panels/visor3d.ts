@@ -43,7 +43,9 @@ export class Visor3D implements IContentRenderer {
   private camara = new THREE.PerspectiveCamera(35, 1, 1, 2000);
   private controles: OrbitControls;
   private observador: ResizeObserver;
-  private estadoTexto: HTMLElement;
+  /** Mensaje de la barra de control que sustituye a la instrucción de la herramienta. */
+  private mensaje: { texto: string; tipo: "estado" | "aviso" | "error" } | null = { texto: "", tipo: "estado" };
+  private temporizadorMensaje = 0;
   private botonSeleccionar!: HTMLButtonElement;
   private area!: HTMLElement;
   private controlSeleccion!: HTMLElement;
@@ -174,9 +176,7 @@ export class Visor3D implements IContentRenderer {
     this.area.className = "area-visor";
     this.area.appendChild(this.renderer.domElement);
 
-    this.estadoTexto = document.createElement("div");
-    this.estadoTexto.className = "etiqueta-flotante";
-    this.estadoTexto.textContent = t("Cargando cuerpo…");
+    this.mensaje = { texto: t("Cargando el modelo…"), tipo: "estado" };
 
     // ── Riel de herramientas (como en Illustrator): solo iconos, con tooltip y atajo ──
     this.botonSeleccionar = botonIcono("seleccionar", t("Pincel de selección: pinta la zona sobre el cuerpo; Mayús quita (S)"), () => this.alternarSeleccion());
@@ -256,7 +256,7 @@ export class Visor3D implements IContentRenderer {
     this.area.append(this.capaLazo);
     this.panelCuerpo = new PanelCuerpo();
     this.barraPresentacion = this.montarBarraPresentacion();
-    this.area.append(this.estadoTexto, this.panelCuerpo.element);
+    this.area.append(this.panelCuerpo.element);
     this.element.append(this.barraPresentacion);
     this.actualizarControl();
 
@@ -497,7 +497,7 @@ export class Visor3D implements IContentRenderer {
       this.base = await cargarCuerpo();
       prepararSimetria(this.base);
     } catch (error) {
-      this.estadoTexto.textContent = t("No se pudo cargar el cuerpo: {error}", { error: String(error) });
+      this.error(t("No se pudo cargar el modelo: {error}", { error: String(error) }), 0);
       return;
     }
     try {
@@ -528,8 +528,7 @@ export class Visor3D implements IContentRenderer {
     app.fijarCuerpo(this.cuerpo);
     this.suscribirProyecto();
     this.reconstruirLienzos();
-    this.estadoTexto.textContent =
-      t("Elige una zona rápida o pinta una con «Seleccionar» · arrastra para girar, rueda para acercar");
+    this.mostrarMensaje(null);
   }
 
   /** Complexión guardada en el proyecto abierto (o la inicial si no hay proyecto). */
@@ -649,8 +648,9 @@ export class Visor3D implements IContentRenderer {
     const seleccion = zona.seleccionar(this.cuerpo);
     this.fijarSeleccion(seleccion.triangulos);
     this.verVista(VISTAS.findIndex((v) => v.nombre === zona.vista));
-    this.estadoTexto.textContent =
-      t("{zona}: {n} triángulos. La línea azul es el corte: gira la vista para moverlo. Pulsa «Aplanar zona».", { zona: t(zona.nombre), n: seleccion.triangulos.length });
+    this.estado(
+      t("{zona}: {n} triángulos. La línea azul es el corte: gira la vista para moverlo. Pulsa «Aplanar zona».", { zona: t(zona.nombre), n: seleccion.triangulos.length }),
+    );
   }
 
   // ── Selección a pincel ────────────────────────────────────────────────────────
@@ -659,7 +659,14 @@ export class Visor3D implements IContentRenderer {
   private actualizarControl(): void {
     if (!this.ayudaControl) return;
     this.controlSeleccion.hidden = !this.modoSeleccion;
-    this.ayudaControl.textContent = this.modoSeleccion
+    // Al cambiar de herramienta vuelve su instrucción (salvo mientras carga o con un error fijo).
+    if (this.mensaje?.tipo !== "error" && this.cuerpo) this.mensaje = null;
+    this.pintarMensaje();
+  }
+
+  /** Instrucción de la herramienta activa (lo que se ve cuando no hay otro mensaje). */
+  private instruccion(): string {
+    return this.modoSeleccion
       ? t("Arrastra sobre el cuerpo para añadir piel a la zona; Mayús + arrastrar quita.")
       : this.modoLazo
         ? t("Rodea la zona con el ratón: se añade lo que se ve dentro. Mayús quita.")
@@ -669,7 +676,44 @@ export class Visor3D implements IContentRenderer {
             ? t("Haz clic dentro de la zona donde debe terminar el corte extra.")
             : this.modoPintar
               ? t("Dibuja sobre el modelo con el pincel del lienzo; botón derecho para girar.")
-              : t("Selecciona una zona con las herramientas de la izquierda, ajusta el corte y pulsa Aplanar.");
+              : t("Elige una zona rápida o selecciónala con las herramientas de la izquierda; luego pulsa «Aplanar zona».");
+  }
+
+  private pintarMensaje(): void {
+    if (!this.ayudaControl) return;
+    const m = this.mensaje;
+    this.ayudaControl.textContent = m ? m.texto : this.instruccion();
+    this.ayudaControl.classList.toggle("estado", m?.tipo === "estado");
+    this.ayudaControl.classList.toggle("aviso", m?.tipo === "aviso");
+    this.ayudaControl.classList.toggle("error", m?.tipo === "error");
+    this.ayudaControl.title = this.ayudaControl.textContent ?? "";
+  }
+
+  /**
+   * Mensaje en la barra de control. Los estados se quedan hasta que cambia la herramienta o
+   * llega otro mensaje; avisos y errores vuelven a lo anterior pasados unos segundos (0: fijo).
+   */
+  private mostrarMensaje(m: { texto: string; tipo: "estado" | "aviso" | "error" } | null, duracion = 0): void {
+    clearTimeout(this.temporizadorMensaje);
+    const anterior = this.mensaje?.tipo === "estado" ? this.mensaje : null;
+    this.mensaje = m;
+    this.pintarMensaje();
+    if (m && duracion)
+      this.temporizadorMensaje = window.setTimeout(() => {
+        if (this.mensaje === m) this.mostrarMensaje(anterior);
+      }, duracion);
+  }
+
+  private estado(texto: string): void {
+    this.mostrarMensaje({ texto, tipo: "estado" });
+  }
+
+  private aviso(texto: string): void {
+    this.mostrarMensaje({ texto, tipo: "aviso" }, 4000);
+  }
+
+  private error(texto: string, duracion = 8000): void {
+    this.mostrarMensaje({ texto, tipo: "error" }, duracion);
   }
 
   private alternarCorteManual(): void {
@@ -680,32 +724,32 @@ export class Visor3D implements IContentRenderer {
     this.botonCorteManual.classList.toggle("activo", this.modoCorteManual);
     this.actualizarControl();
     this.renderer.domElement.style.cursor = this.modoCorteManual ? "crosshair" : "";
-    if (this.modoCorteManual)
-      this.estadoTexto.textContent = t("Haz clic en la manga por donde quieras que pase el corte (puedes marcar varios puntos).");
   }
 
   private añadirPuntoCorte(e: PointerEvent): void {
     const seleccion = this.seleccionActual();
     const golpe = this.lanzarRayo(e);
     if (!seleccion) {
-      this.estadoTexto.textContent = t("Selecciona primero una manga.");
+      this.aviso(t("Selecciona primero una manga."));
       return;
     }
     if (!golpe || !this.seleccionados.has(golpe.cara)) {
-      this.estadoTexto.textContent = t("Haz clic sobre la zona seleccionada.");
+      this.aviso(t("Haz clic sobre la zona seleccionada."));
       return;
     }
     const punto = verticeMasCercano(seleccion.malla, golpe.point.toArray() as P3);
     const puntos = [...this.puntosCorte, punto];
     if (!corteManual(seleccion.malla, puntos)) {
-      this.estadoTexto.textContent = corteSugerido(seleccion.malla, [0, 0, 1])
-        ? t("Ese punto está en el borde: elige uno dentro de la manga.")
-        : t("El corte manual solo es para mangas (zonas con dos bordes).");
+      this.aviso(
+        corteSugerido(seleccion.malla, [0, 0, 1])
+          ? t("Ese punto está en el borde: elige uno dentro de la manga.")
+          : t("El corte manual solo es para mangas (zonas con dos bordes)."),
+      );
       return;
     }
     this.puntosCorte = puntos;
     this.actualizarCorte();
-    this.estadoTexto.textContent = plural(puntos.length, "Corte manual con {n} punto. Añade más o pulsa «Aplanar zona».", "Corte manual con {n} puntos. Añade más o pulsa «Aplanar zona».");
+    this.estado(plural(puntos.length, "Corte manual con {n} punto. Añade más o pulsa «Aplanar zona».", "Corte manual con {n} puntos. Añade más o pulsa «Aplanar zona»."));
   }
 
   /** Corte principal que se usará: el manual si hay puntos, si no el automático según la vista. */
@@ -725,7 +769,6 @@ export class Visor3D implements IContentRenderer {
     this.botonCorte.classList.toggle("activo", this.modoCorte);
     this.actualizarControl();
     this.renderer.domElement.style.cursor = this.modoCorte ? "crosshair" : "";
-    if (this.modoCorte) this.estadoTexto.textContent = t("Haz clic en la zona seleccionada donde debe terminar el corte extra.");
   }
 
   private añadirCorteExtra(e: PointerEvent): void {
@@ -735,12 +778,12 @@ export class Visor3D implements IContentRenderer {
     const objetivo = verticeMasCercano(seleccion.malla, golpe.point.toArray() as P3);
     const camino = corteExtraHasta(seleccion.malla, objetivo);
     if (camino.length < 2) {
-      this.estadoTexto.textContent = t("Ese punto está en el borde: elige uno dentro de la zona.");
+      this.aviso(t("Ese punto está en el borde: elige uno dentro de la zona."));
       return;
     }
     this.cortesExtra.push(camino);
     this.pintarCortesExtra();
-    this.estadoTexto.textContent = plural(this.cortesExtra.length, "{n} corte extra. Pulsa «Aplanar zona» o añade más.", "{n} cortes extra. Pulsa «Aplanar zona» o añade más.");
+    this.estado(plural(this.cortesExtra.length, "{n} corte extra. Pulsa «Aplanar zona» o añade más.", "{n} cortes extra. Pulsa «Aplanar zona» o añade más."));
   }
 
   private quitarCortesExtra(): void {
@@ -795,9 +838,11 @@ export class Visor3D implements IContentRenderer {
     this.actualizarControl();
     this.botonesCamara(this.modoPintar);
     if (this.modoPintar)
-      this.estadoTexto.textContent = app.activo
-        ? t("Pintando en «{lienzo}» con el pincel del panel Lienzo. Gira con el botón derecho.", { lienzo: app.activo.nombre })
-        : t("Abre o crea un lienzo para pintar sobre el modelo.");
+      this.estado(
+        app.activo
+          ? t("Pintando en «{lienzo}» con el pincel del panel Lienzo. Gira con el botón derecho.", { lienzo: app.activo.nombre })
+          : t("Abre o crea un lienzo para pintar sobre el modelo."),
+      );
   }
 
   /** Punto del lienzo activo bajo el puntero, en píxeles del documento. */
@@ -838,7 +883,7 @@ export class Visor3D implements IContentRenderer {
       this.terminarTrazo3d();
       const herramienta = app.ajustes.herramienta === "goma" ? "goma" : "pincel";
       if (!punto.lienzo.empezarTrazo({ ...app.ajustes, herramienta }, punto.doc.x, punto.doc.y, presion)) {
-        this.estadoTexto.textContent = t("La capa «{capa}» está bloqueada u oculta.", { capa: punto.lienzo.doc.activa.nombre });
+        this.aviso(t("La capa «{capa}» está bloqueada u oculta.", { capa: punto.lienzo.doc.activa.nombre }));
         return;
       }
     } else {
@@ -860,7 +905,6 @@ export class Visor3D implements IContentRenderer {
     this.botonLazo.classList.toggle("activo", this.modoLazo);
     this.actualizarControl();
     this.botonesCamara(this.modoLazo);
-    if (this.modoLazo) this.estadoTexto.textContent = t("Rodea la zona con el ratón (Mayús para quitar). Gira la vista con el botón derecho.");
   }
 
   /** En los modos de selección el botón izquierdo selecciona; la cámara gira con el derecho. */
@@ -1013,12 +1057,18 @@ export class Visor3D implements IContentRenderer {
       const seleccion = new Set(this.seleccionados);
       for (const t of dentro) quitar ? seleccion.delete(t) : seleccion.add(t);
       this.fijarSeleccion(suavizarSeleccion(this.cuerpo, seleccion));
-      this.estadoTexto.textContent = t("{n} triángulos seleccionados. Gira la vista y rodea más zona, o pulsa «Aplanar zona».", { n: this.seleccionados.size });
+      this.estadoSeleccion();
       return;
     }
     if (!this.pintando || !this.cuerpo) return;
     this.pintando = null;
     this.fijarSeleccion(suavizarSeleccion(this.cuerpo, this.seleccionados));
+    this.estadoSeleccion();
+  }
+
+  private estadoSeleccion(): void {
+    if (this.seleccionados.size) this.estado(t("{n} triángulos seleccionados. Añade o quita más, o pulsa «Aplanar zona».", { n: this.seleccionados.size }));
+    else this.mostrarMensaje(null);
   }
 
   private moverPincel(e: PointerEvent): void {
@@ -1081,6 +1131,8 @@ export class Visor3D implements IContentRenderer {
 
   private fijarSeleccion(triangulos: Iterable<number>): void {
     this.seleccionados = new Set(triangulos);
+    // Sin selección, los mensajes sobre ella (triángulos, cortes…) ya no valen.
+    if (!this.seleccionados.size && this.mensaje?.tipo === "estado") this.mostrarMensaje(null);
     this.actualizarResaltado();
   }
 
@@ -1147,7 +1199,7 @@ export class Visor3D implements IContentRenderer {
   private async aplanar(): Promise<void> {
     if (!this.cuerpo) return;
     if (this.seleccionados.size < 8) {
-      this.estadoTexto.textContent = t("Selecciona primero una zona.");
+      this.aviso(t("Selecciona primero una zona."));
       return;
     }
     const seleccion = this.seleccionActual()!;
@@ -1155,7 +1207,7 @@ export class Visor3D implements IContentRenderer {
     // con la piel en la postura base (sin doblar): la zona es la misma (mismos triángulos y
     // vértices, en el mismo orden), solo cambian las posiciones.
     const enReposo = esRecta(this.pose) ? seleccion : submalla(this.cuerpoSinPostura(), this.seleccionados);
-    this.estadoTexto.textContent = t("Aplanando…");
+    this.estado(t("Aplanando…"));
     // El corte por defecto queda en la cara que no se ve (opuesta a la cámara), y el
     // lienzo se orienta como la vista actual: la derecha de la pantalla es la del lienzo.
     const haciaCamara = this.camara.position.clone().sub(this.controles.target).normalize();
@@ -1189,16 +1241,17 @@ export class Visor3D implements IContentRenderer {
       await añadirLienzo(lienzo);
       const tipo = aplanado.tipo === "manga" ? t("Manga aplanada (con corte)") : t("Parche aplanado");
       const [w, h] = lienzo.geo.tamanoCm;
-      this.estadoTexto.textContent =
+      this.estado(
         t("{tipo} en {s} s · {ancho} × {alto} cm · {pct} % del área con deformación ≤ 2 %", {
           tipo,
           s: (milisegundos / 1000).toFixed(2),
           ancho: w.toFixed(1),
           alto: h.toFixed(1),
           pct: deformacion.areaDentroDel2.toFixed(0),
-        });
+        }),
+      );
     } catch (error) {
-      this.estadoTexto.textContent = error instanceof Error ? error.message : String(error);
+      this.error(error instanceof Error ? error.message : String(error));
     }
   }
 
@@ -1431,7 +1484,7 @@ export class Visor3D implements IContentRenderer {
     const bytes = Uint8Array.from(atob(url.split(",")[1]), (c) => c.charCodeAt(0));
     const nombre = t("{proyecto} - vista 3D", { proyecto: app.proyecto?.nombre ?? "Dermap" });
     const ruta = await guardarExportacion(bytes, nombre, { descripcion: t("Imagen PNG"), extension: "png", mime: "image/png" });
-    if (ruta) this.estadoTexto.textContent = t("Imagen guardada: {ruta}", { ruta });
+    if (ruta) this.aviso(t("Imagen guardada: {ruta}", { ruta }));
   }
 
   // ── Cámara ────────────────────────────────────────────────────────────────────

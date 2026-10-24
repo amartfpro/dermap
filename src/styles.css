@@ -1646,11 +1646,6 @@ input[type="radio"] {
   justify-content: flex-end;
 }
 
-.area-visor .etiqueta-flotante {
-  bottom: 10px;
-  right: 12px;
-}
-
 .zona-lienzo .etiqueta-flotante {
   top: 8px;
   bottom: auto;
@@ -2411,6 +2406,18 @@ body.en-inicio > #espacio {
   text-overflow: ellipsis;
   min-width: 0;
   flex: 1;
+}
+
+.ayuda-control.estado {
+  color: var(--texto-suave);
+}
+
+.ayuda-control.aviso {
+  color: var(--aviso);
+}
+
+.ayuda-control.error {
+  color: var(--peligro);
 }
 
 .control-etiquetado[hidden] {
