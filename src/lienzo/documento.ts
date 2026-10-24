@@ -1,5 +1,5 @@
 import { t } from "../i18n";
-import { Capa, nuevoId, operacionCanvas, type ModoFusion } from "./capa";
+import { Capa, GrupoCapas, nuevoId, operacionCanvas, type ModoFusion } from "./capa";
 import type { Paso } from "./historial";
 import { Trazo, type AjustesPincel } from "./pincel";
 import {
@@ -44,6 +44,8 @@ export class DocumentoLienzo extends EventTarget {
 
   añadirCapa(nombre = this.nombreLibre(), encimaDe: Capa | null = this.activa ?? null): Capa {
     const capa = new Capa(nuevoId(), nombre);
+    // Encima de la activa y en su mismo grupo.
+    capa.grupo = encimaDe?.grupo ?? null;
     const i = encimaDe ? this.capas.indexOf(encimaDe) + 1 : this.capas.length;
     this.capas.splice(i, 0, capa);
     this.activa = capa;
@@ -79,7 +81,120 @@ export class DocumentoLienzo extends EventTarget {
 
   seleccionarCapa(capa: Capa): void {
     this.activa = capa;
+    this.grupoSeleccionado = null;
     this.avisarCapas();
+  }
+
+  // ── Grupos de capas ───────────────────────────────────────────────────────────
+
+  /** Grupo seleccionado en el panel Capas (sus propiedades se editan en lugar de las de la capa). */
+  grupoSeleccionado: GrupoCapas | null = null;
+
+  /** Grupos del lienzo, en el orden de dibujo (los vacíos dejan de existir). */
+  get grupos(): GrupoCapas[] {
+    return [...new Set(this.capas.map((c) => c.grupo).filter((g): g is GrupoCapas => g !== null))];
+  }
+
+  capasDe(grupo: GrupoCapas): Capa[] {
+    return this.capas.filter((c) => c.grupo === grupo);
+  }
+
+  /** Mete la capa en un grupo nuevo, en su sitio. */
+  agrupar(capa: Capa, nombre = this.nombreGrupoLibre()): GrupoCapas {
+    const grupo = new GrupoCapas(nuevoId(), nombre);
+    capa.grupo = grupo;
+    this.grupoSeleccionado = grupo;
+    this.avisarCapas();
+    this.avisarTodo();
+    return grupo;
+  }
+
+  /** Saca las capas del grupo (quedan en su sitio) y el grupo desaparece. */
+  desagrupar(grupo: GrupoCapas): void {
+    for (const c of this.capasDe(grupo)) c.grupo = null;
+    if (this.grupoSeleccionado === grupo) this.grupoSeleccionado = null;
+    this.avisarCapas();
+    this.avisarTodo();
+  }
+
+  /** Elimina el grupo con sus capas (siempre queda al menos una capa en el lienzo). */
+  eliminarGrupo(grupo: GrupoCapas): void {
+    const suyas = this.capasDe(grupo);
+    if (suyas.length >= this.capas.length) return;
+    const i = this.capas.indexOf(suyas[0]);
+    this.capas = this.capas.filter((c) => c.grupo !== grupo);
+    if (this.activa.grupo === grupo) this.activa = this.capas[Math.max(0, Math.min(this.capas.length - 1, i - 1))];
+    if (this.grupoSeleccionado === grupo) this.grupoSeleccionado = null;
+    this.avisarCapas();
+    this.avisarTodo();
+  }
+
+  cambiarGrupo(grupo: GrupoCapas, cambios: Partial<Pick<GrupoCapas, "nombre" | "visible" | "bloqueado" | "opacidad" | "abierto">>): void {
+    Object.assign(grupo, cambios);
+    this.avisarCapas();
+    if ("visible" in cambios || "opacidad" in cambios) this.avisarTodo();
+  }
+
+  seleccionarGrupo(grupo: GrupoCapas): void {
+    this.grupoSeleccionado = grupo;
+    // Se sigue pintando en una capa: la de arriba del grupo, si la activa no es suya.
+    if (this.activa.grupo !== grupo) {
+      const suyas = this.capasDe(grupo);
+      if (suyas.length) this.activa = suyas[suyas.length - 1];
+    }
+    this.avisarCapas();
+  }
+
+  /**
+   * Coloca la capa encima o debajo de `referencia` (null: arriba del todo) y la deja en
+   * `grupo`. Así se reordena y se entra o sale de los grupos arrastrando.
+   */
+  colocarCapa(capa: Capa, referencia: Capa | null, lado: "encima" | "debajo", grupo: GrupoCapas | null): void {
+    if (capa === referencia) {
+      capa.grupo = grupo;
+    } else {
+      this.capas.splice(this.capas.indexOf(capa), 1);
+      const i = referencia ? this.capas.indexOf(referencia) + (lado === "encima" ? 1 : 0) : this.capas.length;
+      this.capas.splice(i, 0, capa);
+      capa.grupo = grupo;
+    }
+    this.normalizarGrupos();
+    this.avisarCapas();
+    this.avisarTodo();
+  }
+
+  /** Mueve el grupo entero encima o debajo de `referencia` (null: arriba del todo). */
+  colocarGrupo(grupo: GrupoCapas, referencia: Capa | null, lado: "encima" | "debajo"): void {
+    const suyas = this.capasDe(grupo);
+    if (referencia && referencia.grupo === grupo) return;
+    this.capas = this.capas.filter((c) => c.grupo !== grupo);
+    const i = referencia ? this.capas.indexOf(referencia) + (lado === "encima" ? 1 : 0) : this.capas.length;
+    this.capas.splice(i, 0, ...suyas);
+    this.normalizarGrupos();
+    this.avisarCapas();
+    this.avisarTodo();
+  }
+
+  /** Las capas de cada grupo quedan seguidas (donde está la de más abajo del grupo). */
+  normalizarGrupos(): void {
+    const resultado: Capa[] = [];
+    const vistos = new Set<GrupoCapas>();
+    for (const c of this.capas) {
+      if (!c.grupo) resultado.push(c);
+      else if (!vistos.has(c.grupo)) {
+        vistos.add(c.grupo);
+        resultado.push(...this.capas.filter((x) => x.grupo === c.grupo));
+      }
+    }
+    this.capas = resultado;
+    if (this.grupoSeleccionado && !vistos.has(this.grupoSeleccionado)) this.grupoSeleccionado = null;
+  }
+
+  private nombreGrupoLibre(): string {
+    const grupos = this.grupos;
+    let n = grupos.length + 1;
+    while (grupos.some((g) => g.nombre === t("Grupo {n}", { n }))) n++;
+    return t("Grupo {n}", { n });
   }
 
   cambiarCapa(capa: Capa, cambios: Partial<Pick<Capa, "nombre" | "visible" | "bloqueada" | "opacidad" | "modo" | "enStencil">>): void {
@@ -102,7 +217,7 @@ export class DocumentoLienzo extends EventTarget {
   // ── Trazos ────────────────────────────────────────────────────────────────────
 
   empezarTrazo(ajustes: AjustesPincel): Trazo | null {
-    if (this.activa.bloqueada || !this.activa.visible) return null;
+    if (this.activa.bloqueadaTotal || !this.activa.seVe) return null;
     this.trazo = new Trazo(this.activa, { ...ajustes }, this.pxPorMm, this.ancho, this.alto);
     return this.trazo;
   }
@@ -170,10 +285,11 @@ export class DocumentoLienzo extends EventTarget {
    * `solape` (en px del documento) agranda cada tesela al dibujarla escalada, para que el
    * suavizado de los bordes no deje rendijas entre teselas vecinas.
    */
-  componer(ctx: Contexto2D, rect: Rect, filtro: (c: Capa) => boolean = (c) => c.visible, solape = 0): void {
+  componer(ctx: Contexto2D, rect: Rect, filtro: (c: Capa) => boolean = (c) => c.seVe, solape = 0): void {
     for (const capa of this.capas) {
-      if (!filtro(capa)) continue;
-      ctx.globalAlpha = capa.opacidad;
+      // Las capas de un grupo oculto no se dibujan nunca (tampoco en el stencil).
+      if (!filtro(capa) || capa.grupo?.visible === false) continue;
+      ctx.globalAlpha = capa.opacidadTotal;
       ctx.globalCompositeOperation = operacionCanvas(capa.modo);
       const trazo = this.trazo?.capa === capa ? this.trazo : null;
       for (const [tx, ty] of teselasEn(rect, this.ancho, this.alto)) {
@@ -308,6 +424,7 @@ class PasoTeselas implements Paso {
 
 interface EstadoCapa {
   capa: Capa;
+  grupo: GrupoCapas | null;
   nombre: string;
   visible: boolean;
   bloqueada: boolean;
@@ -320,6 +437,8 @@ interface EstadoCapa {
 class PasoEstructura implements Paso {
   private readonly capas: EstadoCapa[];
   private readonly activa: Capa;
+  private readonly grupos: { grupo: GrupoCapas; nombre: string; visible: boolean; bloqueado: boolean; opacidad: number }[];
+  private readonly grupoSeleccionado: GrupoCapas | null;
 
   constructor(
     private readonly doc: DocumentoLienzo,
@@ -327,6 +446,7 @@ class PasoEstructura implements Paso {
   ) {
     this.capas = doc.capas.map((capa) => ({
       capa,
+      grupo: capa.grupo,
       nombre: capa.nombre,
       visible: capa.visible,
       bloqueada: capa.bloqueada,
@@ -335,6 +455,8 @@ class PasoEstructura implements Paso {
       enStencil: capa.enStencil,
     }));
     this.activa = doc.activa;
+    this.grupos = doc.grupos.map((g) => ({ grupo: g, nombre: g.nombre, visible: g.visible, bloqueado: g.bloqueado, opacidad: g.opacidad }));
+    this.grupoSeleccionado = doc.grupoSeleccionado;
   }
 
   bytes(): number {
@@ -351,9 +473,12 @@ class PasoEstructura implements Paso {
         opacidad: e.opacidad,
         modo: e.modo,
         enStencil: e.enStencil,
+        grupo: e.grupo,
       });
       return e.capa;
     });
+    for (const g of this.grupos) Object.assign(g.grupo, { nombre: g.nombre, visible: g.visible, bloqueado: g.bloqueado, opacidad: g.opacidad });
+    this.doc.grupoSeleccionado = this.grupoSeleccionado && this.doc.grupos.includes(this.grupoSeleccionado) ? this.grupoSeleccionado : null;
     this.doc.activa = this.doc.capas.includes(this.activa) ? this.activa : this.doc.capas[0];
     this.doc.avisarCapas();
     this.doc.avisarTodo();

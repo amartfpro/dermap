@@ -2,7 +2,7 @@ import { desplegable } from "../ui/desplegable";
 import { plural, t } from "../i18n";
 import type { IContentRenderer } from "dockview-core";
 import { app } from "../estado";
-import { MODOS_FUSION, nuevoId, type Capa, type ModoFusion } from "../lienzo/capa";
+import { MODOS_FUSION, nuevoId, type Capa, type GrupoCapas, type ModoFusion } from "../lienzo/capa";
 import type { Lienzo } from "../lienzo/lienzo";
 import { simetriaActual } from "../geometria/simetria";
 import { confirmar } from "../dialogos";
@@ -17,18 +17,28 @@ import { botonIcono, icono, type NombreIcono } from "../ui/iconos";
 import { botonMenu, type ElementoMenu } from "../ui/menu";
 import { campoDeslizante } from "../ui/campo";
 
+type Arrastre = { tipo: "lienzo"; id: string } | { tipo: "grupo"; lienzo: Lienzo; grupo: GrupoCapas } | { tipo: "capa"; lienzo: Lienzo; capa: Capa };
+type Destino =
+  | { tipo: "lienzo"; nodo: NodoLienzo; lienzo: Lienzo | undefined }
+  | { tipo: "grupo"; lienzo: Lienzo; grupo: GrupoCapas }
+  | { tipo: "capa"; lienzo: Lienzo; capa: Capa };
+type Zona = "encima" | "debajo" | "dentro";
+
 /**
- * Capas del lienzo activo (RF-31): crear, duplicar, eliminar, reordenar, ocultar, bloquear,
- * opacidad y modo de fusión. También importa imágenes PNG/JPG como capa nueva (RF-33).
- * Todos los cambios de estructura se pueden deshacer.
+ * Panel Capas (RF-31): los lienzos del proyecto, cada uno con sus capas y grupos de capas.
+ * Pulsar un lienzo lo abre para dibujar; se crean, duplican, agrupan, ocultan, bloquean y
+ * reordenan capas, grupos y lienzos arrastrando. También importa imágenes PNG/JPG como capa
+ * nueva (RF-33). Todos los cambios de estructura de un lienzo se pueden deshacer.
  */
 export class PanelCapas implements IContentRenderer {
   readonly element: HTMLElement;
   private lista: HTMLUListElement;
   private propiedades: HTMLElement;
   private lienzo: Lienzo | null = null;
-  private arrastrada: Capa | null = null;
-  private lienzoArrastrado: string | null = null;
+  /** Lo que se está arrastrando en la lista: un lienzo, un grupo o una capa. */
+  private arrastre: Arrastre | null = null;
+  /** Qué representa cada fila de la lista (para soltar encima). */
+  private destinoDe = new WeakMap<HTMLElement, Destino>();
   /** Lienzos no activos que el usuario ha desplegado para ver sus capas. */
   private desplegados = new Set<string>();
   private proyecto: ProyectoAbierto | null = null;
@@ -67,9 +77,10 @@ export class PanelCapas implements IContentRenderer {
       botonIcono("copiar", t("Copiar la capa activa (Ctrl+C)"), () => void panelLienzoActual()?.copiar()),
       botonIcono("pegar", t("Pegar la capa copiada, en este u otro lienzo (Ctrl+V)"), () => panelLienzoActual()?.pegar()),
       hueco,
+      botonIcono("agrupar", t("Agrupar: mete la capa activa en un grupo nuevo (Ctrl+G)"), () => this.agrupar()),
       botonIcono("duplicar", t("Duplicar la capa activa (Ctrl+J)"), () => this.duplicar()),
       botonIcono("mas", t("Nueva capa (Ctrl+Mayús+N)"), () => this.nueva()),
-      botonIcono("borrar", t("Eliminar la capa activa"), () => this.eliminar(), { clase: "peligro" }),
+      botonIcono("borrar", t("Eliminar la capa o el grupo seleccionado"), () => void this.eliminar(), { clase: "peligro" }),
       archivo,
     );
 
@@ -85,7 +96,16 @@ export class PanelCapas implements IContentRenderer {
     app.addEventListener("lienzos", this.alCambiarCapas);
     this.alCambiarProyecto();
     this.mostrar(app.activo);
+    window.addEventListener("keydown", this.alTecla);
   }
+
+  /** Ctrl+G: agrupar la capa activa (si el foco no está escribiendo en un campo). */
+  private alTecla = (e: KeyboardEvent) => {
+    const enCampo = e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement;
+    if (enCampo || !(e.ctrlKey || e.metaKey) || e.key.toLowerCase() !== "g" || !this.lienzo) return;
+    e.preventDefault();
+    this.agrupar();
+  };
 
   init(): void {}
 
@@ -93,6 +113,7 @@ export class PanelCapas implements IContentRenderer {
     app.removeEventListener("activo", this.alCambiarActivo);
     app.removeEventListener("proyecto", this.alCambiarProyecto);
     app.removeEventListener("lienzos", this.alCambiarCapas);
+    window.removeEventListener("keydown", this.alTecla);
     this.proyecto?.removeEventListener("arbol", this.alCambiarCapas);
     this.lienzo?.removeEventListener("capas", this.alCambiarCapas);
   }
@@ -113,21 +134,39 @@ export class PanelCapas implements IContentRenderer {
     accion(l);
   }
 
-  private nueva(): void {
-    this.conPaso("Nueva capa", (l) => l.doc.añadirCapa());
+  private nueva(lienzo: Lienzo | null = this.lienzo): void {
+    if (lienzo && lienzo !== this.lienzo) app.abrir(lienzo);
+    this.conPaso("Nueva capa", (l) => l.doc.añadirCapa(), lienzo);
   }
 
   private duplicar(): void {
     this.conPaso("Duplicar capa", (l) => {
       const origen = l.doc.activa;
       const copia = origen.duplicar(nuevoId(), t("{nombre} copia", { nombre: origen.nombre }));
+      copia.grupo = origen.grupo;
       l.doc.insertarCapa(copia, l.doc.capas.indexOf(origen) + 1);
     });
   }
 
-  private eliminar(): void {
-    if (!this.lienzo || this.lienzo.doc.capas.length <= 1) return;
-    this.conPaso("Eliminar capa", (l) => l.doc.eliminarCapa(l.doc.activa));
+  private agrupar(): void {
+    const l = this.lienzo;
+    if (!l || l.doc.activa.grupo) return;
+    this.conPaso("Agrupar", (lz) => lz.doc.agrupar(lz.doc.activa));
+  }
+
+  private async eliminar(): Promise<void> {
+    const l = this.lienzo;
+    if (!l) return;
+    const grupo = l.doc.grupoSeleccionado;
+    if (grupo) {
+      const n = l.doc.capasDe(grupo).length;
+      if (n >= l.doc.capas.length) return;
+      if (!(await confirmar(plural(n, "¿Eliminar el grupo «{nombre}» y su capa?", "¿Eliminar el grupo «{nombre}» y sus {n} capas?").replace("{nombre}", grupo.nombre)))) return;
+      this.conPaso("Eliminar grupo", (lz) => lz.doc.eliminarGrupo(grupo));
+      return;
+    }
+    if (l.doc.capas.length <= 1) return;
+    this.conPaso("Eliminar capa", (lz) => lz.doc.eliminarCapa(lz.doc.activa));
   }
 
   private cambiar(
@@ -137,6 +176,15 @@ export class PanelCapas implements IContentRenderer {
     lienzo: Lienzo | null = this.lienzo,
   ): void {
     this.conPaso(descripcion, (l) => l.doc.cambiarCapa(capa, cambios), lienzo);
+  }
+
+  private cambiarGrupo(
+    l: Lienzo,
+    grupo: GrupoCapas,
+    cambios: Partial<Pick<GrupoCapas, "nombre" | "visible" | "bloqueado" | "opacidad">>,
+    descripcion: string,
+  ): void {
+    this.conPaso(descripcion, (lz) => lz.doc.cambiarGrupo(grupo, cambios), l);
   }
 
   private async importar(archivo: File): Promise<void> {
@@ -219,12 +267,14 @@ export class PanelCapas implements IContentRenderer {
   private pintar(): void {
     this.lista.replaceChildren();
     this.propiedades.replaceChildren();
-    this.pintarGrupos();
+    this.pintarLista();
     const l = this.lienzo;
     if (!l) return;
+    const grupo = l.doc.grupoSeleccionado;
+    if (grupo) return this.propiedadesGrupo(l, grupo);
     const activa = l.doc.activa;
 
-    // Propiedades de la capa activa: opacidad, modo de fusión y si va al stencil.
+    // Propiedades de la capa activa: modo de fusión, opacidad y si va al stencil.
     let pasoRegistrado = false;
     const opacidad = campoDeslizante(t("Opacidad"), t("Opacidad de la capa"), 0, 100, (v) => {
       // Un único paso de historial por arrastre.
@@ -238,26 +288,45 @@ export class PanelCapas implements IContentRenderer {
     const modo = desplegable(
       MODOS_FUSION.map((m) => ({ valor: m.modo, texto: t(m.nombre) })),
       activa.modo,
+      t("Modo de fusión"),
     );
     modo.addEventListener("change", () => this.cambiar(activa, { modo: modo.value as ModoFusion }, "Modo de fusión"));
     const stencil = document.createElement("label");
-    stencil.className = "interruptor";
-    stencil.title = t("Incluir esta capa al exportar el stencil");
+    stencil.className = "casilla con-conmutador";
+    stencil.title = t("Si está activado, la capa sale al exportar el stencil. Desactívalo en fotos de referencia, bocetos o guías.");
     const casilla = document.createElement("input");
     casilla.type = "checkbox";
+    casilla.className = "conmutador";
+    casilla.setAttribute("role", "switch");
     casilla.checked = activa.enStencil;
     casilla.addEventListener("change", () => this.cambiar(activa, { enStencil: casilla.checked }, "Capa en stencil"));
-    stencil.append(casilla, " " + t("Stencil"));
-    modo.title = t("Modo de fusión");
+    stencil.append(casilla, t("En el stencil"));
     this.propiedades.append(modo, opacidad.el, stencil);
+  }
 
+  /** Propiedades del grupo seleccionado: opacidad y desagrupar. */
+  private propiedadesGrupo(l: Lienzo, grupo: GrupoCapas): void {
+    let pasoRegistrado = false;
+    const opacidad = campoDeslizante(t("Opacidad"), t("Opacidad del grupo (se aplica a todas sus capas)"), 0, 100, (v) => {
+      if (!pasoRegistrado) l.historial.registrar(l.doc.instantaneaCapas("Opacidad de grupo"));
+      pasoRegistrado = true;
+      const valor = Math.round(v);
+      opacidad.fijar(v, `${valor} %`);
+      l.doc.cambiarGrupo(grupo, { opacidad: valor / 100 });
+    });
+    opacidad.fijar(grupo.opacidad * 100, `${Math.round(grupo.opacidad * 100)} %`);
+    const desagrupar = botonIcono("desagrupar", t("Desagrupar: las capas salen del grupo y quedan en su sitio"), () =>
+      this.conPaso("Desagrupar", (lz) => lz.doc.desagrupar(grupo), l),
+      { texto: t("Desagrupar") },
+    );
+    this.propiedades.append(opacidad.el, desagrupar);
   }
 
   /**
-   * Lienzos del proyecto como grupos plegables (el de arriba se dibuja encima en el 3D), con
-   * sus capas dentro. Clic en un grupo: abrirlo para dibujar; el ojo lo oculta en el 3D.
+   * Los lienzos del proyecto (el de arriba se dibuja encima en el 3D) con sus grupos y capas
+   * dentro, de arriba abajo. El lienzo activo siempre está desplegado; los demás, si se pide.
    */
-  private pintarGrupos(): void {
+  private pintarLista(): void {
     const p = app.proyecto;
     if (!p) return;
     const nodos = p.nodosLienzo();
@@ -271,17 +340,25 @@ export class PanelCapas implements IContentRenderer {
     for (const nodo of [...nodos].reverse()) {
       const lienzo = p.lienzos.get(nodo.id);
       const abierto = lienzo ? lienzo === this.lienzo || this.desplegados.has(nodo.id) : false;
-      this.lista.append(this.filaGrupo(nodo, lienzo, abierto));
-      if (lienzo && abierto) for (const capa of [...lienzo.doc.capas].reverse()) this.lista.append(this.filaCapa(lienzo, capa));
+      this.lista.append(this.filaLienzo(nodo, lienzo, abierto));
+      if (!lienzo || !abierto) continue;
+      const vistos = new Set<GrupoCapas>();
+      for (const capa of [...lienzo.doc.capas].reverse()) {
+        const g = capa.grupo;
+        if (g && !vistos.has(g)) {
+          vistos.add(g);
+          this.lista.append(this.filaGrupo(lienzo, g));
+        }
+        if (!g || g.abierto) this.lista.append(this.filaCapa(lienzo, capa));
+      }
     }
   }
 
-  private filaGrupo(nodo: NodoLienzo, lienzo: Lienzo | undefined, abierto: boolean): HTMLElement {
+  private filaLienzo(nodo: NodoLienzo, lienzo: Lienzo | undefined, abierto: boolean): HTMLElement {
     const p = app.proyecto!;
     const li = document.createElement("li");
-    li.className = "fila-grupo" + (lienzo && lienzo === this.lienzo ? " activa" : "") + (nodo.visible ? "" : " oculta");
+    li.className = "fila-lienzo" + (lienzo && lienzo === this.lienzo ? " activa" : "") + (nodo.visible ? "" : " oculta");
     li.dataset.id = nodo.id;
-    li.draggable = true;
     const fallo = p.noAbiertos.get(nodo.id);
     if (fallo) {
       li.classList.add("dañada");
@@ -315,6 +392,7 @@ export class PanelCapas implements IContentRenderer {
     detalle.title = lienzo ? plural(lienzo.doc.capas.length, "{n} capa", "{n} capas") : "";
     const acciones = document.createElement("span");
     acciones.className = "acciones-fila";
+    if (lienzo) acciones.append(iconoBoton("mas", t("Nueva capa en este lienzo"), () => this.nueva(lienzo)));
     acciones.append(
       iconoBoton("duplicar", t("Duplicar el lienzo (para probar otra versión del diseño)"), () => void duplicarLienzo(nodo.id)),
       iconoBoton("borrar", t("Eliminar el lienzo"), async () => {
@@ -323,38 +401,64 @@ export class PanelCapas implements IContentRenderer {
     );
     li.append(flecha, ojo, tipo, nombre, detalle, acciones);
     li.addEventListener("click", () => {
-      if (lienzo) app.abrir(lienzo);
+      if (!lienzo) return;
+      app.abrir(lienzo);
+      // Pulsar el lienzo selecciona su capa activa (no un grupo).
+      if (lienzo.doc.grupoSeleccionado) lienzo.doc.seleccionarCapa(lienzo.doc.activa);
     });
-    // Reordenar lienzos arrastrando: se suelta encima del grupo destino.
-    li.addEventListener("dragstart", (e) => {
-      this.lienzoArrastrado = nodo.id;
-      this.arrastrada = null;
-      e.dataTransfer?.setData("text/plain", nodo.id);
+    this.arrastrable(li, { tipo: "lienzo", id: nodo.id });
+    this.soltable(li, { tipo: "lienzo", nodo, lienzo });
+    return li;
+  }
+
+  private filaGrupo(l: Lienzo, grupo: GrupoCapas): HTMLElement {
+    const li = document.createElement("li");
+    const seleccionado = l === this.lienzo && l.doc.grupoSeleccionado === grupo;
+    li.className = "fila-grupo-capas" + (seleccionado ? " activa" : "") + (grupo.visible ? "" : " oculta");
+    const flecha = iconoBoton(grupo.abierto ? "plegar" : "desplegar", grupo.abierto ? t("Plegar") : t("Desplegar"), () =>
+      l.doc.cambiarGrupo(grupo, { abierto: !grupo.abierto }),
+    );
+    flecha.classList.add("flecha");
+    const ojo = iconoBoton(grupo.visible ? "ojo" : "ojoCerrado", grupo.visible ? t("Ocultar el grupo") : t("Mostrar el grupo"), () =>
+      this.cambiarGrupo(l, grupo, { visible: !grupo.visible }, grupo.visible ? "Ocultar grupo" : "Mostrar grupo"),
+    );
+    ojo.classList.toggle("tenue", !grupo.visible);
+    const candado = iconoBoton(grupo.bloqueado ? "candado" : "candadoAbierto", grupo.bloqueado ? t("Desbloquear el grupo") : t("Bloquear el grupo"), () =>
+      this.cambiarGrupo(l, grupo, { bloqueado: !grupo.bloqueado }, grupo.bloqueado ? "Desbloquear grupo" : "Bloquear grupo"),
+    );
+    candado.classList.toggle("tenue", !grupo.bloqueado);
+    const tipo = document.createElement("span");
+    tipo.className = "tipo";
+    tipo.append(icono(grupo.abierto ? "grupoAbierto" : "grupo", 14));
+    const nombre = document.createElement("span");
+    nombre.className = "nombre";
+    nombre.textContent = grupo.nombre;
+    nombre.title = t("Doble clic para renombrar");
+    nombre.addEventListener("dblclick", (e) => {
+      e.stopPropagation();
+      this.renombrarCampo(nombre, grupo.nombre, (nuevo) => this.cambiarGrupo(l, grupo, { nombre: nuevo }, "Renombrar grupo"));
     });
-    li.addEventListener("dragover", (e) => {
-      if (!this.lienzoArrastrado || this.lienzoArrastrado === nodo.id) return;
-      e.preventDefault();
-      li.classList.add("destino");
+    const detalle = document.createElement("span");
+    detalle.className = "detalle";
+    const n = l.doc.capasDe(grupo).length;
+    const partes = [String(n)];
+    if (grupo.opacidad < 1) partes.unshift(`${Math.round(grupo.opacidad * 100)} %`);
+    detalle.textContent = partes.join(" · ");
+    detalle.title = plural(n, "{n} capa", "{n} capas");
+    li.append(flecha, ojo, candado, tipo, nombre, detalle);
+    li.addEventListener("click", () => {
+      if (l !== this.lienzo) app.abrir(l);
+      l.doc.seleccionarGrupo(grupo);
     });
-    li.addEventListener("dragleave", () => li.classList.remove("destino"));
-    li.addEventListener("drop", (e) => {
-      e.preventDefault();
-      const id = this.lienzoArrastrado;
-      this.lienzoArrastrado = null;
-      if (!id || id === nodo.id) return;
-      // Encima en la lista = después en el orden de dibujo.
-      const orden = p.nodosLienzo().map((n) => n.id).filter((x) => x !== id);
-      const siguiente = orden[orden.indexOf(nodo.id) + 1] ?? null;
-      p.mover(id, null, siguiente);
-    });
+    this.arrastrable(li, { tipo: "grupo", lienzo: l, grupo });
+    this.soltable(li, { tipo: "grupo", lienzo: l, grupo });
     return li;
   }
 
   private filaCapa(l: Lienzo, capa: Capa): HTMLElement {
-    const activa = l === this.lienzo && capa === l.doc.activa;
+    const activa = l === this.lienzo && capa === l.doc.activa && !l.doc.grupoSeleccionado;
     const li = document.createElement("li");
-    li.className = "fila-capa" + (activa ? " activa" : "");
-    li.draggable = true;
+    li.className = "fila-capa" + (activa ? " activa" : "") + (capa.grupo ? " en-grupo" : "") + (capa.seVe ? "" : " oculta");
     const ojo = iconoBoton(capa.visible ? "ojo" : "ojoCerrado", capa.visible ? t("Ocultar") : t("Mostrar"), () =>
       this.cambiar(capa, { visible: !capa.visible }, capa.visible ? "Ocultar capa" : "Mostrar capa", l),
     );
@@ -369,7 +473,7 @@ export class PanelCapas implements IContentRenderer {
     nombre.title = t("Doble clic para renombrar");
     nombre.addEventListener("dblclick", (e) => {
       e.stopPropagation();
-      if (l === this.lienzo) this.renombrar(capa, nombre);
+      this.renombrarCampo(nombre, capa.nombre, (nuevo) => this.cambiar(capa, { nombre: nuevo }, "Renombrar capa", l));
     });
     const detalle = document.createElement("span");
     detalle.className = "detalle";
@@ -383,26 +487,125 @@ export class PanelCapas implements IContentRenderer {
       if (l !== this.lienzo) app.abrir(l);
       l.doc.seleccionarCapa(capa);
     });
-    // Reordenar capas arrastrando, dentro del mismo lienzo.
+    this.arrastrable(li, { tipo: "capa", lienzo: l, capa });
+    this.soltable(li, { tipo: "capa", lienzo: l, capa });
+    return li;
+  }
+
+  // ── Arrastrar y soltar ────────────────────────────────────────────────────────
+
+  private arrastrable(li: HTMLElement, arrastre: Arrastre): void {
+    li.draggable = true;
     li.addEventListener("dragstart", (e) => {
       e.stopPropagation();
-      this.arrastrada = l === this.lienzo ? capa : null;
-      this.lienzoArrastrado = null;
+      this.arrastre = arrastre;
+      li.classList.add("arrastrando");
+      e.dataTransfer?.setData("text/plain", "");
+      if (e.dataTransfer) e.dataTransfer.effectAllowed = "move";
     });
+    li.addEventListener("dragend", () => {
+      this.arrastre = null;
+      li.classList.remove("arrastrando");
+      this.limpiarIndicador();
+    });
+  }
+
+  private soltable(li: HTMLElement, destino: Destino): void {
+    this.destinoDe.set(li, destino);
     li.addEventListener("dragover", (e) => {
-      if (!this.arrastrada || l !== this.lienzo) return;
+      const r = li.getBoundingClientRect();
+      const y = (e.clientY - r.top) / r.height;
+      const accion = this.arrastre && this.resolver(this.arrastre, destino, y, li);
+      this.limpiarIndicador();
+      if (!accion) return;
       e.preventDefault();
-      li.classList.add("destino");
+      if (e.dataTransfer) e.dataTransfer.dropEffect = "move";
+      accion.fila.classList.add(`soltar-${accion.zona}`);
     });
-    li.addEventListener("dragleave", () => li.classList.remove("destino"));
     li.addEventListener("drop", (e) => {
+      const r = li.getBoundingClientRect();
+      const accion = this.arrastre && this.resolver(this.arrastre, destino, (e.clientY - r.top) / r.height, li);
+      this.limpiarIndicador();
+      this.arrastre = null;
+      if (!accion) return;
       e.preventDefault();
-      const origen = this.arrastrada;
-      this.arrastrada = null;
-      if (!origen || origen === capa || l !== this.lienzo) return;
-      this.conPaso("Mover capa", (lz) => lz.doc.moverCapa(origen, lz.doc.capas.indexOf(capa)));
+      accion.hacer();
     });
-    return li;
+  }
+
+  private limpiarIndicador(): void {
+    for (const el of this.lista.querySelectorAll(".soltar-encima, .soltar-debajo, .soltar-dentro"))
+      el.classList.remove("soltar-encima", "soltar-debajo", "soltar-dentro");
+  }
+
+  /**
+   * Qué pasa al soltar `a` sobre la fila `d` a la altura relativa `y` (0 arriba, 1 abajo):
+   * la fila que se marca, cómo (línea encima o debajo, o dentro) y la acción. null: no se puede.
+   */
+  private resolver(a: Arrastre, d: Destino, y: number, aqui: HTMLElement): { fila: HTMLElement; zona: Zona; hacer: () => void } | null {
+    const p = app.proyecto;
+    if (!p) return null;
+    const mitad = y < 0.5 ? "encima" : "debajo";
+    const tercios: Zona = y < 0.3 ? "encima" : y > 0.7 ? "debajo" : "dentro";
+
+    // Lienzos: se reordenan entre sí (encima en la lista = se dibuja encima en el 3D).
+    if (a.tipo === "lienzo") {
+      if (d.tipo !== "lienzo" || d.nodo.id === a.id) return null;
+      const zona = mitad;
+      return {
+        fila: aqui,
+        zona,
+        hacer: () => {
+          const orden = p.nodosLienzo().map((n) => n.id).filter((x) => x !== a.id);
+          const i = orden.indexOf(d.nodo.id);
+          const siguiente = zona === "encima" ? (orden[i + 1] ?? null) : d.nodo.id;
+          p.mover(a.id, null, siguiente);
+        },
+      };
+    }
+
+    // Capas y grupos solo se mueven dentro de su lienzo.
+    const l = a.lienzo;
+    if (d.lienzo !== l) return null;
+    const doc = l.doc;
+    const arriba = (g: GrupoCapas) => doc.capasDe(g)[doc.capasDe(g).length - 1];
+    const abajo = (g: GrupoCapas) => doc.capasDe(g)[0];
+    const conPaso = (descripcion: string, f: () => void) => () => this.conPaso(descripcion, f, l);
+
+    if (a.tipo === "capa") {
+      const c = a.capa;
+      if (d.tipo === "lienzo") return { fila: aqui, zona: "dentro", hacer: conPaso("Mover capa", () => doc.colocarCapa(c, null, "encima", null)) };
+      if (d.tipo === "capa") {
+        if (d.capa === c) return null;
+        return { fila: aqui, zona: mitad, hacer: conPaso("Mover capa", () => doc.colocarCapa(c, d.capa, mitad, d.capa.grupo)) };
+      }
+      const g = d.grupo;
+      if (tercios === "encima") return { fila: aqui, zona: "encima", hacer: conPaso("Mover capa", () => doc.colocarCapa(c, arriba(g), "encima", null)) };
+      if (tercios === "debajo" && !g.abierto)
+        return { fila: aqui, zona: "debajo", hacer: conPaso("Mover capa", () => doc.colocarCapa(c, abajo(g), "debajo", null)) };
+      return { fila: aqui, zona: "dentro", hacer: conPaso("Meter en el grupo", () => doc.colocarCapa(c, arriba(g), "encima", g)) };
+    }
+
+    // Grupo: se mueve entero, nunca dentro de otro grupo.
+    const g = a.grupo;
+    if (d.tipo === "lienzo") return { fila: aqui, zona: "dentro", hacer: conPaso("Mover grupo", () => doc.colocarGrupo(g, null, "encima")) };
+    const otro = d.tipo === "grupo" ? d.grupo : d.capa.grupo;
+    if (otro === g) return null;
+    if (otro) {
+      // Sobre otro grupo (su cabecera o sus capas): encima o debajo del grupo entero.
+      const zona = d.tipo === "grupo" ? (y < 0.5 ? "encima" : "debajo") : mitad;
+      const filaGrupo = d.tipo === "grupo" ? aqui : ([...this.lista.children] as HTMLElement[]).find((f) => {
+        const x = this.destinoDe.get(f);
+        return x?.tipo === "grupo" && x.grupo === otro;
+      }) ?? aqui;
+      return {
+        fila: zona === "encima" ? filaGrupo : aqui,
+        zona,
+        hacer: conPaso("Mover grupo", () => (zona === "encima" ? doc.colocarGrupo(g, arriba(otro), "encima") : doc.colocarGrupo(g, abajo(otro), "debajo"))),
+      };
+    }
+    const capa = (d as { capa: Capa }).capa;
+    return { fila: aqui, zona: mitad, hacer: conPaso("Mover grupo", () => doc.colocarGrupo(g, capa, mitad)) };
   }
 
   private renombrarLienzo(nodo: NodoLienzo, span: HTMLElement): void {
@@ -429,22 +632,28 @@ export class PanelCapas implements IContentRenderer {
     campo.addEventListener("blur", () => terminar(true));
   }
 
-  private renombrar(capa: Capa, span: HTMLElement): void {
+  /** Cambia un texto de la lista por un campo para renombrar (Intro guarda, Esc cancela). */
+  private renombrarCampo(span: HTMLElement, actual: string, guardar: (nuevo: string) => void): void {
     const campo = document.createElement("input");
     campo.className = "campo-nombre";
-    campo.value = capa.nombre;
+    campo.value = actual;
     span.replaceWith(campo);
     campo.focus();
     campo.select();
-    const terminar = (guardar: boolean) => {
+    let hecho = false;
+    const terminar = (ok: boolean) => {
+      if (hecho) return;
+      hecho = true;
       const nuevo = campo.value.trim();
-      if (guardar && nuevo && nuevo !== capa.nombre) this.cambiar(capa, { nombre: nuevo }, "Renombrar capa");
+      if (ok && nuevo && nuevo !== actual) guardar(nuevo);
       else this.pintar();
     };
     campo.addEventListener("keydown", (e) => {
+      e.stopPropagation();
       if (e.key === "Enter") terminar(true);
       if (e.key === "Escape") terminar(false);
     });
+    campo.addEventListener("click", (e) => e.stopPropagation());
     campo.addEventListener("blur", () => terminar(true));
   }
 }

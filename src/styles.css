@@ -672,9 +672,6 @@ input[type="radio"] {
   box-shadow: inset 2px 0 0 var(--primario);
 }
 
-.fila-capa.destino {
-  box-shadow: inset 0 2px 0 var(--primario);
-}
 
 .fila-capa .nombre {
   flex: 1;
@@ -1978,7 +1975,7 @@ body.en-inicio > #espacio {
 }
 
 /* Capas: lienzos como grupos */
-.fila-grupo {
+.fila-lienzo {
   display: flex;
   align-items: center;
   gap: 2px;
@@ -1992,49 +1989,51 @@ body.en-inicio > #espacio {
   font-weight: 600;
 }
 
-.fila-grupo:first-child {
+.fila-lienzo:first-child {
   margin-top: 0;
 }
 
-.fila-grupo:hover {
+.fila-lienzo:hover {
   background: var(--superficie-3);
 }
 
-.fila-grupo.activa {
-  box-shadow: inset 0 0 0 1px var(--primario-tinte-fuerte);
+.fila-lienzo.activa {
+  background: var(--primario-tinte);
+  box-shadow: inset 0 0 0 1px var(--primario-tinte-fuerte), inset 2px 0 0 var(--primario);
 }
 
-.fila-grupo.activa .nombre {
+.fila-lienzo.activa:hover {
+  background: var(--primario-tinte-fuerte);
+}
+
+.fila-lienzo.activa .nombre {
   color: var(--texto);
 }
 
-.fila-grupo.oculta .nombre,
-.fila-grupo.oculta .tipo {
+.fila-lienzo.oculta .nombre,
+.fila-lienzo.oculta .tipo {
   opacity: 0.45;
 }
 
-.fila-grupo.destino {
-  box-shadow: inset 0 2px 0 var(--primario);
-}
 
-.fila-grupo.dañada .nombre {
+.fila-lienzo.dañada .nombre {
   color: var(--peligro);
 }
 
-.fila-grupo .tipo {
+.fila-lienzo .tipo {
   display: inline-flex;
   color: var(--texto-tenue);
   margin: 0 4px 0 2px;
 }
 
-.fila-grupo .nombre {
+.fila-lienzo .nombre {
   flex: 1;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.fila-grupo .detalle {
+.fila-lienzo .detalle {
   min-width: 20px;
   height: 18px;
   padding: 0 6px;
@@ -2047,29 +2046,118 @@ body.en-inicio > #espacio {
   text-align: center;
 }
 
-.fila-grupo .acciones-fila {
+.fila-lienzo .acciones-fila {
   display: none;
 }
 
-.fila-grupo:hover .acciones-fila {
+.fila-lienzo:hover .acciones-fila {
   display: inline-flex;
 }
 
-.fila-grupo:hover .detalle {
+.fila-lienzo:hover .detalle {
   display: none;
 }
 
-.fila-grupo .flecha {
+.fila-lienzo .flecha {
   color: var(--texto-suave);
 }
 
-.fila-grupo + .fila-capa,
-.fila-capa + .fila-capa {
-  margin-left: 18px;
+/* Grupos de capas y sangrías: lienzo › grupo › capa. */
+.fila-capa,
+.fila-grupo-capas {
+  margin-left: 14px;
 }
 
-.fila-grupo + .fila-capa {
+.fila-capa.en-grupo {
+  margin-left: 30px;
+}
+
+.fila-lienzo + .fila-capa,
+.fila-lienzo + .fila-grupo-capas {
   margin-top: 2px;
+}
+
+.fila-grupo-capas {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  height: 30px;
+  padding: 0 8px 0 2px;
+  border-radius: var(--radio);
+  cursor: default;
+  user-select: none;
+  font-weight: 500;
+}
+
+.fila-grupo-capas:hover {
+  background: var(--superficie-2);
+}
+
+.fila-grupo-capas.activa {
+  background: var(--primario-tinte);
+  box-shadow: inset 2px 0 0 var(--primario);
+}
+
+.fila-grupo-capas .tipo {
+  display: inline-flex;
+  color: var(--texto-suave);
+  margin: 0 4px 0 2px;
+}
+
+.fila-grupo-capas .nombre {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fila-grupo-capas .detalle {
+  color: var(--texto-tenue);
+  font-size: 11px;
+}
+
+.fila-grupo-capas .flecha {
+  color: var(--texto-suave);
+}
+
+.fila-grupo-capas.oculta .nombre,
+.fila-grupo-capas.oculta .tipo,
+.fila-capa.oculta .nombre {
+  opacity: 0.45;
+}
+
+/* Arrastrar y soltar: línea encima o debajo de la fila, o la fila resaltada («dentro»). */
+.lista-capas li {
+  position: relative;
+}
+
+.lista-capas li.arrastrando {
+  opacity: 0.4;
+}
+
+.lista-capas li.soltar-encima::before,
+.lista-capas li.soltar-debajo::after {
+  content: "";
+  position: absolute;
+  left: 4px;
+  right: 4px;
+  height: 2px;
+  border-radius: 1px;
+  background: var(--primario);
+  pointer-events: none;
+}
+
+.lista-capas li.soltar-encima::before {
+  top: -2px;
+}
+
+.lista-capas li.soltar-debajo::after {
+  bottom: -2px;
+}
+
+.lista-capas li.soltar-dentro {
+  box-shadow: inset 0 0 0 1.5px var(--primario);
+  background: var(--primario-tinte);
 }
 
 .estado-guardado {

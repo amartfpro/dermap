@@ -73,6 +73,10 @@ const ICONOS = {
   mano: "Hand",
   abrir: "FolderOpen",
   aplanar: "MapPlus",
+  grupo: "Folder",
+  grupoAbierto: "FolderOpen",
+  agrupar: "FolderPlus",
+  desagrupar: "FolderOutput",
 };
 
 const datos = Object.fromEntries(Object.entries(ICONOS).map(([k, nombre]) => [k, lucide[nombre]]));

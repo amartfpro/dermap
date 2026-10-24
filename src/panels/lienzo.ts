@@ -469,7 +469,7 @@ export class PanelLienzo implements IContentRenderer {
     const [w, h] = this.lienzo.geo.tamanoCm;
     const a = app.ajustes;
     const capa = this.lienzo.doc.activa;
-    const bloqueo = capa.bloqueada ? t(" (bloqueada)") : !capa.visible ? t(" (oculta)") : "";
+    const bloqueo = capa.bloqueadaTotal ? t(" (bloqueada)") : !capa.seVe ? t(" (oculta)") : "";
     this.info.textContent =
       t("{lienzo} · {ancho} × {alto} cm · capa «{capa}»{bloqueo} · {herramienta} {mm} mm · zoom {zoom} %", {
         lienzo: this.lienzo.nombre,
@@ -662,7 +662,7 @@ export class PanelLienzo implements IContentRenderer {
     if (h === "relleno") {
       const a = app.ajustes;
       if (!rellenar(l, d.x, d.y, a.color, a.opacidad))
-        this.info.textContent = l.doc.activa.bloqueada || !l.doc.activa.visible
+        this.info.textContent = l.doc.activa.bloqueadaTotal || !l.doc.activa.seVe
           ? capaNoEditable(l.doc.activa)
           : t("Haz clic dentro de la zona para rellenar.");
       return;
@@ -1298,8 +1298,8 @@ export function boton(texto: string, alPulsar: () => void, clase = ""): HTMLButt
 }
 
 /** Mensaje de por qué no se puede dibujar en una capa. */
-function capaNoEditable(capa: { nombre: string; bloqueada: boolean }): string {
-  return capa.bloqueada
+function capaNoEditable(capa: { nombre: string; bloqueadaTotal: boolean }): string {
+  return capa.bloqueadaTotal
     ? t("La capa «{capa}» está bloqueada.", { capa: capa.nombre })
     : t("La capa «{capa}» está oculta.", { capa: capa.nombre });
 }

@@ -18,7 +18,7 @@ export function abrirDialogoExportar(lienzo: Lienzo): void {
   fondo.append(caja);
 
   const opciones: OpcionesStencil = {
-    capas: new Set(lienzo.doc.capas.filter((c) => c.enStencil && c.visible).map((c) => c.id)),
+    capas: new Set(lienzo.doc.capas.filter((c) => c.enStencil && c.seVe).map((c) => c.id)),
     soloLineas: true,
     contorno: true,
     espejo: leerEspejo(),

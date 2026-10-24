@@ -16,7 +16,7 @@ export interface MedidaDiseno {
  * presupuestar (muchos estudios cobran por tamaño) y para la ficha del cliente.
  * Devuelve null si no hay nada dibujado.
  */
-export function medirDiseno(lienzo: Lienzo, filtro: (c: Capa) => boolean = (c) => c.visible && c.enStencil): MedidaDiseno | null {
+export function medirDiseno(lienzo: Lienzo, filtro: (c: Capa) => boolean = (c) => c.seVe && c.enStencil): MedidaDiseno | null {
   const doc = lienzo.doc;
   const claves = new Set<string>();
   for (const capa of doc.capas) if (filtro(capa)) for (const k of capa.teselas.keys()) claves.add(k);

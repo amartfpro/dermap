@@ -1,5 +1,5 @@
 import { t } from "../i18n";
-import { Capa, nuevoId, type ModoFusion } from "../lienzo/capa";
+import { Capa, GrupoCapas, nuevoId, type ModoFusion } from "../lienzo/capa";
 import { aBlob, DocumentoLienzo } from "../lienzo/documento";
 import { PPP, PX_POR_MM } from "../lienzo/geometria-zona";
 import { Lienzo } from "../lienzo/lienzo";
@@ -197,7 +197,25 @@ export class ProyectoAbierto extends EventTarget {
     const encontrado = this.buscar(id);
     if (!origen || !encontrado) return null;
     const doc = new DocumentoLienzo(origen.doc.ancho, origen.doc.alto, PX_POR_MM, false);
-    for (const capa of origen.doc.capas) doc.capas.push(capa.duplicar(nuevoId(), capa.nombre));
+    // Los grupos se copian también (grupos nuevos con las mismas propiedades).
+    const grupos = new Map<GrupoCapas, GrupoCapas>();
+    for (const capa of origen.doc.capas) {
+      const c = capa.duplicar(nuevoId(), capa.nombre);
+      if (capa.grupo) {
+        let g = grupos.get(capa.grupo);
+        if (!g) {
+          g = Object.assign(new GrupoCapas(nuevoId(), capa.grupo.nombre), {
+            visible: capa.grupo.visible,
+            bloqueado: capa.grupo.bloqueado,
+            opacidad: capa.grupo.opacidad,
+            abierto: capa.grupo.abierto,
+          });
+          grupos.set(capa.grupo, g);
+        }
+        c.grupo = g;
+      }
+      doc.capas.push(c);
+    }
     doc.activa = doc.capas[origen.doc.capas.indexOf(origen.doc.activa)] ?? doc.capas[0];
     const copia = new Lienzo(nuevoId(), this.nombreLibre(t("{nombre} copia", { nombre: origen.nombre })), origen.zona, doc);
     copia.cuadricula = origen.cuadricula;
@@ -475,6 +493,15 @@ export class ProyectoAbierto extends EventTarget {
           opacidad: c.opacidad,
           modo: c.modo,
           enStencil: c.enStencil,
+          ...(c.grupo ? { grupo: c.grupo.id } : {}),
+        })),
+        grupos: l.doc.grupos.map((g) => ({
+          id: g.id,
+          nombre: g.nombre,
+          visible: g.visible,
+          bloqueado: g.bloqueado,
+          opacidad: g.opacidad,
+          abierto: g.abierto,
         })),
       };
       await escribirTextoSeguro(fs, `${dir}/lienzo.json`, JSON.stringify(datos, null, 2));
@@ -489,8 +516,15 @@ export class ProyectoAbierto extends EventTarget {
     const datos = JSON.parse(await fs.leerTexto(`${dir}/lienzo.json`)) as DatosLienzo;
     const zona = desempaquetarZona(await fs.leerBinario(`${dir}/zona.bin`));
     const doc = new DocumentoLienzo(datos.ancho, datos.alto, PX_POR_MM, false);
+    const grupos = new Map<string, GrupoCapas>();
+    for (const dg of datos.grupos ?? []) {
+      const g = new GrupoCapas(dg.id, dg.nombre);
+      Object.assign(g, { visible: dg.visible, bloqueado: dg.bloqueado, opacidad: dg.opacidad, abierto: dg.abierto });
+      grupos.set(g.id, g);
+    }
     for (const dc of datos.capas) {
       const capa = new Capa(dc.id, dc.nombre);
+      capa.grupo = (dc.grupo && grupos.get(dc.grupo)) || null;
       capa.visible = dc.visible;
       capa.bloqueada = dc.bloqueada;
       capa.opacidad = dc.opacidad;
@@ -516,6 +550,7 @@ export class ProyectoAbierto extends EventTarget {
       doc.capas.push(capa);
     }
     if (doc.capas.length === 0) doc.capas.push(new Capa(nuevoId(), t("Líneas")));
+    doc.normalizarGrupos();
     doc.activa = doc.capas.find((c) => c.id === datos.capaActiva) ?? doc.capas[doc.capas.length - 1];
     const lienzo = new Lienzo(datos.id, nodo.nombre, zona, doc);
     if (datos.cuadricula === false || (datos.tonoPiel && datos.tonoPiel !== lienzo.tonoPiel)) {

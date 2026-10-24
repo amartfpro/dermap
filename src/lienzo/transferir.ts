@@ -46,7 +46,7 @@ export function transferirDibujo(origen: Lienzo, destino: Lienzo, espejo?: Simet
     const clave = `${tx},${ty}`;
     if (fuente.has(clave)) return fuente.get(clave)!;
     const r = { x0: tx * TESELA, y0: ty * TESELA, x1: (tx + 1) * TESELA, y1: (ty + 1) * TESELA };
-    const algo = origen.doc.capas.some((c) => c.visible && c.teselas.has(clave));
+    const algo = origen.doc.capas.some((c) => c.seVe && c.teselas.has(clave));
     let lamina: Lamina | null = null;
     if (algo) {
       lamina = crearLamina(TESELA, TESELA);

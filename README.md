@@ -73,8 +73,13 @@ herramienta activa y menús con un triangulito en la esquina del icono. Los tres
    aparece en el 3D al momento y los trazos continúan al otro lado de la costura. En mangas,
    **Vista recta** muestra la piel desenrollada en un rectángulo (una línea horizontal es un
    anillo alrededor del brazo), y **Pintar en 3D** dibuja directamente sobre el modelo.
-5. **Capas**: cada lienzo es un grupo plegable con sus capas dentro (el ojo del grupo lo oculta
-   en el 3D; se reordenan arrastrando). Crear, duplicar, reordenar, ocultar, bloquear, opacidad, modo de fusión,
+5. **Capas**: los lienzos del proyecto, cada uno con sus capas y **grupos de capas** dentro.
+   Pulsar un lienzo lo abre para dibujar (el activo se ve resaltado); su ojo lo oculta en el 3D y
+   su **+** le añade una capa. **Agrupar** (Ctrl+G) mete la capa activa en un grupo nuevo; el grupo
+   se pliega, se oculta, se bloquea y tiene su opacidad. Todo se reordena arrastrando: lienzos
+   entre sí, capas (también dentro y fuera de los grupos) y grupos enteros; una línea naranja
+   marca dónde caerá. **En el stencil** decide si la capa sale al exportar el stencil (apágalo
+   en fotos de referencia o bocetos). Crear, duplicar, ocultar, bloquear, opacidad, modo de fusión,
    **Importar imagen…** (PNG/JPG), **A stencil…** (convierte una foto o boceto importado en
    líneas o en blanco y negro, en una capa nueva), **Texto…** (lettering con las tipografías
    instaladas y la altura de las mayúsculas en mm reales), **Copiar/Pegar** entre lienzos y

@@ -17,7 +17,7 @@ const TOLERANCIA = 40;
 export function rellenar(lienzo: Lienzo, x: number, y: number, color: string, opacidad: number): boolean {
   const doc = lienzo.doc;
   const capa = doc.activa;
-  if (capa.bloqueada || !capa.visible) return false;
+  if (capa.bloqueadaTotal || !capa.seVe) return false;
   const W = doc.ancho, H = doc.alto;
   x = Math.floor(x);
   y = Math.floor(y);
@@ -146,7 +146,7 @@ export class Seleccion {
 
   borrar(lienzo: Lienzo, descripcion = "Borrar selección"): boolean {
     const capa = lienzo.doc.activa;
-    if (capa.bloqueada) return false;
+    if (capa.bloqueadaTotal) return false;
     const paso = lienzo.doc.editar(
       capa,
       this.rect,

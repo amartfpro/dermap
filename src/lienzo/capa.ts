@@ -16,6 +16,24 @@ export function operacionCanvas(modo: ModoFusion): GlobalCompositeOperation {
   return modo === "normal" ? "source-over" : modo;
 }
 
+/**
+ * Grupo de capas dentro de un lienzo (como las carpetas de Procreate o Photoshop): un solo
+ * nivel, con sus capas seguidas en el orden de dibujo. Su visibilidad, bloqueo y opacidad se
+ * aplican a todas sus capas.
+ */
+export class GrupoCapas {
+  visible = true;
+  bloqueado = false;
+  opacidad = 1;
+  /** Desplegado en el panel Capas. */
+  abierto = true;
+
+  constructor(
+    readonly id: string,
+    public nombre: string,
+  ) {}
+}
+
 /** Capa de píxeles dispersa: solo guarda las teselas con contenido (RF-31). */
 export class Capa {
   visible = true;
@@ -24,6 +42,8 @@ export class Capa {
   modo: ModoFusion = "normal";
   /** Si se exporta en el stencil por defecto (RF-54). */
   enStencil = true;
+  /** Grupo al que pertenece, si está en uno. */
+  grupo: GrupoCapas | null = null;
   readonly teselas = new Map<string, Lamina>();
   /** Teselas cambiadas desde el último guardado (también las borradas). */
   readonly sucias = new Set<string>();
@@ -32,6 +52,21 @@ export class Capa {
     readonly id: string,
     public nombre: string,
   ) {}
+
+  /** Se ve: ella y su grupo están visibles. */
+  get seVe(): boolean {
+    return this.visible && (this.grupo?.visible ?? true);
+  }
+
+  /** No se puede pintar en ella: está bloqueada ella o su grupo. */
+  get bloqueadaTotal(): boolean {
+    return this.bloqueada || (this.grupo?.bloqueado ?? false);
+  }
+
+  /** Opacidad con la que se dibuja (la suya por la de su grupo). */
+  get opacidadTotal(): number {
+    return this.opacidad * (this.grupo?.opacidad ?? 1);
+  }
 
   obtener(tx: number, ty: number): Lamina | undefined {
     return this.teselas.get(claveTesela(tx, ty));

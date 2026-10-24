@@ -84,6 +84,17 @@ export interface DatosLienzo {
   capaActiva: string;
   /** De abajo arriba. */
   capas: DatosCapa[];
+  /** Grupos de capas (opcional: no existían en los primeros lienzos). */
+  grupos?: DatosGrupo[];
+}
+
+export interface DatosGrupo {
+  id: string;
+  nombre: string;
+  visible: boolean;
+  bloqueado: boolean;
+  opacidad: number;
+  abierto: boolean;
 }
 
 export interface DatosCapa {
@@ -94,4 +105,6 @@ export interface DatosCapa {
   opacidad: number;
   modo: string;
   enStencil: boolean;
+  /** Id del grupo, si está en uno. */
+  grupo?: string;
 }
