@@ -65,6 +65,8 @@ export class PanelCapas implements IContentRenderer {
     archivo.addEventListener("change", () => {
       const f = archivo.files?.[0];
       archivo.value = "";
+      // Sin el foco en el campo de archivo, Intro y Esc llegan a la imagen colocada.
+      archivo.blur();
       if (f) void this.importar(f);
     });
     const sep = () => Object.assign(document.createElement("span"), { className: "separador-control" });

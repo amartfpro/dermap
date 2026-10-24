@@ -83,7 +83,8 @@ herramienta activa y menús con un triangulito en la esquina del icono. Los tres
    las capas del grupo seleccionado, en su sitio y como un solo paso de deshacer. **En el stencil** decide si la capa sale al exportar el stencil (apágalo
    en fotos de referencia o bocetos). Crear, duplicar, ocultar, bloquear, opacidad, modo de fusión,
    **Importar imagen…** (PNG/JPG), **A stencil…** (convierte una foto o boceto importado en
-   líneas o en blanco y negro, en una capa nueva), **Texto…** (lettering con las tipografías
+   líneas o en blanco y negro, en una capa nueva; medidas en mm reales, quitar manchas, ajuste
+   local para luz desigual y vista previa con zoom), **Texto…** (lettering con las tipografías
    instaladas y la altura de las mayúsculas en mm reales), **Copiar/Pegar** entre lienzos y
    **Traer dibujo de…**, que recoloca el dibujo de otro lienzo sobre la misma piel (para rehacer
    una zona con otro corte) o lo lleva **en espejo** a la zona simétrica (del brazo izquierdo al

@@ -843,6 +843,14 @@ export class PanelLienzo implements IContentRenderer {
 
   private teclaAbajo(e: KeyboardEvent): void {
     if (esCampoDeTexto(e.target)) return;
+    // Con algo flotando (imagen, pegado, transformación), Intro, Esc, deshacer y voltear van a
+    // ello esté donde esté el ratón: se suele empezar desde el panel Capas.
+    if (this.flotante && !document.querySelector(".fondo-modal")) {
+      const ctrl = e.ctrlKey || e.metaKey;
+      if (e.key === "Enter") return (e.preventDefault(), this.fijarImagen());
+      if (e.key === "Escape" || (ctrl && e.key.toLowerCase() === "z")) return (e.preventDefault(), this.cancelarImagen());
+      if (e.shiftKey && (e.code === "KeyH" || e.code === "KeyV")) return (e.preventDefault(), this.voltearImagen(e.code === "KeyH"));
+    }
     // Solo con el ratón sobre el lienzo o el foco en él, para no robar atajos a otros paneles.
     if (!this.element.matches(":hover") && !this.element.contains(document.activeElement)) return;
     const ctrl = e.ctrlKey || e.metaKey;

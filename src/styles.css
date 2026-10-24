@@ -2918,3 +2918,122 @@ input[type="checkbox"].conmutador:focus-visible {
   gap: 8px;
   align-self: flex-start;
 }
+
+/* ── Convertir a stencil: controles a la izquierda y vista previa navegable a la derecha ─── */
+.modal.modal-filtro {
+  width: min(1100px, calc(100vw - 32px));
+  height: min(820px, calc(100vh - 48px));
+  display: grid;
+  grid-template-columns: 280px minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  gap: 12px 16px;
+  overflow: hidden;
+}
+
+.modal-filtro h2 {
+  grid-column: 1 / -1;
+  margin: 0;
+}
+
+.controles-filtro {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  overflow-y: auto;
+  min-height: 0;
+  padding-right: 4px;
+}
+
+.fila-filtro {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.fila-filtro[hidden],
+.casilla[hidden] {
+  display: none;
+}
+
+.cabecera-filtro {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: var(--texto-suave);
+  font-weight: 500;
+}
+
+.valor-filtro {
+  color: var(--texto);
+  font-variant-numeric: tabular-nums;
+}
+
+.fila-filtro .deslizador {
+  width: 100%;
+}
+
+.fila-filtro .desplegable {
+  width: 100%;
+}
+
+.previa-filtro {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 0;
+}
+
+.visor-filtro {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  border-radius: var(--radio);
+  border: 1px solid var(--borde);
+  background: var(--fondo);
+  cursor: grab;
+  touch-action: none;
+}
+
+.visor-filtro.moviendo {
+  cursor: grabbing;
+}
+
+.visor-filtro canvas {
+  position: absolute;
+  left: 0;
+  top: 0;
+  transform-origin: 0 0;
+  image-rendering: auto;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.4);
+}
+
+.barra-visor-filtro {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+
+.zoom-filtro {
+  min-width: 52px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--texto-suave);
+  font-variant-numeric: tabular-nums;
+}
+
+.modal-filtro .modal-pie {
+  grid-column: 1 / -1;
+  margin-top: 0;
+}
+
+@media (max-width: 760px) {
+  .modal.modal-filtro {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto auto minmax(0, 1fr) auto;
+  }
+  .controles-filtro {
+    max-height: 34vh;
+  }
+}
