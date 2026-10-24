@@ -84,3 +84,21 @@ export class Historial extends EventTarget {
     this.dispatchEvent(new Event("cambio"));
   }
 }
+
+/** Varios pasos que se deshacen juntos (en orden inverso), como uno solo. */
+export class PasoCompuesto implements Paso {
+  constructor(
+    readonly descripcion: string,
+    private readonly pasos: Paso[],
+  ) {}
+
+  bytes(): number {
+    return this.pasos.reduce((s, p) => s + p.bytes(), 0);
+  }
+
+  async deshacer(): Promise<Paso> {
+    const inversos: Paso[] = [];
+    for (const p of [...this.pasos].reverse()) inversos.push(await p.deshacer());
+    return new PasoCompuesto(this.descripcion, inversos);
+  }
+}

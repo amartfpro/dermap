@@ -78,7 +78,9 @@ herramienta activa y menús con un triangulito en la esquina del icono. Los tres
    su **+** le añade una capa. **Agrupar** (Ctrl+G) mete la capa activa en un grupo nuevo; el grupo
    se pliega, se oculta, se bloquea y tiene su opacidad. Todo se reordena arrastrando: lienzos
    entre sí, capas (también dentro y fuera de los grupos) y grupos enteros; una línea naranja
-   marca dónde caerá. **En el stencil** decide si la capa sale al exportar el stencil (apágalo
+   marca dónde caerá. **Transformar** (Ctrl+T, en las herramientas del lienzo o al pasar el ratón
+   por una capa o un grupo) mueve, escala, gira y voltea el dibujo de la capa activa o de todas
+   las capas del grupo seleccionado, en su sitio y como un solo paso de deshacer. **En el stencil** decide si la capa sale al exportar el stencil (apágalo
    en fotos de referencia o bocetos). Crear, duplicar, ocultar, bloquear, opacidad, modo de fusión,
    **Importar imagen…** (PNG/JPG), **A stencil…** (convierte una foto o boceto importado en
    líneas o en blanco y negro, en una capa nueva), **Texto…** (lettering con las tipografías

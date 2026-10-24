@@ -4,6 +4,7 @@ import type { IContentRenderer } from "dockview-core";
 import { app } from "../estado";
 import { PX_POR_MM } from "../lienzo/geometria-zona";
 import { ImagenFlotante } from "../lienzo/imagen";
+import { aplicar as aplicarTransformacion, cancelar as cancelarTransformacion, levantar, type Levantado } from "../lienzo/transformar";
 import { PRESETS } from "../lienzo/pincel";
 import { nuevoId } from "../lienzo/capa";
 import { copiarCapa, obtenerCopia } from "../lienzo/portapapeles";
@@ -117,6 +118,8 @@ export class PanelLienzo implements IContentRenderer {
   private filaPaleta!: HTMLElement;
   private verDeformacion = false;
   private flotante: ImagenFlotante | null = null;
+  /** Si la imagen flotante es dibujo levantado de capas para transformarlo en su sitio. */
+  private transformacion: { lienzo: Lienzo; levantado: Levantado } | null = null;
   private repintar = false;
 
   private controles: Record<string, HTMLInputElement | HTMLButtonElement | HTMLSelectElement> = {};
@@ -262,6 +265,7 @@ export class PanelLienzo implements IContentRenderer {
     });
     const relleno = herramienta("relleno", "relleno", t("Cubo de relleno: rellena la zona cerrada bajo el clic (G)"));
     const lazo = herramienta("lazo", "lazo", t("Selección con lazo: rodea una parte para moverla, copiarla o borrarla (L)"));
+    const transformar = botonIcono("transformar", t("Transformar la capa activa o el grupo seleccionado: mover, escalar, girar y voltear (Ctrl+T)"), () => void this.transformar());
     const linea = herramienta("linea", "linea", t("Línea (U). Mayús: ángulos de 15°"));
     const rectangulo = herramienta("rectangulo", "rectangulo", t("Rectángulo (U). Mayús: cuadrado"));
     const elipse = herramienta("elipse", "elipse", t("Elipse (U). Mayús: círculo"));
@@ -286,7 +290,7 @@ export class PanelLienzo implements IContentRenderer {
     );
 
     const separador = () => Object.assign(document.createElement("span"), { className: "separador-riel" });
-    this.riel.append(pincel, goma, gotero, separador(), relleno, lazo, separador(), linea, rectangulo, elipse, texto, separador(), color);
+    this.riel.append(pincel, goma, gotero, separador(), relleno, lazo, transformar, separador(), linea, rectangulo, elipse, texto, separador(), color);
 
     // ── Barra de opciones del trazo (arriba) ──
     const preset = desplegable(
@@ -846,6 +850,9 @@ export class PanelLienzo implements IContentRenderer {
       e.preventDefault();
       this.lienzo.historial.registrar(this.lienzo.doc.instantaneaCapas("Nueva capa"));
       this.lienzo.doc.añadirCapa();
+    } else if (ctrl && tecla === "t" && this.lienzo) {
+      e.preventDefault();
+      void this.transformar();
     } else if (ctrl && tecla === "j" && this.lienzo) {
       e.preventDefault();
       const l = this.lienzo;
@@ -1025,6 +1032,32 @@ export class PanelLienzo implements IContentRenderer {
     this.pedirRepintado();
   }
 
+  /**
+   * Transformar en su sitio (mover, escalar, girar, voltear) la capa activa o, si hay un grupo
+   * seleccionado, todas sus capas a la vez (Ctrl+T).
+   */
+  async transformar(): Promise<void> {
+    const l = this.lienzo;
+    if (!l || this.flotante) return;
+    if (this.recta) this.alternarRecta();
+    const grupo = l.doc.grupoSeleccionado;
+    const capas = grupo ? l.doc.capasDe(grupo) : [l.doc.activa];
+    const nombre = grupo ? grupo.nombre : l.doc.activa.nombre;
+    if (!grupo && (l.doc.activa.bloqueadaTotal || !l.doc.activa.seVe)) {
+      this.info.textContent = capaNoEditable(l.doc.activa);
+      return;
+    }
+    this.seleccion = null;
+    const levantado = await levantar(l, capas);
+    if (!levantado) {
+      this.info.textContent = grupo ? t("El grupo «{grupo}» no tiene dibujo que transformar.", { grupo: nombre }) : t("La capa activa está vacía.");
+      return;
+    }
+    if (this.lienzo !== l) return void cancelarTransformacion(l, levantado);
+    this.colocarImagen(levantado.vista, nombre, new DOMMatrix().translate(levantado.rect.x0, levantado.rect.y0));
+    this.transformacion = { lienzo: l, levantado };
+  }
+
   colocarImagen(imagen: ImageBitmap, nombre: string, matriz?: DOMMatrix): void {
     if (!this.lienzo) return;
     if (this.recta) this.alternarRecta();
@@ -1035,11 +1068,17 @@ export class PanelLienzo implements IContentRenderer {
 
   private fijarImagen(): void {
     if (!this.flotante || !this.lienzo) return;
-    this.flotante.fijar(this.lienzo);
+    if (this.transformacion) {
+      aplicarTransformacion(this.transformacion.lienzo, this.transformacion.levantado, this.flotante.matriz);
+      this.transformacion = null;
+    } else this.flotante.fijar(this.lienzo);
     this.cancelarImagen();
   }
 
   private cancelarImagen(): void {
+    // Una transformación sin aplicar devuelve el dibujo a sus capas tal como estaba.
+    if (this.transformacion) void cancelarTransformacion(this.transformacion.lienzo, this.transformacion.levantado);
+    this.transformacion = null;
     this.flotante = null;
     this.barraImagen.hidden = true;
     this.pedirRepintado();

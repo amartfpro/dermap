@@ -468,6 +468,11 @@ export class PanelCapas implements IContentRenderer {
     const acciones = document.createElement("span");
     acciones.className = "acciones-fila";
     acciones.append(
+      iconoBoton("transformar", t("Transformar el grupo: mover, escalar, girar y voltear (Ctrl+T)"), () => {
+        if (l !== this.lienzo) app.abrir(l);
+        l.doc.seleccionarGrupo(grupo);
+        void panelLienzoActual()?.transformar();
+      }),
       iconoBoton("mas", t("Nueva capa en este grupo"), () => this.nuevaEnGrupo(l, grupo)),
       iconoBoton("desagrupar", t("Desagrupar: las capas salen del grupo y quedan en su sitio"), () => this.conPaso("Desagrupar", (lz) => lz.doc.desagrupar(grupo), l)),
       iconoBoton("borrar", t("Eliminar el grupo con sus capas"), () => void this.eliminarGrupo(l, grupo)),
@@ -513,6 +518,11 @@ export class PanelCapas implements IContentRenderer {
     acciones.className = "acciones-fila";
     if (!capa.grupo) acciones.append(iconoBoton("agrupar", t("Agrupar: mete esta capa en un grupo nuevo (Ctrl+G)"), () => this.agrupar(l, capa)));
     acciones.append(
+      iconoBoton("transformar", t("Transformar la capa: mover, escalar, girar y voltear (Ctrl+T)"), () => {
+        if (l !== this.lienzo) app.abrir(l);
+        l.doc.seleccionarCapa(capa);
+        void panelLienzoActual()?.transformar();
+      }),
       iconoBoton("duplicar", t("Duplicar la capa (Ctrl+J)"), () => this.duplicar(l, capa)),
       iconoBoton("borrar", t("Eliminar la capa"), () => this.eliminarCapa(l, capa)),
     );

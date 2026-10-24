@@ -566,5 +566,9 @@
   "Eliminar el grupo con sus capas": "Delete the group and its layers",
   "Agrupar: mete esta capa en un grupo nuevo (Ctrl+G)": "Group: put this layer in a new group (Ctrl+G)",
   "Duplicar la capa (Ctrl+J)": "Duplicate the layer (Ctrl+J)",
-  "Eliminar la capa": "Delete the layer"
+  "Eliminar la capa": "Delete the layer",
+  "Transformar el grupo: mover, escalar, girar y voltear (Ctrl+T)": "Transform the group: move, scale, rotate and flip (Ctrl+T)",
+  "Transformar la capa: mover, escalar, girar y voltear (Ctrl+T)": "Transform the layer: move, scale, rotate and flip (Ctrl+T)",
+  "Transformar la capa activa o el grupo seleccionado: mover, escalar, girar y voltear (Ctrl+T)": "Transform the active layer or the selected group: move, scale, rotate and flip (Ctrl+T)",
+  "El grupo «{grupo}» no tiene dibujo que transformar.": "The group “{grupo}” has no drawing to transform."
 }

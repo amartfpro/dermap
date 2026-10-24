@@ -76,6 +76,7 @@ const ICONOS = {
   grupo: "Folder",
   grupoAbierto: "FolderOpen",
   agrupar: "FolderPlus",
+  transformar: "Scaling",
   desagrupar: "FolderOutput",
 };
 
