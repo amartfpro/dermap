@@ -9,7 +9,7 @@ import { abrirAyuda } from "./panels/ayuda";
 import { PanelLienzo } from "./panels/lienzo";
 import { PanelCapas } from "./panels/capas";
 import { app } from "./estado";
-import { abrirArchivoInicial, exportarProyecto } from "./proyectos/gestor";
+import { abrirArchivoInicial, abrirProyecto, exportarProyecto } from "./proyectos/gestor";
 import { inicioVisible, mostrarInicio, ocultarInicio, volverAlInicio } from "./inicio/inicio";
 import { icono, type NombreIcono } from "./ui/iconos";
 import { botonMenu } from "./ui/menu";
@@ -18,6 +18,8 @@ import { firma } from "./ui/firma";
 import { enTauri, sistemaArchivos } from "./proyectos/sistema-archivos";
 
 const CLAVE_LAYOUT = "dermap.layout.v3";
+/** Proyecto que reabrir tras recargar la interfaz al cambiar de idioma. */
+const CLAVE_REABRIR = "dermap.reabrir";
 
 const componentes: Record<string, () => IContentRenderer> = {
   visor3d: () => new Visor3D(),
@@ -116,6 +118,12 @@ const botonIdioma = botonMenu("idioma", t("Idioma"), () =>
     accion: async () => {
       if (codigo === idiomaActual()) return;
       await app.proyecto?.guardar();
+      // Cambiar de idioma recarga la interfaz: al volver, se reabre el mismo proyecto.
+      try {
+        if (app.proyecto) sessionStorage.setItem(CLAVE_REABRIR, app.proyecto.carpeta);
+      } catch {
+        // Sin almacenamiento de sesión: se vuelve al inicio.
+      }
       cambiarIdioma(codigo);
     },
   })),
@@ -176,11 +184,23 @@ app.addEventListener("proyecto", () => {
 
 // ── Proyectos: reabrir el último, guardar con Ctrl+S y antes de cerrar ───────────
 
-// Al arrancar: si la app se abrió con un archivo .dermap, ese proyecto; si no, la pantalla de inicio.
-mostrarInicio();
-void abrirArchivoInicial((texto) => app.dispatchEvent(new CustomEvent("progreso", { detail: texto })))
-  .then(() => {
+// Al arrancar: si la app se abrió con un archivo .dermap, ese proyecto; si se acaba de cambiar
+// el idioma, el proyecto que estaba abierto; si no, la pantalla de inicio.
+let reabrir: string | null = null;
+try {
+  reabrir = sessionStorage.getItem(CLAVE_REABRIR);
+  sessionStorage.removeItem(CLAVE_REABRIR);
+} catch {
+  // Sin almacenamiento de sesión.
+}
+// Al reabrir tras cambiar el idioma no se enseña el inicio (salvo que falle).
+if (!reabrir) mostrarInicio();
+const progresoInicial = (texto: string) => app.dispatchEvent(new CustomEvent("progreso", { detail: texto }));
+void abrirArchivoInicial(progresoInicial)
+  .then(async () => {
+    if (!app.proyecto && reabrir) await abrirProyecto(reabrir, progresoInicial).catch(() => undefined);
     if (app.proyecto) ocultarInicio();
+    else if (reabrir) mostrarInicio();
   })
   .catch((error) => console.error("No se pudo abrir el archivo inicial", error));
 
