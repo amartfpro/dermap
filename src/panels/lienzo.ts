@@ -851,7 +851,9 @@ export class PanelLienzo implements IContentRenderer {
       const l = this.lienzo;
       const origen = l.doc.activa;
       l.historial.registrar(l.doc.instantaneaCapas("Duplicar capa"));
-      l.doc.insertarCapa(origen.duplicar(nuevoId(), t("{nombre} copia", { nombre: origen.nombre })), l.doc.capas.indexOf(origen) + 1);
+      const copia = origen.duplicar(nuevoId(), t("{nombre} copia", { nombre: origen.nombre }));
+      copia.grupo = origen.grupo;
+      l.doc.insertarCapa(copia, l.doc.capas.indexOf(origen) + 1);
     } else if (ctrl && tecla === "d") {
       e.preventDefault();
       this.seleccion = null;

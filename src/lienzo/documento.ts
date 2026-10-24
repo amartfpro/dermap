@@ -80,6 +80,8 @@ export class DocumentoLienzo extends EventTarget {
   }
 
   seleccionarCapa(capa: Capa): void {
+    // Sin cambios no se avisa: así el panel no se repinta entre los dos clics de un doble clic.
+    if (this.activa === capa && !this.grupoSeleccionado) return;
     this.activa = capa;
     this.grupoSeleccionado = null;
     this.avisarCapas();
@@ -136,6 +138,7 @@ export class DocumentoLienzo extends EventTarget {
   }
 
   seleccionarGrupo(grupo: GrupoCapas): void {
+    if (this.grupoSeleccionado === grupo) return;
     this.grupoSeleccionado = grupo;
     // Se sigue pintando en una capa: la de arriba del grupo, si la activa no es suya.
     if (this.activa.grupo !== grupo) {

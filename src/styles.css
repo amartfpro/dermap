@@ -2046,16 +2046,47 @@ body.en-inicio > #espacio {
   text-align: center;
 }
 
-.fila-lienzo .acciones-fila {
+/* Acciones de cada fila (nueva capa, agrupar, duplicar, eliminar): al pasar el ratón. */
+.lista-capas .acciones-fila {
   display: none;
+  align-items: center;
 }
 
-.fila-lienzo:hover .acciones-fila {
+.lista-capas li:hover .acciones-fila {
   display: inline-flex;
 }
 
-.fila-lienzo:hover .detalle {
+.lista-capas li:hover .detalle:not(:empty) {
   display: none;
+}
+
+body.arrastrando-fila .lista-capas li:hover .acciones-fila {
+  display: none;
+}
+
+body.arrastrando-fila,
+body.arrastrando-fila * {
+  cursor: grabbing !important;
+  user-select: none;
+}
+
+/* Copia de la fila que sigue al puntero al arrastrar. */
+.fantasma-fila {
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 2000;
+  pointer-events: none;
+  list-style: none;
+  margin: 0 !important;
+  opacity: 0.9;
+  background: var(--superficie-3) !important;
+  border-radius: var(--radio);
+  box-shadow: var(--sombra);
+}
+
+.fantasma-fila .acciones-fila {
+  display: none !important;
 }
 
 .fila-lienzo .flecha {
@@ -2534,6 +2565,9 @@ body.en-inicio > #espacio {
 .panel-capas .propiedades-capa {
   border-top: none;
   border-bottom: 1px solid var(--borde-suave);
+  /* Alto fijo (dos filas): al cambiar de capa a grupo la lista de debajo no salta. */
+  min-height: 80px;
+  align-content: flex-start;
 }
 
 /* Barra superior */
