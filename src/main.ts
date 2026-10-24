@@ -45,8 +45,14 @@ const dock = createDockview(contenedor, {
   },
 });
 
+// Cada columna tiene un solo panel: se pueden recolocar arrastrando su cabecera a un borde, pero no
+// apilar en pestañas (así la cabecera es un título con su botón de cerrar).
+dock.onWillShowOverlay((e) => {
+  if (e.kind === "tab" || e.kind === "header_space" || (e.kind === "content" && e.position === "center")) e.preventDefault();
+});
+
 const TITULOS: Record<string, string> = {
-  visor3d: traducible("Visor 3D"),
+  visor3d: traducible("Modelo"),
   lienzo: traducible("Lienzo"),
   capas: traducible("Capas"),
 };
