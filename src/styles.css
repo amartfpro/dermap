@@ -126,8 +126,9 @@ body {
 
 .marca::before {
   content: "";
-  width: 18px;
-  height: 18px;
+  /* La golondrina es más ancha que alta. */
+  width: 24px;
+  height: 20px;
   background: url("./marca/logo.svg") center / contain no-repeat;
 }
 
@@ -1694,7 +1695,7 @@ body.en-inicio > #espacio {
 }
 
 .inicio-marca::before {
-  width: 28px;
+  width: 34px;
   height: 28px;
 }
 

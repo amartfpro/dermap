@@ -168,6 +168,9 @@ Documentos/Dermap/<Proyecto>/
   complexión (los targets de MakeHuman que lista el script).
 - `npx tsx scripts/convertir-esqueleto.ts base.obj rig.default.json weights.default.json`:
   regenera el esqueleto y los pesos (archivos de `src/mpfb/data/rigs/standard` de MPFB).
+- `python3 scripts/iconos-app.py`: regenera el logo de la app y todos los iconos (Windows, macOS,
+  tienda de Windows y favicon) a partir de `src/marca/golondrina.svg`. Hasta 48 px usa una
+  variante con la golondrina más grande y el trazo engordado. Necesita Playwright y Pillow.
 
 La especificación de requisitos y el documento de diseño están en documentos compartidos aparte.
 Los identificadores RF-xx y RNF-xx del código remiten a la especificación.
