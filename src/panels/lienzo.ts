@@ -173,7 +173,7 @@ export class PanelLienzo implements IContentRenderer {
 
     this.aviso = document.createElement("div");
     this.aviso.className = "aviso centrado";
-    this.aviso.textContent = t("Aplana una zona desde el visor 3D, o abre un lienzo del proyecto, para empezar a dibujar.");
+    this.aviso.textContent = t("Mapea una zona desde la columna Modelo, o abre un lienzo del proyecto, para empezar a dibujar.");
 
     this.info = document.createElement("div");
     this.info.className = "etiqueta-flotante";
@@ -391,7 +391,7 @@ export class PanelLienzo implements IContentRenderer {
       if (this.lienzo) this.lienzo.cambiar({ cuadricula: !this.lienzo.cuadricula });
       this.sincronizarControles();
     });
-    const deformacion = botonIcono("zona", t("Ver la deformación del aplanado (zonas que estiran o encogen)"), () => {
+    const deformacion = botonIcono("zona", t("Ver la deformación del mapeado (zonas que estiran o encogen)"), () => {
       this.verDeformacion = !this.verDeformacion;
       this.sincronizarControles();
     });

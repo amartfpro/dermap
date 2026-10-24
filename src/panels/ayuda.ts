@@ -8,10 +8,10 @@ const SECCIONES: { titulo: string; filas: [string, string][] }[] = [
     titulo: traducible("Flujo de trabajo"),
     filas: [
       [traducible("1 · Proyecto"), traducible("Uno por cliente. «Ficha del cliente» guarda contacto, cita y notas.")],
-      [traducible("2 · Modelo"), traducible("«Modelo» en el visor 3D: altura, sexo, complexión, tono de piel y postura.")],
+      [traducible("2 · Modelo"), traducible("Botón «Modelo» de la columna Modelo: altura, sexo, complexión, tono de piel y postura.")],
       [traducible("3 · Zona"), traducible("Zona rápida, «Seleccionar» (pincel) o «Lazo» sobre el cuerpo.")],
       [traducible("4 · Corte"), traducible("En mangas, la línea azul es el corte: gira la vista para moverlo o usa «Corte manual».")],
-      [traducible("5 · Aplanar"), traducible("Crea un lienzo nuevo con la forma de la zona, a escala real.")],
+      [traducible("5 · Mapear"), traducible("Crea un lienzo nuevo con la forma de la zona, a escala real.")],
       [traducible("6 · Dibujar"), traducible("Lo que dibujas se ve al momento en el 3D. Las capas se eligen al exportar.")],
       [traducible("7 · Exportar"), traducible("«Exportar stencil…»: PDF A4 en piezas con regla, o PNG a 300 ppp.")],
     ],
@@ -39,13 +39,13 @@ const SECCIONES: { titulo: string; filas: [string, string][] }[] = [
     ],
   },
   {
-    titulo: traducible("Visor 3D (con el ratón encima)"),
+    titulo: traducible("Columna Modelo (con el ratón encima)"),
     filas: [
       [traducible("Arrastrar · rueda · botón derecho"), traducible("Girar · acercar · desplazar")],
       [traducible("1 – 9"), traducible("Vistas: cuerpo, brazos, piernas, torso, espalda")],
       [traducible("F"), traducible("Centrar en la zona del lienzo activo")],
       [traducible("S · L"), traducible("Seleccionar con pincel · con lazo (Mayús quita)")],
-      [traducible("Intro"), traducible("Aplanar la zona seleccionada")],
+      [traducible("Intro"), traducible("Mapear la zona seleccionada")],
     ],
   },
   {

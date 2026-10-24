@@ -211,7 +211,7 @@ export class Visor3D implements IContentRenderer {
       this.botonCorte,
       botonIcono("cerrar", t("Quitar los cortes"), () => this.quitarCortesExtra()),
       separador(),
-      botonIcono("aplanar", t("Aplanar la zona seleccionada en un lienzo nuevo (Intro)"), () => void this.aplanar(), { clase: "acento" }),
+      botonIcono("aplanar", t("Mapear la zona seleccionada en un lienzo nuevo (Intro)"), () => void this.aplanar(), { clase: "acento" }),
       separador(),
       this.botonPintar,
       hueco,
@@ -649,7 +649,7 @@ export class Visor3D implements IContentRenderer {
     this.fijarSeleccion(seleccion.triangulos);
     this.verVista(VISTAS.findIndex((v) => v.nombre === zona.vista));
     this.estado(
-      t("{zona}: {n} triángulos. La línea azul es el corte: gira la vista para moverlo. Pulsa «Aplanar zona».", { zona: t(zona.nombre), n: seleccion.triangulos.length }),
+      t("{zona}: {n} triángulos. La línea azul es el corte: gira la vista para moverlo. Pulsa «Mapear zona».", { zona: t(zona.nombre), n: seleccion.triangulos.length }),
     );
   }
 
@@ -676,7 +676,7 @@ export class Visor3D implements IContentRenderer {
             ? t("Haz clic dentro de la zona donde debe terminar el corte extra.")
             : this.modoPintar
               ? t("Dibuja sobre el modelo con el pincel del lienzo; botón derecho para girar.")
-              : t("Elige una zona rápida o selecciónala con las herramientas de la izquierda; luego pulsa «Aplanar zona».");
+              : t("Elige una zona rápida o selecciónala con las herramientas de la izquierda; luego pulsa «Mapear zona».");
   }
 
   private pintarMensaje(): void {
@@ -749,7 +749,7 @@ export class Visor3D implements IContentRenderer {
     }
     this.puntosCorte = puntos;
     this.actualizarCorte();
-    this.estado(plural(puntos.length, "Corte manual con {n} punto. Añade más o pulsa «Aplanar zona».", "Corte manual con {n} puntos. Añade más o pulsa «Aplanar zona»."));
+    this.estado(plural(puntos.length, "Corte manual con {n} punto. Añade más o pulsa «Mapear zona».", "Corte manual con {n} puntos. Añade más o pulsa «Mapear zona»."));
   }
 
   /** Corte principal que se usará: el manual si hay puntos, si no el automático según la vista. */
@@ -783,7 +783,7 @@ export class Visor3D implements IContentRenderer {
     }
     this.cortesExtra.push(camino);
     this.pintarCortesExtra();
-    this.estado(plural(this.cortesExtra.length, "{n} corte extra. Pulsa «Aplanar zona» o añade más.", "{n} cortes extra. Pulsa «Aplanar zona» o añade más."));
+    this.estado(plural(this.cortesExtra.length, "{n} corte extra. Pulsa «Mapear zona» o añade más.", "{n} cortes extra. Pulsa «Mapear zona» o añade más."));
   }
 
   private quitarCortesExtra(): void {
@@ -1067,7 +1067,7 @@ export class Visor3D implements IContentRenderer {
   }
 
   private estadoSeleccion(): void {
-    if (this.seleccionados.size) this.estado(t("{n} triángulos seleccionados. Añade o quita más, o pulsa «Aplanar zona».", { n: this.seleccionados.size }));
+    if (this.seleccionados.size) this.estado(t("{n} triángulos seleccionados. Añade o quita más, o pulsa «Mapear zona».", { n: this.seleccionados.size }));
     else this.mostrarMensaje(null);
   }
 
@@ -1207,7 +1207,7 @@ export class Visor3D implements IContentRenderer {
     // con la piel en la postura base (sin doblar): la zona es la misma (mismos triángulos y
     // vértices, en el mismo orden), solo cambian las posiciones.
     const enReposo = esRecta(this.pose) ? seleccion : submalla(this.cuerpoSinPostura(), this.seleccionados);
-    this.estado(t("Aplanando…"));
+    this.estado(t("Mapeando…"));
     // El corte por defecto queda en la cara que no se ve (opuesta a la cámara), y el
     // lienzo se orienta como la vista actual: la derecha de la pantalla es la del lienzo.
     const haciaCamara = this.camara.position.clone().sub(this.controles.target).normalize();
@@ -1239,7 +1239,7 @@ export class Visor3D implements IContentRenderer {
       if (this.modoCorteManual) this.alternarCorteManual();
       if (this.modoCorte) this.alternarModoCorte();
       await añadirLienzo(lienzo);
-      const tipo = aplanado.tipo === "manga" ? t("Manga aplanada (con corte)") : t("Parche aplanado");
+      const tipo = aplanado.tipo === "manga" ? t("Manga mapeada (con corte)") : t("Parche mapeado");
       const [w, h] = lienzo.geo.tamanoCm;
       this.estado(
         t("{tipo} en {s} s · {ancho} × {alto} cm · {pct} % del área con deformación ≤ 2 %", {

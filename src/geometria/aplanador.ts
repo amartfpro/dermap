@@ -50,7 +50,7 @@ const MENSAJES: Record<number, string> = {
   1: traducible("La zona debe tener un solo borde (parche) o dos (manga). Amplía la selección para cerrar los huecos."),
   2: traducible("No se encontró un camino de corte entre los dos bordes de la manga."),
   3: traducible("El corte debe empezar en un borde de la manga y terminar en el otro."),
-  4: traducible("No se pudo aplanar la zona."),
+  4: traducible("No se pudo mapear la zona."),
 };
 
 export class ErrorAplanado extends Error {

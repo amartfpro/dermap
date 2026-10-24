@@ -1,7 +1,7 @@
 # Dermap
 
 Aplicación de escritorio para planificar tatuajes: seleccionas una zona del cuerpo sobre un
-modelo 3D, Dermap la aplana en un lienzo a escala real, dibujas en él (o importas tu diseño) y
+modelo 3D, Dermap la mapea en un lienzo a escala real, dibujas en él (o importas tu diseño) y
 ves el resultado en tiempo real sobre el modelo. Al final exportas el stencil a escala 1:1 para
 la impresora térmica.
 
@@ -62,11 +62,11 @@ herramienta activa y menús con un triangulito en la esquina del icono. Los tres
    huesos, con sus pesos y skinning de cuaterniones duales): hombros (de brazos al costado a «en
    T»), brazos adelante/atrás, codos (hasta ~160° estirados), muñecas, dedos, caderas, piernas adelante/atrás, rodillas y
    giro de la cabeza, con atajos «Natural», «Base» y «En T» y la casilla «Simetría»; se guarda en el proyecto y por defecto es la natural. Se puede seleccionar zonas en cualquier postura; el lienzo se
-   aplana siempre en la postura base.
+   mapea siempre en la postura base.
 3. **Zona** (visor 3D): una «Zona rápida», **Seleccionar** (pincel) o **Lazo** (rodear lo que
    se ve); Mayús quita. En mangas, la línea azul es el corte: va por la cara que no estás
    mirando, o márcalo tú con **Corte manual**. **Corte extra** abre pinzas en zonas muy curvas.
-   **Aplanar zona** crea un lienzo nuevo a escala real.
+   **Mapear zona** crea un lienzo nuevo a escala real.
 4. **Dibujo** (panel Lienzo): pinceles para tatuaje (línea fina, línea, relleno, sombreado,
    puntillismo), goma, cuentagotas, relleno, lazo para mover/copiar/borrar, línea, rectángulo y
    elipse, paleta guardable, presión de la tableta y tamaño en milímetros reales. Lo que dibujas

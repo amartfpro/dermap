@@ -262,7 +262,7 @@ export class PanelCapas implements IContentRenderer {
     if (!nodos.length) {
       const aviso = document.createElement("li");
       aviso.className = "aviso";
-      aviso.textContent = t("Proyecto vacío. Selecciona una zona en el visor 3D y pulsa «Aplanar zona» para crear el primer lienzo: un tatuaje nuevo, uno existente o una cicatriz.");
+      aviso.textContent = t("Proyecto vacío. Selecciona una zona en la columna Modelo y pulsa «Mapear zona» para crear el primer lienzo: un tatuaje nuevo, uno existente o una cicatriz.");
       this.lista.append(aviso);
       return;
     }
