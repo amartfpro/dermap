@@ -464,8 +464,22 @@ export class PanelLienzo implements IContentRenderer {
     this.filaPaleta.append(mas);
   }
 
+  /** Aviso en la etiqueta de información, en ámbar y unos segundos (no lo pisa la información normal). */
+  private avisar(texto: string): void {
+    this.avisoInfo = { texto, hasta: performance.now() + 4000 };
+    this.actualizarInfo();
+    setTimeout(() => this.actualizarInfo(), 4100);
+  }
+  private avisoInfo: { texto: string; hasta: number } | null = null;
+
   private actualizarInfo(): void {
     if (this.botonAngulo) this.botonAngulo.textContent = `${Math.round(this.anguloVista())}°`;
+    const aviso = this.avisoInfo && performance.now() < this.avisoInfo.hasta ? this.avisoInfo.texto : null;
+    this.info.classList.toggle("aviso-info", !!aviso);
+    if (aviso) {
+      this.info.textContent = aviso;
+      return;
+    }
     if (!this.lienzo) {
       this.info.textContent = "";
       return;
@@ -1044,13 +1058,17 @@ export class PanelLienzo implements IContentRenderer {
     const capas = grupo ? l.doc.capasDe(grupo) : [l.doc.activa];
     const nombre = grupo ? grupo.nombre : l.doc.activa.nombre;
     if (!grupo && (l.doc.activa.bloqueadaTotal || !l.doc.activa.seVe)) {
-      this.info.textContent = capaNoEditable(l.doc.activa);
+      this.avisar(capaNoEditable(l.doc.activa));
       return;
     }
     this.seleccion = null;
     const levantado = await levantar(l, capas);
     if (!levantado) {
-      this.info.textContent = grupo ? t("El grupo «{grupo}» no tiene dibujo que transformar.", { grupo: nombre }) : t("La capa activa está vacía.");
+      this.avisar(
+        grupo
+          ? t("El grupo «{grupo}» no tiene dibujo que transformar.", { grupo: nombre })
+          : t("La capa «{capa}» está vacía: elige en Capas la capa con el dibujo.", { capa: nombre }),
+      );
       return;
     }
     if (this.lienzo !== l) return void cancelarTransformacion(l, levantado);

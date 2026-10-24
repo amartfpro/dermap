@@ -1390,10 +1390,9 @@ input[type="radio"] {
   width: 28px;
   height: 28px;
   border-radius: var(--radio);
-  border: 2px solid var(--texto);
-  box-shadow:
-    0 0 0 1px rgba(0, 0, 0, 0.6),
-    0 2px 6px rgba(0, 0, 0, 0.4);
+  /* Borde gris como el resto de controles, algo más grueso para que se distinga. */
+  border: 2px solid var(--borde-fuerte);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
   cursor: pointer;
   padding: 0;
   flex: none;
@@ -1401,6 +1400,7 @@ input[type="radio"] {
 
 .muestra-actual:hover {
   transform: scale(1.06);
+  border-color: var(--texto-tenue);
 }
 
 .zona-lienzo {
@@ -1596,6 +1596,10 @@ input[type="radio"] {
   max-width: calc(100% - 20px);
   flex-wrap: wrap;
   justify-content: flex-end;
+}
+
+.etiqueta-flotante.aviso-info {
+  color: var(--aviso);
 }
 
 .zona-lienzo .etiqueta-flotante {

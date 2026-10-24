@@ -6,7 +6,7 @@ import "./estilos/fuentes.css";
 import { Visor3D, visorActual } from "./panels/visor3d";
 import { abrirFicha } from "./panels/ficha";
 import { abrirAyuda } from "./panels/ayuda";
-import { PanelLienzo } from "./panels/lienzo";
+import { PanelLienzo, panelLienzoActual } from "./panels/lienzo";
 import { PanelCapas } from "./panels/capas";
 import { app } from "./estado";
 import { abrirArchivoInicial, abrirProyecto, exportarProyecto } from "./proyectos/gestor";
@@ -262,7 +262,7 @@ if (enTauri()) {
 // Acceso para las pruebas automáticas en navegador (solo con ?prueba en la URL).
 if (new URLSearchParams(location.search).has("prueba")) {
   void Promise.all([import("./proyectos/paquete"), import("./lienzo/vista-recta")]).then(([paquete, { VistaRecta }]) => {
-    (window as unknown as { dermap: unknown }).dermap = { app, sistemaArchivos, paquete, VistaRecta, visorActual, dock };
+    (window as unknown as { dermap: unknown }).dermap = { app, sistemaArchivos, paquete, VistaRecta, visorActual, dock, panelLienzoActual };
   });
   (window as unknown as { dermap: unknown }).dermap = { app, sistemaArchivos };
 }
