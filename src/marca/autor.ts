@@ -22,13 +22,13 @@ export const AUTOR = {
   donaciones: "",
   /** Redes y contacto (mailto: para el correo). */
   enlaces: [] as { texto: string; url: string }[],
-  /** Saludo (título del diálogo). */
-  saludo: traducible("Hola, soy {persona}"),
+  /** Título del diálogo. */
+  saludo: traducible("Sobre {nombre}"),
   /** Párrafos de la presentación, en orden. */
   textos: [
-    traducible("Soy desarrollador fullstack y diseñador. Detrás de AMART estoy yo: cada aplicación la hago de principio a fin, desde la primera idea y el diseño hasta la última línea de código."),
-    traducible("Me gusta crear herramientas para gente que trabaja con las manos y con la imaginación. Si estás usando {aplicacion}, gracias de verdad: saber que te sirve en tu trabajo es lo que me anima a seguir."),
-    traducible("Mi sueño es construir, poco a poco, una familia de aplicaciones útiles, bonitas y honestas, sin publicidad ni suscripciones obligatorias. Si tienes una idea o algo no funciona como esperas, me encantará leerte."),
+    traducible("¿Qué tal todo? Soy Ángel, desarrollador y diseñador. Soy ingeniero informático, trabajo creando aplicaciones web y, desde 2020, diseño para mis propias marcas de ropa."),
+    traducible("AMART es donde junto las dos cosas: aplicaciones que hago de principio a fin, con el mismo cuidado por cómo funcionan que por cómo se ven."),
+    traducible("Si estás usando {aplicacion}, gracias de verdad. Saber que te sirve en tu trabajo es lo que me anima a seguir mejorándola."),
   ],
   /** Texto del enlace a la web. */
   textoWeb: traducible("Conoce el resto de mis aplicaciones y diseños"),

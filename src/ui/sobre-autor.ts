@@ -23,7 +23,7 @@ export function abrirSobreAutor(): void {
   logo.src = urlAutor;
   logo.alt = AUTOR.nombre;
   const titulo = document.createElement("h2");
-  titulo.textContent = t(AUTOR.saludo, { persona: AUTOR.persona });
+  titulo.textContent = t(AUTOR.saludo, { nombre: AUTOR.nombre, persona: AUTOR.persona });
 
   const cuerpo = document.createElement("div");
   cuerpo.className = "texto-autor";

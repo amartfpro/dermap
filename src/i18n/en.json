@@ -599,9 +599,8 @@
   "Sobre {nombre}": "About {nombre}",
   "Apoyar el proyecto": "Support the project",
   "Grupo": "Group",
-  "Hola, soy {persona}": "Hi, I'm {persona}",
-  "Soy desarrollador fullstack y diseñador. Detrás de AMART estoy yo: cada aplicación la hago de principio a fin, desde la primera idea y el diseño hasta la última línea de código.": "I'm a full-stack developer and designer. AMART is me: I make each app from start to finish, from the first idea and the design to the last line of code.",
-  "Me gusta crear herramientas para gente que trabaja con las manos y con la imaginación. Si estás usando {aplicacion}, gracias de verdad: saber que te sirve en tu trabajo es lo que me anima a seguir.": "I love making tools for people who work with their hands and their imagination. If you're using {aplicacion}, thank you, truly: knowing it helps you in your work is what keeps me going.",
-  "Mi sueño es construir, poco a poco, una familia de aplicaciones útiles, bonitas y honestas, sin publicidad ni suscripciones obligatorias. Si tienes una idea o algo no funciona como esperas, me encantará leerte.": "My dream is to build, little by little, a family of useful, beautiful and honest apps, with no ads and no mandatory subscriptions. If you have an idea or something doesn't work as you expect, I'd love to hear from you.",
-  "Conoce el resto de mis aplicaciones y diseños": "Discover the rest of my apps and designs"
+  "Conoce el resto de mis aplicaciones y diseños": "Discover the rest of my apps and designs",
+  "¿Qué tal todo? Soy Ángel, desarrollador y diseñador. Soy ingeniero informático, trabajo creando aplicaciones web y, desde 2020, diseño para mis propias marcas de ropa.": "Hi, how's it going? I'm Ángel, a developer and designer. I'm a software engineer, I build web applications for a living and, since 2020, I've been designing for my own clothing brands.",
+  "AMART es donde junto las dos cosas: aplicaciones que hago de principio a fin, con el mismo cuidado por cómo funcionan que por cómo se ven.": "AMART is where I bring both together: apps I make from start to finish, with as much care for how they work as for how they look.",
+  "Si estás usando {aplicacion}, gracias de verdad. Saber que te sirve en tu trabajo es lo que me anima a seguir mejorándola.": "If you're using {aplicacion}, thank you, truly. Knowing it helps you in your work is what keeps me improving it."
 }
