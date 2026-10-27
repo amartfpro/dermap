@@ -26,9 +26,9 @@ export const AUTOR = {
   saludo: traducible("Sobre {nombre}"),
   /** Párrafos de la presentación, en orden. */
   textos: [
-    traducible("¿Qué tal todo? Soy Ángel, desarrollador y diseñador. Soy ingeniero informático, trabajo creando aplicaciones web y, desde 2020, diseño para mis propias marcas de ropa."),
-    traducible("AMART es donde junto las dos cosas: aplicaciones que hago de principio a fin, con el mismo cuidado por cómo funcionan que por cómo se ven."),
-    traducible("Si estás usando {aplicacion}, gracias de verdad. Saber que te sirve en tu trabajo es lo que me anima a seguir mejorándola."),
+    traducible("¿Qué tal todo? Soy Ángel, ingeniero informático, desarrollador y diseñador. Trabajo como desarrollador fullstack en aplicaciones de operatividad crítica, como la gestión de incendios. Desde 2020 también estoy en el mundo de la moda: diseño patrones y gráficos y preparo la documentación técnica para fábrica. En 2025 fundé mi propia marca junto a otros tres cracks."),
+    traducible("AMART es mi firma personal, donde confluye todo lo que he construido estos años y mi pasión por dar soluciones perfectas a problemas reales: el equilibrio entre un diseño cuidado y accesible y una funcionalidad de verdad, nacida de investigar, escuchar y la experiencia."),
+    traducible("Pensar que {aplicacion} te ayuda en tu trabajo es el motor para seguir dando pasos hacia adelante. Gracias, de verdad."),
   ],
   /** Texto del enlace a la web. */
   textoWeb: traducible("Conoce el resto de mis aplicaciones y diseños"),
