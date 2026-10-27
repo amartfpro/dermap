@@ -56,7 +56,7 @@ export function abrirSobreAutor(): void {
     b.append(icono(nombre, 15), texto);
     if (ayuda) b.title = ayuda;
     b.disabled = !url;
-    if (!url) b.append(Object.assign(document.createElement("span"), { className: "pronto", textContent: t("Próximamente") }));
+    if (!url) b.append(Object.assign(document.createElement("span"), { className: "pronto", textContent: t("Pronto") }));
     b.addEventListener("click", () => url && void abrirEnlace(url));
     acciones.append(b);
   };
