@@ -2807,6 +2807,12 @@ button.firma:focus-visible {
   gap: 8px;
 }
 
+.acciones-autor .pronto {
+  margin-left: auto;
+  font-size: 10.5px;
+  color: var(--texto-tenue);
+}
+
 .redes-autor {
   display: flex;
   flex-wrap: wrap;

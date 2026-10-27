@@ -55,15 +55,18 @@ export function abrirSobreAutor(): void {
     b.className = `boton-texto con-icono ${clase}`.trim();
     b.append(icono(nombre, 15), texto);
     if (ayuda) b.title = ayuda;
-    b.addEventListener("click", () => void abrirEnlace(url));
+    b.disabled = !url;
+    if (!url) b.append(Object.assign(document.createElement("span"), { className: "pronto", textContent: t("Próximamente") }));
+    b.addEventListener("click", () => url && void abrirEnlace(url));
     acciones.append(b);
   };
-  if (AUTOR.web) accion("web", t("Mi portafolio"), AUTOR.web, "", t(AUTOR.textoWeb));
+  // El portafolio siempre está: mientras la web no exista, el botón avisa de que llegará.
+  accion("web", t("Mi portafolio"), AUTOR.web, "", t(AUTOR.textoWeb));
   if (AUTOR.donaciones) accion("corazon", t("Apoyar el proyecto"), AUTOR.donaciones, "primario", t(AUTOR.textoApoyo, valores));
   if (AUTOR.correo) {
     // Sugerencias y fallos por correo, con la aplicación y su versión ya en el asunto.
     const asunto = encodeURIComponent(`${AUTOR.aplicacion} ${version} · `);
-    accion("mensaje", t("Sugerencias y fallos"), `mailto:${AUTOR.correo}?subject=${asunto}`, "", t("Escríbeme con una idea o un fallo"));
+    accion("mensaje", t("Sugerencias y contacto"), `mailto:${AUTOR.correo}?subject=${asunto}`, "", t("Escríbeme con una idea, un fallo o lo que quieras contarme"));
   }
   if (AUTOR.enlaces.length) {
     const redes = document.createElement("div");

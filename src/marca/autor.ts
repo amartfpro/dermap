@@ -16,10 +16,10 @@ export const AUTOR = {
   aplicacion: "Dermap",
   /** Foto del autor (se muestra entera, en cuadrado). Vacía: sin foto. */
   foto: urlFoto as string,
-  /** Web con el portafolio completo de aplicaciones y diseños (común a todas las aplicaciones). */
+  /** Web con el portafolio completo de aplicaciones y diseños (común a todas las aplicaciones). Vacía: el botón sale como «Próximamente». */
   web: "",
   /** Correo para sugerencias y fallos (el botón abre el programa de correo). */
-  correo: "",
+  correo: "amartfpro@gmail.com",
   /** Página de donaciones. */
   donaciones: "",
   /** Redes (Instagram, GitHub, LinkedIn…), como enlaces de texto bajo los botones. */
