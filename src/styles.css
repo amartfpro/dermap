@@ -2773,48 +2773,55 @@ button.firma:focus-visible {
 
 /* Sobre AMART */
 .modal.modal-autor {
-  width: min(480px, calc(100vw - 32px));
+  width: min(660px, calc(100vw - 32px));
   display: flex;
   flex-direction: column;
   gap: 14px;
 }
 
-.cabecera-autor {
-  display: flex;
-  align-items: center;
-  gap: 16px;
+.carta-autor {
+  display: grid;
+  grid-template-columns: 190px minmax(0, 1fr);
+  gap: 20px;
+  align-items: start;
 }
 
+/* La foto entera, en cuadrado. */
 .foto-autor {
-  width: 76px;
-  height: 76px;
-  border-radius: 50%;
+  width: 100%;
+  aspect-ratio: 1;
   object-fit: cover;
-  flex: none;
-  box-shadow: 0 0 0 2px var(--superficie), 0 0 0 3px var(--borde-fuerte);
+  border-radius: var(--radio-panel);
+  border: 1px solid var(--borde);
 }
 
-.nombre-autor {
+.columna-autor {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 12px;
   min-width: 0;
 }
 
-.logo-autor {
-  height: 32px;
-  width: auto;
-  align-self: flex-start;
-}
-
-.nombre-autor h2 {
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--texto-suave);
-}
-
-.modal-autor h2 {
+.columna-autor h2 {
   margin: 0;
+}
+
+/* La firma al pie del texto, como en una carta. */
+.firma-autor {
+  height: 34px;
+  width: auto;
+  align-self: flex-end;
+  margin-top: 4px;
+  opacity: 0.9;
+}
+
+@media (max-width: 560px) {
+  .carta-autor {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .foto-autor {
+    max-width: 220px;
+  }
 }
 
 .texto-autor {

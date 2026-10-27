@@ -17,7 +17,7 @@ export function abrirSobreAutor(): void {
   fondo.append(caja);
 
   const logo = document.createElement("img");
-  logo.className = "logo-autor";
+  logo.className = "firma-autor";
   logo.src = urlAutor;
   logo.alt = AUTOR.nombre;
   const titulo = document.createElement("h2");
@@ -31,21 +31,21 @@ export function abrirSobreAutor(): void {
     cuerpo.append(p);
   }
 
-  // Cabecera: la foto (si la hay) junto al logo y el título.
-  const cabecera = document.createElement("div");
-  cabecera.className = "cabecera-autor";
+  // La foto (si la hay) a la izquierda; a la derecha el texto, firmado abajo como una carta.
+  const carta = document.createElement("div");
+  carta.className = "carta-autor";
   if (AUTOR.foto) {
     const foto = document.createElement("img");
     foto.className = "foto-autor";
     foto.src = AUTOR.foto;
     foto.alt = AUTOR.nombre;
-    cabecera.append(foto);
+    carta.append(foto);
   }
-  const nombre = document.createElement("div");
-  nombre.className = "nombre-autor";
-  nombre.append(logo, titulo);
-  cabecera.append(nombre);
-  caja.append(cabecera, cuerpo);
+  const texto = document.createElement("div");
+  texto.className = "columna-autor";
+  texto.append(titulo, cuerpo, logo);
+  carta.append(texto);
+  caja.append(carta);
 
   if (AUTOR.donaciones) {
     const apoyo = document.createElement("div");
