@@ -595,11 +595,13 @@
   "Tamaño real de los píxeles (100 %)": "Actual pixel size (100 %)",
   "Se crea una capa nueva encima con el color del pincel; la original se conserva. «Líneas» saca el trazo de fotos y bocetos; «Blanco y negro», las zonas oscuras.": "A new layer is created on top in the brush colour; the original is kept. “Lines” extracts the strokes of photos and sketches; “Black and white”, the dark areas.",
   "Procesando a resolución completa…": "Processing at full resolution…",
-  "Soy AMART, desarrollador independiente. Hago herramientas para oficios creativos: aplicaciones cuidadas, que funcionan sin conexión y que respetan tu trabajo y tus datos.": "I'm AMART, an independent developer. I make tools for creative crafts: carefully built apps that work offline and respect your work and your data.",
-  "Gracias por usar {aplicacion}. Cada proyecto que planificas con ella me ayuda a seguir mejorándola.": "Thank you for using {aplicacion}. Every project you plan with it helps me keep improving it.",
-  "Mi objetivo es construir una familia de aplicaciones para artistas y estudios: útiles de verdad, sin publicidad y sin suscripciones obligatorias.": "My goal is to build a family of apps for artists and studios: genuinely useful, with no ads and no mandatory subscriptions.",
   "Si {aplicacion} te ahorra tiempo, puedes apoyar su desarrollo con una donación. Es voluntaria: la aplicación es igual para todos.": "If {aplicacion} saves you time, you can support its development with a donation. It's voluntary: the app is the same for everyone.",
   "Sobre {nombre}": "About {nombre}",
   "Apoyar el proyecto": "Support the project",
-  "Grupo": "Group"
+  "Grupo": "Group",
+  "Hola, soy {persona}": "Hi, I'm {persona}",
+  "Soy desarrollador fullstack y diseñador. Detrás de AMART estoy yo: cada aplicación la hago de principio a fin, desde la primera idea y el diseño hasta la última línea de código.": "I'm a full-stack developer and designer. AMART is me: I make each app from start to finish, from the first idea and the design to the last line of code.",
+  "Me gusta crear herramientas para gente que trabaja con las manos y con la imaginación. Si estás usando {aplicacion}, gracias de verdad: saber que te sirve en tu trabajo es lo que me anima a seguir.": "I love making tools for people who work with their hands and their imagination. If you're using {aplicacion}, thank you, truly: knowing it helps you in your work is what keeps me going.",
+  "Mi sueño es construir, poco a poco, una familia de aplicaciones útiles, bonitas y honestas, sin publicidad ni suscripciones obligatorias. Si tienes una idea o algo no funciona como esperas, me encantará leerte.": "My dream is to build, little by little, a family of useful, beautiful and honest apps, with no ads and no mandatory subscriptions. If you have an idea or something doesn't work as you expect, I'd love to hear from you.",
+  "Conoce el resto de mis aplicaciones y diseños": "Discover the rest of my apps and designs"
 }

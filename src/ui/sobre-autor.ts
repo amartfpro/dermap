@@ -21,7 +21,7 @@ export function abrirSobreAutor(): void {
   logo.src = urlAutor;
   logo.alt = AUTOR.nombre;
   const titulo = document.createElement("h2");
-  titulo.textContent = t("Sobre {nombre}", { nombre: AUTOR.nombre });
+  titulo.textContent = t(AUTOR.saludo, { persona: AUTOR.persona });
 
   const cuerpo = document.createElement("div");
   cuerpo.className = "texto-autor";
@@ -44,6 +44,18 @@ export function abrirSobreAutor(): void {
   const texto = document.createElement("div");
   texto.className = "columna-autor";
   texto.append(titulo, cuerpo, logo);
+  // La web con todo el portafolio: el enlace principal del diálogo.
+  if (AUTOR.web) {
+    const web = document.createElement("a");
+    web.className = "web-autor";
+    web.href = AUTOR.web;
+    web.textContent = `${t(AUTOR.textoWeb)} →`;
+    web.addEventListener("click", (ev) => {
+      ev.preventDefault();
+      void abrirEnlace(AUTOR.web);
+    });
+    texto.append(web);
+  }
   carta.append(texto);
   caja.append(carta);
 

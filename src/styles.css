@@ -2849,6 +2849,18 @@ button.firma:focus-visible {
   line-height: 1.5;
 }
 
+.web-autor {
+  align-self: flex-start;
+  color: var(--primario-suave);
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.web-autor:hover {
+  color: var(--primario);
+  text-decoration: underline;
+}
+
 .enlaces-autor {
   display: flex;
   flex-wrap: wrap;
