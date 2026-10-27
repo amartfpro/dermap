@@ -2808,7 +2808,7 @@ button.firma:focus-visible {
 
 /* La firma al pie del texto, como en una carta. */
 .firma-autor {
-  height: 34px;
+  height: 22px;
   width: auto;
   align-self: flex-end;
   margin-top: 4px;
