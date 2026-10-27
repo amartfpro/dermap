@@ -2831,10 +2831,10 @@ button.firma:focus-visible {
   color: var(--primario-suave);
 }
 
-/* La foto en vertical (3:4): ocupa más alto junto al texto. */
+/* La foto entera, en cuadrado. */
 .foto-autor {
   width: 100%;
-  aspect-ratio: 3 / 4;
+  aspect-ratio: 1;
   object-fit: cover;
   border-radius: var(--radio-panel);
   border: 1px solid var(--borde);

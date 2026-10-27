@@ -14,7 +14,7 @@ export const AUTOR = {
   /** Nombre de la persona: el saludo del diálogo. */
   persona: "Ángel",
   aplicacion: "Dermap",
-  /** Foto del autor, en vertical 3:4. Vacía: sin foto. */
+  /** Foto del autor (se muestra entera, en cuadrado). Vacía: sin foto. */
   foto: urlFoto as string,
   /** Web con el portafolio completo de aplicaciones y diseños (común a todas las aplicaciones). Vacía: el botón sale como «Próximamente». */
   web: "",
