@@ -114,6 +114,19 @@ restaurar();
 // Los títulos guardados en la distribución pueden estar en otro idioma.
 for (const panel of dock.panels) if (TITULOS[panel.id]) panel.api.setTitle(t(TITULOS[panel.id]));
 
+/**
+ * Ancho mínimo de cada columna, para que ninguna se deforme al estrecharla: lo justo para sus
+ * herramientas. La ventana de la aplicación tiene un mínimo que deja sitio a las tres.
+ */
+const ANCHO_MINIMO: Record<string, number> = { visor3d: 320, lienzo: 400, capas: 230 };
+function aplicarMinimos(): void {
+  for (const panel of dock.panels) {
+    const minimo = ANCHO_MINIMO[panel.id];
+    if (minimo) panel.group.api.setConstraints({ minimumWidth: minimo });
+  }
+}
+aplicarMinimos();
+
 // Textos de la barra superior y selector de idioma (RNF-14).
 // Barra superior: solo iconos con tooltip (como Illustrator).
 const iconosBarra: [string, NombreIcono, string][] = [
@@ -160,7 +173,10 @@ dock.onDidLayoutChange(() => {
   }
 });
 
-document.getElementById("restablecer")!.addEventListener("click", () => layoutInicial(dock));
+document.getElementById("restablecer")!.addEventListener("click", () => {
+  layoutInicial(dock);
+  aplicarMinimos();
+});
 document.getElementById("ayuda")!.addEventListener("click", abrirAyuda);
 document.getElementById("ficha")!.addEventListener("click", () => void abrirFicha());
 document.getElementById("presentar")!.addEventListener("click", () => visorActual()?.presentar(true));
