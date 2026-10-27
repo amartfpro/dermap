@@ -88,8 +88,9 @@ export function abrirSobreAutor(): void {
 
   const texto = document.createElement("div");
   texto.className = "columna-autor";
-  texto.append(titulo, cuerpo, logo);
-  carta.append(texto);
+  texto.append(titulo, cuerpo);
+  // La firma va en su propia fila: así los botones acaban a la altura del final del texto.
+  carta.append(texto, logo);
   caja.append(carta);
 
   const cerrar = () => {
