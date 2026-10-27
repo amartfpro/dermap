@@ -21,7 +21,7 @@ export const AUTOR = {
   /** Correo para sugerencias y fallos (el botón abre el programa de correo). */
   correo: "amartfpro@gmail.com",
   /** Página de donaciones. */
-  donaciones: "",
+  donaciones: "https://ko-fi.com/angelmartinezfernandez",
   /** Redes (Instagram, GitHub, LinkedIn…), como enlaces de texto bajo los botones. */
   enlaces: [] as { texto: string; url: string }[],
   /** Título del diálogo. */
