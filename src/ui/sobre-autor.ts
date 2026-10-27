@@ -31,7 +31,21 @@ export function abrirSobreAutor(): void {
     cuerpo.append(p);
   }
 
-  caja.append(logo, titulo, cuerpo);
+  // Cabecera: la foto (si la hay) junto al logo y el título.
+  const cabecera = document.createElement("div");
+  cabecera.className = "cabecera-autor";
+  if (AUTOR.foto) {
+    const foto = document.createElement("img");
+    foto.className = "foto-autor";
+    foto.src = AUTOR.foto;
+    foto.alt = AUTOR.nombre;
+    cabecera.append(foto);
+  }
+  const nombre = document.createElement("div");
+  nombre.className = "nombre-autor";
+  nombre.append(logo, titulo);
+  cabecera.append(nombre);
+  caja.append(cabecera, cuerpo);
 
   if (AUTOR.donaciones) {
     const apoyo = document.createElement("div");

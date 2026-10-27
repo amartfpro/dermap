@@ -2779,10 +2779,38 @@ button.firma:focus-visible {
   gap: 14px;
 }
 
+.cabecera-autor {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.foto-autor {
+  width: 76px;
+  height: 76px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex: none;
+  box-shadow: 0 0 0 2px var(--superficie), 0 0 0 3px var(--borde-fuerte);
+}
+
+.nombre-autor {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
 .logo-autor {
-  height: 40px;
+  height: 32px;
   width: auto;
   align-self: flex-start;
+}
+
+.nombre-autor h2 {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--texto-suave);
 }
 
 .modal-autor h2 {

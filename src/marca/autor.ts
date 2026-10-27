@@ -1,4 +1,5 @@
 import { traducible } from "../i18n";
+import urlFoto from "./autor-foto.jpg";
 
 /**
  * Datos del desarrollador para «Sobre AMART», comunes a todas sus aplicaciones: al reutilizar
@@ -11,6 +12,8 @@ import { traducible } from "../i18n";
 export const AUTOR = {
   nombre: "AMART",
   aplicacion: "Dermap",
+  /** Foto del autor (cuadrada; se muestra en círculo). Vacía: solo el logo. */
+  foto: urlFoto as string,
   /** Página de donaciones. */
   donaciones: "",
   /** Web, redes y contacto (mailto: para el correo). */
