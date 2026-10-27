@@ -341,7 +341,12 @@ export class PanelCapas implements IContentRenderer {
       this.conPaso("Desagrupar", (lz) => lz.doc.desagrupar(grupo), l),
       { texto: t("Desagrupar") },
     );
-    this.propiedades.append(opacidad.el, desagrupar);
+    // Las mismas tres casillas que con una capa: al pasar de capa a grupo nada salta de sitio.
+    const etiqueta = document.createElement("span");
+    etiqueta.className = "etiqueta-grupo";
+    etiqueta.append(icono("grupoAbierto", 14), grupo.nombre);
+    etiqueta.title = grupo.nombre;
+    this.propiedades.append(etiqueta, opacidad.el, desagrupar);
   }
 
   /**
@@ -403,7 +408,6 @@ export class PanelCapas implements IContentRenderer {
     const nombre = document.createElement("span");
     nombre.className = "nombre";
     nombre.textContent = fallo ? t("{nombre} (no se pudo abrir)", { nombre: nodo.nombre }) : nodo.nombre;
-    nombre.title = t("Doble clic para renombrar");
     this.alDobleClic(nombre, `lienzo:${nodo.id}`, () => this.renombrarLienzo(nodo, nombre));
     const detalle = document.createElement("span");
     detalle.className = "detalle";
@@ -456,7 +460,6 @@ export class PanelCapas implements IContentRenderer {
     const nombre = document.createElement("span");
     nombre.className = "nombre";
     nombre.textContent = grupo.nombre;
-    nombre.title = t("Doble clic para renombrar");
     this.alDobleClic(nombre, `grupo:${grupo.id}`, () =>
       this.renombrarCampo(nombre, grupo.nombre, (nuevo) => this.cambiarGrupo(l, grupo, { nombre: nuevo }, "Renombrar grupo")),
     );
@@ -505,7 +508,6 @@ export class PanelCapas implements IContentRenderer {
     const nombre = document.createElement("span");
     nombre.className = "nombre";
     nombre.textContent = capa.nombre;
-    nombre.title = t("Doble clic para renombrar");
     this.alDobleClic(nombre, `capa:${capa.id}`, () =>
       this.renombrarCampo(nombre, capa.nombre, (nuevo) => this.cambiar(capa, { nombre: nuevo }, "Renombrar capa", l)),
     );

@@ -612,20 +612,6 @@ input[type="radio"] {
   flex-direction: column;
 }
 
-.propiedades-capa {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--hueco);
-  padding: 8px 10px;
-  border-top: 1px solid var(--borde-suave);
-  background: var(--superficie);
-}
-
-.propiedades-capa:empty {
-  display: none;
-}
-
 .panel-capas .herramientas {
   align-items: flex-end;
   gap: 10px 12px;
@@ -638,51 +624,6 @@ input[type="radio"] {
 
 .panel-capas .fila-seccion .desplegable {
   max-width: 100%;
-}
-
-.propiedades-capa .deslizador {
-  width: 90px;
-}
-
-.lista-capas {
-  list-style: none;
-  margin: 0;
-  padding: 6px;
-  overflow: auto;
-  flex: 1;
-}
-
-.fila-capa {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  height: 32px;
-  padding: 0 8px;
-  border-radius: var(--radio);
-  cursor: default;
-  user-select: none;
-}
-
-.fila-capa:hover {
-  background: var(--superficie-2);
-}
-
-.fila-capa.activa {
-  background: var(--primario-tinte);
-  box-shadow: inset 2px 0 0 var(--primario);
-}
-
-
-.fila-capa .nombre {
-  flex: 1;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.fila-capa .detalle {
-  color: var(--texto-tenue);
-  font-size: 11px;
 }
 
 .campo-nombre {
@@ -1678,7 +1619,6 @@ body.en-inicio > #espacio {
   border-radius: 8px;
 }
 
-
 .inicio-pie {
   margin: auto 0 0;
   display: flex;
@@ -1978,223 +1918,6 @@ body.en-inicio > #espacio {
   justify-content: center;
 }
 
-/* Capas: lienzos como grupos */
-.fila-lienzo {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-  height: 34px;
-  margin-top: 4px;
-  padding: 0 6px 0 2px;
-  border-radius: var(--radio);
-  background: var(--superficie-2);
-  cursor: pointer;
-  user-select: none;
-  font-weight: 600;
-}
-
-.fila-lienzo:first-child {
-  margin-top: 0;
-}
-
-.fila-lienzo:hover {
-  background: var(--superficie-3);
-}
-
-.fila-lienzo.activa {
-  background: var(--primario-tinte);
-  box-shadow: inset 0 0 0 1px var(--primario-tinte-fuerte), inset 2px 0 0 var(--primario);
-}
-
-.fila-lienzo.activa:hover {
-  background: var(--primario-tinte-fuerte);
-}
-
-.fila-lienzo.activa .nombre {
-  color: var(--texto);
-}
-
-.fila-lienzo.oculta .nombre,
-.fila-lienzo.oculta .tipo {
-  opacity: 0.45;
-}
-
-
-.fila-lienzo.dañada .nombre {
-  color: var(--peligro);
-}
-
-.fila-lienzo .tipo {
-  display: inline-flex;
-  color: var(--texto-tenue);
-  margin: 0 4px 0 2px;
-}
-
-.fila-lienzo .nombre {
-  flex: 1;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.fila-lienzo .detalle {
-  min-width: 20px;
-  height: 18px;
-  padding: 0 6px;
-  border-radius: 9px;
-  background: var(--superficie-4);
-  color: var(--texto-suave);
-  font-size: 11px;
-  font-weight: 600;
-  line-height: 18px;
-  text-align: center;
-}
-
-/* Acciones de cada fila (nueva capa, agrupar, duplicar, eliminar): al pasar el ratón. */
-.lista-capas .acciones-fila {
-  display: none;
-  align-items: center;
-}
-
-.lista-capas li:hover .acciones-fila {
-  display: inline-flex;
-}
-
-.lista-capas li:hover .detalle:not(:empty) {
-  display: none;
-}
-
-body.arrastrando-fila .lista-capas li:hover .acciones-fila {
-  display: none;
-}
-
-body.arrastrando-fila,
-body.arrastrando-fila * {
-  cursor: grabbing !important;
-  user-select: none;
-}
-
-/* Copia de la fila que sigue al puntero al arrastrar. */
-.fantasma-fila {
-  position: fixed;
-  left: 0;
-  top: 0;
-  z-index: 2000;
-  pointer-events: none;
-  list-style: none;
-  margin: 0 !important;
-  opacity: 0.9;
-  background: var(--superficie-3) !important;
-  border-radius: var(--radio);
-  box-shadow: var(--sombra);
-}
-
-.fantasma-fila .acciones-fila {
-  display: none !important;
-}
-
-.fila-lienzo .flecha {
-  color: var(--texto-suave);
-}
-
-/* Grupos de capas y sangrías: lienzo › grupo › capa. */
-.fila-capa,
-.fila-grupo-capas {
-  margin-left: 14px;
-}
-
-.fila-capa.en-grupo {
-  margin-left: 30px;
-}
-
-.fila-lienzo + .fila-capa,
-.fila-lienzo + .fila-grupo-capas {
-  margin-top: 2px;
-}
-
-.fila-grupo-capas {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-  height: 30px;
-  padding: 0 8px 0 2px;
-  border-radius: var(--radio);
-  cursor: default;
-  user-select: none;
-  font-weight: 500;
-}
-
-.fila-grupo-capas:hover {
-  background: var(--superficie-2);
-}
-
-.fila-grupo-capas.activa {
-  background: var(--primario-tinte);
-  box-shadow: inset 2px 0 0 var(--primario);
-}
-
-.fila-grupo-capas .tipo {
-  display: inline-flex;
-  color: var(--texto-suave);
-  margin: 0 4px 0 2px;
-}
-
-.fila-grupo-capas .nombre {
-  flex: 1;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.fila-grupo-capas .detalle {
-  color: var(--texto-tenue);
-  font-size: 11px;
-}
-
-.fila-grupo-capas .flecha {
-  color: var(--texto-suave);
-}
-
-.fila-grupo-capas.oculta .nombre,
-.fila-grupo-capas.oculta .tipo,
-.fila-capa.oculta .nombre {
-  opacity: 0.45;
-}
-
-/* Arrastrar y soltar: línea encima o debajo de la fila, o la fila resaltada («dentro»). */
-.lista-capas li {
-  position: relative;
-}
-
-.lista-capas li.arrastrando {
-  opacity: 0.4;
-}
-
-.lista-capas li.soltar-encima::before,
-.lista-capas li.soltar-debajo::after {
-  content: "";
-  position: absolute;
-  left: 4px;
-  right: 4px;
-  height: 2px;
-  border-radius: 1px;
-  background: var(--primario);
-  pointer-events: none;
-}
-
-.lista-capas li.soltar-encima::before {
-  top: -2px;
-}
-
-.lista-capas li.soltar-debajo::after {
-  bottom: -2px;
-}
-
-.lista-capas li.soltar-dentro {
-  box-shadow: inset 0 0 0 1.5px var(--primario);
-  background: var(--primario-tinte);
-}
-
 .estado-guardado {
   font-size: 11.5px;
   color: var(--texto-tenue);
@@ -2281,7 +2004,6 @@ body.arrastrando-fila * {
 .ventana-cuerpo .segmentado.sexo {
   display: flex;
 }
-
 
 /* ── Estilo Illustrator: iconos, tooltips, menús, barras de control ─────── */
 
@@ -2566,14 +2288,6 @@ body.arrastrando-fila * {
   margin: 0 4px;
 }
 
-.panel-capas .propiedades-capa {
-  border-top: none;
-  border-bottom: 1px solid var(--borde-suave);
-  /* Alto fijo (dos filas): al cambiar de capa a grupo la lista de debajo no salta. */
-  min-height: 80px;
-  align-content: flex-start;
-}
-
 /* Barra superior */
 .grupo-barra {
   display: flex;
@@ -2675,7 +2389,6 @@ body.arrastrando-fila * {
   min-width: 0;
   width: 130px;
 }
-
 
 /* Paneles como cristal sobre el fondo de marca. */
 :root {
@@ -3118,4 +2831,311 @@ button.firma:focus-visible {
 
 .modal-autor .modal-pie {
   margin-top: 4px;
+}
+
+/* ── Panel Capas ────────────────────────────────────────────────────────── */
+
+/* Propiedades de la capa o grupo seleccionado: tres casillas que se reparten el ancho
+   (las tres en una fila si caben; si no, dos y una). */
+.propiedades-capa {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(118px, 1fr));
+  /* Filas del mismo alto con capa o con grupo: la lista de debajo no salta al cambiar. */
+  grid-auto-rows: 28px;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--borde-suave);
+  background: var(--superficie);
+}
+
+.propiedades-capa:empty {
+  display: none;
+}
+
+.propiedades-capa > * {
+  min-width: 0;
+}
+
+.propiedades-capa .desplegable,
+.propiedades-capa .campo-deslizante,
+.propiedades-capa .boton-texto {
+  width: 100%;
+}
+
+.propiedades-capa .campo-deslizante .valor-campo {
+  flex: 1;
+}
+
+.propiedades-capa .casilla {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.etiqueta-grupo {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--texto-suave);
+  padding-left: 2px;
+}
+
+/* Lista: lienzo › grupo › capa. */
+.lista-capas {
+  list-style: none;
+  margin: 0;
+  padding: 6px;
+  overflow: auto;
+  flex: 1;
+}
+
+.lista-capas li {
+  /* Fondo de la fila (lo usan también las acciones que aparecen encima al pasar el ratón). */
+  --fondo-fila: var(--superficie);
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+  border-radius: var(--radio);
+  background: var(--fondo-fila);
+  user-select: none;
+}
+
+.lista-capas li > .icono,
+.lista-capas li > .tipo {
+  flex: none;
+}
+
+.lista-capas .nombre {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lista-capas .detalle {
+  flex: none;
+  margin-left: 4px;
+}
+
+.lista-capas .tipo {
+  display: inline-flex;
+  margin: 0 4px 0 2px;
+}
+
+/* Lienzo */
+.fila-lienzo {
+  --fondo-fila: var(--superficie-2);
+  height: 34px;
+  margin-top: 4px;
+  padding: 0 6px 0 2px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.fila-lienzo:first-child {
+  margin-top: 0;
+}
+
+.fila-lienzo:hover {
+  --fondo-fila: var(--superficie-3);
+}
+
+.fila-lienzo.activa {
+  --fondo-fila: color-mix(in srgb, var(--primario) 16%, var(--superficie));
+  box-shadow: inset 0 0 0 1px var(--primario-tinte-fuerte);
+}
+
+.fila-lienzo.activa:hover {
+  --fondo-fila: color-mix(in srgb, var(--primario) 22%, var(--superficie));
+}
+
+.fila-lienzo .tipo,
+.fila-lienzo .flecha {
+  color: var(--texto-tenue);
+}
+
+.fila-lienzo .detalle {
+  min-width: 20px;
+  height: 18px;
+  padding: 0 6px;
+  border-radius: 9px;
+  background: var(--superficie-4);
+  color: var(--texto-suave);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 18px;
+  text-align: center;
+}
+
+.fila-lienzo.dañada .nombre {
+  color: var(--peligro);
+}
+
+/* Grupo de capas y capa */
+.fila-grupo-capas,
+.fila-capa {
+  margin-left: 14px;
+  cursor: default;
+}
+
+.fila-lienzo + .fila-capa,
+.fila-lienzo + .fila-grupo-capas {
+  margin-top: 2px;
+}
+
+.fila-grupo-capas {
+  height: 30px;
+  padding: 0 8px 0 2px;
+  font-weight: 500;
+}
+
+.fila-grupo-capas .tipo,
+.fila-grupo-capas .flecha {
+  color: var(--texto-suave);
+}
+
+.fila-capa {
+  height: 32px;
+  padding: 0 8px 0 4px;
+}
+
+.fila-capa.en-grupo {
+  margin-left: 30px;
+}
+
+.fila-grupo-capas:hover,
+.fila-capa:hover {
+  --fondo-fila: var(--superficie-2);
+}
+
+.fila-grupo-capas.activa,
+.fila-capa.activa {
+  --fondo-fila: color-mix(in srgb, var(--primario) 14%, var(--superficie));
+}
+
+.fila-grupo-capas.activa:hover,
+.fila-capa.activa:hover {
+  --fondo-fila: color-mix(in srgb, var(--primario) 20%, var(--superficie));
+}
+
+.fila-grupo-capas .detalle,
+.fila-capa .detalle {
+  color: var(--texto-tenue);
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.fila-lienzo.oculta .nombre,
+.fila-lienzo.oculta .tipo,
+.fila-grupo-capas.oculta .nombre,
+.fila-grupo-capas.oculta .tipo,
+.fila-capa.oculta .nombre {
+  opacity: 0.45;
+}
+
+/* Acciones (nueva capa, agrupar, duplicar, eliminar…): al pasar el ratón aparecen encima del
+   final de la fila, con su mismo fondo, sin empujar nada; el nombre queda tapado por un
+   degradado. En filas muy estrechas se ven solo las últimas (eliminar siempre está). */
+.lista-capas .acciones-fila {
+  position: absolute;
+  right: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: none;
+  align-items: center;
+  gap: 1px;
+  max-width: calc(100% - 8px);
+  overflow: hidden;
+  /* Alineadas a la derecha: si no caben, se recortan las primeras (eliminar sigue a mano). */
+  justify-content: flex-end;
+  padding-left: 18px;
+  background: linear-gradient(to right, transparent, var(--fondo-fila) 16px);
+}
+
+.lista-capas .acciones-fila > * {
+  flex: none;
+}
+
+.lista-capas li:hover .acciones-fila {
+  display: inline-flex;
+}
+
+body.arrastrando-fila .lista-capas li:hover .acciones-fila {
+  display: none;
+}
+
+/* Arrastrar y soltar: línea encima o debajo de la fila, o la fila resaltada («dentro»). */
+.lista-capas li.arrastrando {
+  opacity: 0.4;
+}
+
+.lista-capas li.soltar-encima::before,
+.lista-capas li.soltar-debajo::after {
+  content: "";
+  position: absolute;
+  left: 4px;
+  right: 4px;
+  height: 2px;
+  border-radius: 1px;
+  background: var(--primario);
+  pointer-events: none;
+}
+
+.lista-capas li.soltar-encima::before {
+  top: -1px;
+}
+
+.lista-capas li.soltar-debajo::after {
+  bottom: -1px;
+}
+
+.lista-capas li.soltar-dentro {
+  --fondo-fila: color-mix(in srgb, var(--primario) 14%, var(--superficie));
+  box-shadow: inset 0 0 0 1.5px var(--primario);
+}
+
+body.arrastrando-fila,
+body.arrastrando-fila * {
+  cursor: grabbing !important;
+  user-select: none;
+}
+
+/* Copia de la fila que sigue al puntero al arrastrar. */
+.fantasma-fila {
+  --fondo-fila: var(--superficie-3);
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  height: 32px;
+  padding: 0 8px;
+  pointer-events: none;
+  list-style: none;
+  margin: 0 !important;
+  opacity: 0.92;
+  background: var(--fondo-fila);
+  border-radius: var(--radio);
+  box-shadow: var(--sombra);
+}
+
+.fantasma-fila .acciones-fila {
+  display: none !important;
+}
+
+.fantasma-fila .nombre {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
