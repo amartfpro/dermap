@@ -26,7 +26,8 @@ export const AUTOR = {
   saludo: traducible("Sobre {nombre}"),
   /** Párrafos de la presentación, en orden. */
   textos: [
-    traducible("¿Qué tal? Soy Ángel, ingeniero informático y diseñador. Como desarrollador fullstack creo aplicaciones GIS de operatividad crítica, como la gestión de incendios: escucho a los operarios, analizo cómo trabajan y lo convierto en herramientas claras con Vue, TypeScript, Node.js y PostGIS."),
+    traducible("¿Qué tal? Soy Ángel, ingeniero informático y diseñador."),
+    traducible("Como desarrollador fullstack creo aplicaciones GIS de operatividad crítica, como la gestión de incendios. Escucho a los operarios, analizo cómo trabajan y lo convierto en herramientas precisas para la labor correspondiente."),
     traducible("Desde 2020 también estoy metido en el mundo de la moda: creo patrones, diseño gráficos y preparo la documentación técnica para fábrica. En 2025 fundé mi propia marca, AM2T, junto a otros tres cracks."),
     traducible("AMART es mi firma personal, donde confluye todo lo que he construido estos años y mi pasión por dar soluciones perfectas a problemas reales: el equilibrio entre un diseño cuidado y accesible y una funcionalidad de verdad, nacida de investigar, escuchar y aprender."),
     traducible("Pensar que {aplicacion} te ayuda en tu trabajo es el motor para seguir dando pasos hacia adelante. Gracias, de verdad."),
