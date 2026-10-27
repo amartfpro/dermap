@@ -2,6 +2,8 @@ import { t } from "../i18n";
 import { AUTOR } from "../marca/autor";
 import urlAutor from "../marca/autor.svg";
 import { abrirEnlace } from "./enlaces";
+import { icono, type NombreIcono } from "./iconos";
+import { version } from "../../package.json";
 
 /**
  * «Sobre AMART»: quién hace la aplicación, agradecimiento, enlaces y, si la hay, donaciones.
@@ -33,51 +35,39 @@ export function abrirSobreAutor(): void {
     cuerpo.append(p);
   }
 
-  // La foto (si la hay) a la izquierda; a la derecha el texto, firmado abajo como una carta.
+  // Izquierda: la foto y, al fondo, los botones. Derecha: el texto, firmado como una carta.
   const carta = document.createElement("div");
   carta.className = "carta-autor";
+  const lateral = document.createElement("div");
+  lateral.className = "lateral-autor";
   if (AUTOR.foto) {
     const foto = document.createElement("img");
     foto.className = "foto-autor";
     foto.src = AUTOR.foto;
     foto.alt = AUTOR.nombre;
-    carta.append(foto);
+    lateral.append(foto);
   }
-  const texto = document.createElement("div");
-  texto.className = "columna-autor";
-  texto.append(titulo, cuerpo, logo);
-  // La web con todo el portafolio: el enlace principal del diálogo.
-  if (AUTOR.web) {
-    const web = document.createElement("a");
-    web.className = "web-autor";
-    web.href = AUTOR.web;
-    web.textContent = `${t(AUTOR.textoWeb)} →`;
-    web.addEventListener("click", (ev) => {
-      ev.preventDefault();
-      void abrirEnlace(AUTOR.web);
-    });
-    texto.append(web);
+  const acciones = document.createElement("div");
+  acciones.className = "acciones-autor";
+  const accion = (nombre: NombreIcono, texto: string, url: string, clase = "", ayuda = "") => {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = `boton-texto con-icono ${clase}`.trim();
+    b.append(icono(nombre, 15), texto);
+    if (ayuda) b.title = ayuda;
+    b.addEventListener("click", () => void abrirEnlace(url));
+    acciones.append(b);
+  };
+  if (AUTOR.web) accion("web", t("Mi portafolio"), AUTOR.web, "", t(AUTOR.textoWeb));
+  if (AUTOR.donaciones) accion("corazon", t("Apoyar el proyecto"), AUTOR.donaciones, "primario", t(AUTOR.textoApoyo, valores));
+  if (AUTOR.correo) {
+    // Sugerencias y fallos por correo, con la aplicación y su versión ya en el asunto.
+    const asunto = encodeURIComponent(`${AUTOR.aplicacion} ${version} · `);
+    accion("mensaje", t("Sugerencias y fallos"), `mailto:${AUTOR.correo}?subject=${asunto}`, "", t("Escríbeme con una idea o un fallo"));
   }
-  carta.append(texto);
-  caja.append(carta);
-
-  if (AUTOR.donaciones) {
-    const apoyo = document.createElement("div");
-    apoyo.className = "apoyo-autor";
-    const p = document.createElement("p");
-    p.textContent = t(AUTOR.textoApoyo, valores);
-    const boton = document.createElement("button");
-    boton.type = "button";
-    boton.className = "boton-texto primario";
-    boton.textContent = t("Apoyar el proyecto");
-    boton.addEventListener("click", () => void abrirEnlace(AUTOR.donaciones));
-    apoyo.append(p, boton);
-    caja.append(apoyo);
-  }
-
   if (AUTOR.enlaces.length) {
-    const enlaces = document.createElement("div");
-    enlaces.className = "enlaces-autor";
+    const redes = document.createElement("div");
+    redes.className = "redes-autor";
     for (const e of AUTOR.enlaces) {
       const a = document.createElement("a");
       a.href = e.url;
@@ -86,10 +76,18 @@ export function abrirSobreAutor(): void {
         ev.preventDefault();
         void abrirEnlace(e.url);
       });
-      enlaces.append(a);
+      redes.append(a);
     }
-    caja.append(enlaces);
+    acciones.append(redes);
   }
+  if (acciones.childElementCount) lateral.append(acciones);
+  carta.append(lateral);
+
+  const texto = document.createElement("div");
+  texto.className = "columna-autor";
+  texto.append(titulo, cuerpo, logo);
+  carta.append(texto);
+  caja.append(carta);
 
   const cerrar = () => {
     fondo.remove();

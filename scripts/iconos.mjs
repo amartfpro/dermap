@@ -77,6 +77,9 @@ const ICONOS = {
   grupoAbierto: "FolderOpen",
   agrupar: "FolderPlus",
   transformar: "Scaling",
+  web: "Globe",
+  corazon: "Heart",
+  mensaje: "MessageCircle",
   desagrupar: "FolderOutput",
 };
 

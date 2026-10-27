@@ -18,9 +18,11 @@ export const AUTOR = {
   foto: urlFoto as string,
   /** Web con el portafolio completo de aplicaciones y diseños (común a todas las aplicaciones). */
   web: "",
+  /** Correo para sugerencias y fallos (el botón abre el programa de correo). */
+  correo: "",
   /** Página de donaciones. */
   donaciones: "",
-  /** Redes y contacto (mailto: para el correo). */
+  /** Redes (Instagram, GitHub, LinkedIn…), como enlaces de texto bajo los botones. */
   enlaces: [] as { texto: string; url: string }[],
   /** Título del diálogo. */
   saludo: traducible("Sobre {nombre}"),
@@ -32,7 +34,7 @@ export const AUTOR = {
     traducible("AMART es mi firma personal, donde confluye todo lo que he construido estos años y mi pasión por dar soluciones perfectas a problemas reales: el equilibrio entre un diseño cuidado y accesible y una funcionalidad de verdad, nacida de investigar, escuchar y aprender."),
     traducible("Pensar que {aplicacion} te ayuda en tu trabajo es el motor para seguir dando pasos hacia adelante. Gracias, de verdad."),
   ],
-  /** Texto del enlace a la web. */
+  /** Texto de ayuda del botón del portafolio. */
   textoWeb: traducible("Conoce el resto de mis aplicaciones y diseños"),
   /** Texto junto al botón de apoyar. */
   textoApoyo: traducible("Si {aplicacion} te ahorra tiempo, puedes apoyar su desarrollo con una donación. Es voluntaria: la aplicación es igual para todos."),

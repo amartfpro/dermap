@@ -2783,7 +2783,46 @@ button.firma:focus-visible {
   display: grid;
   grid-template-columns: 190px minmax(0, 1fr);
   gap: 20px;
-  align-items: start;
+  align-items: stretch;
+}
+
+/* Columna de la foto: los botones van al fondo, a la altura de la firma. */
+.lateral-autor {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+
+.acciones-autor {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.acciones-autor .boton-texto {
+  width: 100%;
+  justify-content: flex-start;
+  gap: 8px;
+}
+
+.redes-autor {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 4px 12px;
+  margin-top: 4px;
+  font-size: 12px;
+}
+
+.redes-autor a {
+  color: var(--texto-suave);
+  text-decoration: none;
+}
+
+.redes-autor a:hover {
+  color: var(--primario-suave);
 }
 
 /* La foto entera, en cuadrado. */
@@ -2832,52 +2871,8 @@ button.firma:focus-visible {
   line-height: 1.55;
 }
 
-.texto-autor p,
-.apoyo-autor p {
+.texto-autor p {
   margin: 0;
-}
-
-.apoyo-autor {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 10px;
-  padding: 14px;
-  border-radius: var(--radio-panel);
-  background: var(--primario-tinte);
-  border: 1px solid var(--primario-tinte-fuerte);
-  line-height: 1.5;
-}
-
-.web-autor {
-  align-self: flex-start;
-  color: var(--primario-suave);
-  font-weight: 500;
-  text-decoration: none;
-}
-
-.web-autor:hover {
-  color: var(--primario);
-  text-decoration: underline;
-}
-
-.enlaces-autor {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px 16px;
-}
-
-.enlaces-autor a {
-  color: var(--primario-suave);
-  text-decoration: none;
-}
-
-.enlaces-autor a:hover {
-  text-decoration: underline;
-}
-
-.modal-autor .modal-pie {
-  margin-top: 4px;
 }
 
 /* ── Panel Capas ────────────────────────────────────────────────────────── */
