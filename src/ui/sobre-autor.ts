@@ -1,10 +1,12 @@
 import { t } from "../i18n";
 import { AUTOR } from "../marca/autor";
 import urlAutor from "../marca/autor.svg";
-import { version } from "../../package.json";
 import { abrirEnlace } from "./enlaces";
 
-/** «Sobre AMART»: quién hace la aplicación, agradecimiento, enlaces y, si la hay, donaciones. */
+/**
+ * «Sobre AMART»: quién hace la aplicación, agradecimiento, enlaces y, si la hay, donaciones.
+ * Se cierra con Esc o pulsando fuera.
+ */
 export function abrirSobreAutor(): void {
   if (document.querySelector(".modal-autor")) return;
   const valores = { aplicacion: AUTOR.aplicacion };
@@ -89,18 +91,6 @@ export function abrirSobreAutor(): void {
     caja.append(enlaces);
   }
 
-  const pie = document.createElement("div");
-  pie.className = "modal-pie";
-  const version_ = document.createElement("span");
-  version_.className = "estado-modal";
-  version_.textContent = `${AUTOR.aplicacion} ${version}`;
-  const cerrarBoton = document.createElement("button");
-  cerrarBoton.type = "button";
-  cerrarBoton.className = "boton-texto";
-  cerrarBoton.textContent = t("Cerrar");
-  pie.append(version_, cerrarBoton);
-  caja.append(pie);
-
   const cerrar = () => {
     fondo.remove();
     window.removeEventListener("keydown", alTecla, true);
@@ -112,10 +102,8 @@ export function abrirSobreAutor(): void {
     }
   };
   window.addEventListener("keydown", alTecla, true);
-  cerrarBoton.addEventListener("click", cerrar);
   fondo.addEventListener("mousedown", (e) => {
     if (e.target === fondo) cerrar();
   });
   document.body.append(fondo);
-  cerrarBoton.focus();
 }
