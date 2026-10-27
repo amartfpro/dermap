@@ -3037,3 +3037,85 @@ input[type="checkbox"].conmutador:focus-visible {
     max-height: 34vh;
   }
 }
+
+/* Firma: botón que abre «Sobre AMART». */
+button.firma {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+button.firma:hover {
+  color: var(--texto-suave);
+}
+
+button.firma:focus-visible {
+  outline: 2px solid var(--primario);
+  outline-offset: 3px;
+  border-radius: var(--radio-pequeno);
+}
+
+/* Sobre AMART */
+.modal.modal-autor {
+  width: min(480px, calc(100vw - 32px));
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.logo-autor {
+  height: 40px;
+  width: auto;
+  align-self: flex-start;
+}
+
+.modal-autor h2 {
+  margin: 0;
+}
+
+.texto-autor {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  color: var(--texto-suave);
+  line-height: 1.55;
+}
+
+.texto-autor p,
+.apoyo-autor p {
+  margin: 0;
+}
+
+.apoyo-autor {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 14px;
+  border-radius: var(--radio-panel);
+  background: var(--primario-tinte);
+  border: 1px solid var(--primario-tinte-fuerte);
+  line-height: 1.5;
+}
+
+.enlaces-autor {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+}
+
+.enlaces-autor a {
+  color: var(--primario-suave);
+  text-decoration: none;
+}
+
+.enlaces-autor a:hover {
+  text-decoration: underline;
+}
+
+.modal-autor .modal-pie {
+  margin-top: 4px;
+}

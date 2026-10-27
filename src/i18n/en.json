@@ -594,5 +594,11 @@
   "Encajar (doble clic)": "Fit (double-click)",
   "Tamaño real de los píxeles (100 %)": "Actual pixel size (100 %)",
   "Se crea una capa nueva encima con el color del pincel; la original se conserva. «Líneas» saca el trazo de fotos y bocetos; «Blanco y negro», las zonas oscuras.": "A new layer is created on top in the brush colour; the original is kept. “Lines” extracts the strokes of photos and sketches; “Black and white”, the dark areas.",
-  "Procesando a resolución completa…": "Processing at full resolution…"
+  "Procesando a resolución completa…": "Processing at full resolution…",
+  "Soy AMART, desarrollador independiente. Hago herramientas para oficios creativos: aplicaciones cuidadas, que funcionan sin conexión y que respetan tu trabajo y tus datos.": "I'm AMART, an independent developer. I make tools for creative crafts: carefully built apps that work offline and respect your work and your data.",
+  "Gracias por usar {aplicacion}. Cada proyecto que planificas con ella me ayuda a seguir mejorándola.": "Thank you for using {aplicacion}. Every project you plan with it helps me keep improving it.",
+  "Mi objetivo es construir una familia de aplicaciones para artistas y estudios: útiles de verdad, sin publicidad y sin suscripciones obligatorias.": "My goal is to build a family of apps for artists and studios: genuinely useful, with no ads and no mandatory subscriptions.",
+  "Si {aplicacion} te ahorra tiempo, puedes apoyar su desarrollo con una donación. Es voluntaria: la aplicación es igual para todos.": "If {aplicacion} saves you time, you can support its development with a donation. It's voluntary: the app is the same for everyone.",
+  "Sobre {nombre}": "About {nombre}",
+  "Apoyar el proyecto": "Support the project"
 }
